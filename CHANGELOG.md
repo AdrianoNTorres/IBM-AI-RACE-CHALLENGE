@@ -338,6 +338,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.19`). Line 537: `corner_speed=70` → `corner_speed=75`. Single value, no other changes. Steering rate limit (`max_steer_step` 0.2) stays. |
 | **Why** | Corners are the biggest remaining time (the slowest sections are the two hairpins and the ~400 m corner, each ~4.2–4.4 s), straights are nearly used up (v0.17 gained only 0.18 s), and `brake_decel` is at its limit. Earlier `corner_speed` steps were the biggest gains of the project (+10 km/h ≈ 5.5–6 s in v0.10 and v0.11). It was held at 70 since v0.11 because of the slide at the ~2,450 m flick. v0.18 showed that slide comes from full opposite lock at the flick, not from steering speed, and that it recovers cleanly (`\|trackPos\|` 0.33, 0 damage); elsewhere there is plenty of grip (~2 km/h sideways at full lock in the ~3,250 m hairpin). A +5 km/h step (+7%) is half the earlier steps. Allowed speed with 15 m of road visible goes 70 → 75 km/h; with 22 m ~83 → ~87 km/h. |
 | **Prediction** | Slowest corner ~73–75 km/h (from 68). Lap time roughly 2–3 s faster than v0.18 (1:42.50), mostly in the hairpins and tight corners (~400, ~700, ~1,500, ~1,900, ~2,400–2,500, ~3,200 m). Sideways speed at the ~2,450 m flick will rise, probably to ~10–12 km/h, and `\|trackPos\|` there may grow. Risk: the flick — if the car leaves the track or takes damage, reject; if it stays on track but slides clearly more (well above ~12 km/h or `\|trackPos\|` above ~0.6), the next version should tackle the flick (e.g. no braking at full lock, or a tighter steering rate) before going further. Damage expected to stay at 0. |
+| **Lap time** | 1:41.32 |
+| **Damage** | 0 |
+| **Top speed** | 208 km/h |
+| **Min speed** | 69 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time 1.18 s faster than v0.18 (1:42.50 → 1:41.32) — the fastest lap so far, a little under the predicted 2–3 s. Telemetry (`runs/run_20261001_170424.csv`): every corner section got faster — ~400 m (−0.16 s), the ~2,450 m flick (−0.16 s), ~2,900 m (−0.13 s), ~700 m (−0.11 s), ~1,500 m, ~2,600 m (−0.10 s each), ~2,700 m (−0.09 s); corner minimums rose 2–5 km/h (e.g. ~400 m 78 → 81, ~1,900 m 82 → 86, flick 70 → 74). **But ~0.41 s was lost on the final straight** (~3,400 m +0.26 s, ~3,500 m +0.15 s): the car reached exactly 170 km/h, the 5th → 6th shift point, lost a fraction of a km/h during the shift, dropped back below 170, shifted down, and repeated — it ran at 170 km/h for ~150 m with the gear alternating 5/6 (top speed there 170 instead of 209). That gearbox has no hysteresis, so this could always happen; in v0.18 the car happened to pass 170 cleanly. Without it the gain would have been ~1.6 s. **Hairpins:** sideways speed at the ~2,450 m flick 8.8 → 9.6 km/h with `\|trackPos\|` 0.46 (0.33); at the ~3,250 m hairpin sideways speed 2.9 → 4.9 km/h and the car ran wider on the exit, `\|trackPos\|` 0.58 (0.33), staying near 0.56 into the following straight. That hairpin stays at ~69 km/h because the steering is at full lock (1.0) — speed there is now set by the steering lock, not by the braking plan. Minimum visible road ahead 10.9 m (14.0). Braking 33% of the lap, max pedal 0.41; full throttle 32%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | The +5 km/h `corner_speed` step gained ~1.6 s in the corners — about the same rate per km/h as the earlier +10 steps — and the flick slide grew only a little (9.6 km/h). The ~3,250 m hairpin is now at the steering lock: the car cannot turn tighter, so it runs wider on the exit (0.58) rather than going faster; any further `corner_speed` increase will push it wider still. A separate, old bug showed up: the gearbox shifts up and down at the same speed, so the car can hunt between two gears at a shift point and stall its acceleration. |
+
+---
+
+## v0.20 — Gearbox hysteresis (`gear_hysteresis` 10 km/h)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.20 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.20`). New knob `gear_hysteresis=10` (line 545). After the existing shift thresholds (50/80/110/140/170 km/h, unchanged), lines 613–616 hold the current gear whenever the thresholds would shift down but the speed is still above (the current gear's shift-up speed − 10 km/h). Upshifts are unchanged; downshifts happen 10 km/h lower (e.g. 6th → 5th below 160 instead of 170). No other changes. |
+| **Why** | Bug fix. In v0.19 the car reached exactly 170 km/h on the final straight, dropped a fraction of a km/h while shifting into 6th, shifted straight back to 5th, and repeated for ~150 m, costing ~0.41 s. Upshifts and downshifts used the same speed, so this can happen at any shift point. A 10 km/h gap is far more than the speed lost during a shift. |
+| **Prediction** | No gear changes back and forth at a constant speed anywhere in the lap. The final straight back to ~208 km/h and the ~0.4 s lost in v0.19 recovered: lap roughly 0.3–0.5 s faster than v0.19 (1:41.32), with the gain at ~3,400–3,500 m. Elsewhere about the same: downshifting 10 km/h later under braking means slightly less engine braking, which the braking plan should absorb. Corners and slides should be unchanged. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -348,4 +366,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.19 implemented, awaiting run.*
+*Last updated: v0.20 implemented, awaiting run.*

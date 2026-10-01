@@ -542,6 +542,7 @@ def drive_example(c):
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.20       # steer per unit of trackPos away from the racing line (only in bends).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
+    gear_hysteresis=10  # km/h below a shift-up speed before shifting back down.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
 
     # Steer To Corner
@@ -609,6 +610,10 @@ def drive_example(c):
         R['gear']=5
     if S['speedX']>170:
         R['gear']=6
+    # Hysteresis: hold the current gear until the speed is gear_hysteresis km/h
+    # below the speed it was shifted up at, so the car cannot hunt between two gears.
+    if R['gear'] < S['gear'] and S['speedX'] > [0, 50, 80, 110, 140, 170][int(S['gear'])-1] - gear_hysteresis:
+        R['gear']= int(S['gear'])
     return
 
 # ================ MAIN ================
