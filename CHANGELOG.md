@@ -158,6 +158,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.9`). Line 536: `target_speed=120` → `target_speed=160`. Single value, no other changes. |
 | **Why** | v0.8 telemetry showed the car held at ~120 km/h with the throttle closed for 27% of the lap, on every longer straight. The brake planner (`brake_decel = 8.0`) already allows up to ~200 km/h with 200 m of clear road and slows the car for corners on its own, so `target_speed` is no longer needed as a safety limit on the straights. 160 km/h is a moderate step (+40 km/h) that stays well inside the planner's limit. Side effect to watch: `target_speed` also feeds the corner reduction `target_speed − abs(steer)×50`, so the throttle aim in gentle corners also rises by 40 km/h — v0.8 telemetry shows the slowest corners are set by the brake planner, not this term, so the effect should mostly be on fast sweepers. |
 | **Prediction** | Higher speeds on the straights: top speed roughly 155–165 km/h (up from 148), with harder and longer braking at the ends of the straights. Lap time faster than v0.8 (2:08.37). Min speed unchanged (~50 km/h), since slow corners are set by the brake planner. Fast sweeping corners will be taken quicker, which is the main risk — watch for the car running wide in fast bends. Damage expected to stay at 0. |
+| **Lap time** | 2:02.25 |
+| **Damage** | 0 |
+| **Top speed** | 175 km/h |
+| **Min speed** | 50 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 6.12 s faster than v0.8 (2:08.37 → 2:02.25) — the fastest lap so far. Top speed 148 → 175 km/h (15 km/h above the 160 target — the throttle eases off only 0.01 per step). Min speed unchanged at 50 km/h. Telemetry (`runs/run_20261001_155436.csv`): time at the speed cap fell from 27% to ~8% of the lap; full throttle rose from 3% to 14%; time spent braking rose from 29% to 41% (braking from higher speeds), with max pedal 0.68. The lowest speed in every section of the track was within 1–2 km/h of v0.8 — corner speeds did not change. Steering reached full lock (`|steer|` ≈ 1.0) at ~2,450 m and ~3,250 m. Max `|trackPos|` 0.37 and max sideways speed 2.4 km/h, the same as before: no sliding and the edges are still unused. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | Raising the speed cap gained 6 s on the straights alone, and fast sweepers caused no problems. Corners are now the main limit: the minimum speed in each corner has not changed since v0.7, because it is set by the brake planner — the car always plans to be able to slow to `corner_speed = 50` km/h within the visible road minus the 15 m margin, and in a corner the visible road is only ~15–25 m (allowed speed ~50–68 km/h). The car is not close to its grip limit there (no sliding) and uses only the middle third of the track, so corner speed can rise. Full steering lock at the two slowest corners comes from the steering gains saturating, not from the car being at its grip limit, but those two corners are where to watch first when corner speed goes up. |
+
+---
+
+## v0.10 — Raise `corner_speed` 50 → 60 km/h
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.10 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.10`). Line 537: `corner_speed=50` → `corner_speed=60`. Single value, no other changes. |
+| **Why** | v0.9 telemetry showed corner speeds unchanged since v0.7 — every corner minimum is set by the brake planner, which only lets the car go as fast as it could still slow to `corner_speed` by the end of the visible road (minus 15 m). In corners the visible road is short (~15–25 m), so `corner_speed` is effectively the corner speed limit. The car shows no sliding and stays within the middle third of the track, so there is grip and room to spare. Raising `corner_speed` by 10 km/h (+20%) lifts the allowed speed at every distance, most of all in tight corners: with 15 m visible, 50 → 60 km/h; with 22 m, ~63 → ~71 km/h; with 30 m, ~75 → ~82 km/h; with 200 m, ~202 → ~205 km/h. |
+| **Prediction** | Higher speeds through all slower corners and a minimum speed of roughly 58–62 km/h. Lap time faster than v0.9 (2:02.25). Top speed similar (~175 km/h). The car should start using more track width (`|trackPos|` above 0.37) and may show some sideways sliding. Main risk: the two slowest corners (~2,450 m and ~3,250 m from the start line), where steering is already at full lock — the car may run wide there. Damage expected to stay at 0; if the car leaves the track in those corners, this value should come back down to ~55. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -168,4 +186,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.9 implemented, awaiting run.*
+*Last updated: v0.10 implemented, awaiting run.*
