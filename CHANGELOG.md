@@ -266,6 +266,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.15`). New knob `line_gain=.20` (line 543). The racing-line line (563) changes from `steer += line_target·0.10` to `steer += (line_target − trackPos)·line_gain`, where `line_target = line_offset·phase·side` as in v0.14. Still only active in bends (`\|aim\|` over 2°); `line_offset` (0.5) and the phase (outside at `ahead` ≥ 80 m, inside at ≤ 40 m) are unchanged. |
 | **Why** | v0.14 moved the car only ~0.05–0.1 toward a 0.5 target, yet the corners where it moved were the ones that got faster. The pull needs to be stronger. With the car on the centre line, the push toward the line doubles from 0.05 to 0.10 steer. The new form also fades as the car approaches the target: together with the 0.10 centring term the car settles at `trackPos` = 0.5 × 0.20 / 0.30 ≈ 0.33 if a bend lasts long enough, and can never be pushed past `line_offset`, whatever the gain. Just raising the old 0.10 gain to 0.20 would instead have pushed toward `trackPos` 1.0, the track edge. |
 | **Prediction** | Clearer use of the track width: max `\|trackPos\|` around 0.4–0.5 (0.37 in v0.14), with the car on the outside before bends and the inside near the apexes in more corners. Lap time roughly 0.5–1.5 s faster than v0.14 (1:44.52), mostly in the same corners that gained in v0.14 (~400, ~1,000, ~1,500, ~2,600, ~2,700 m). Risks: the stronger pull may fight the look-ahead steering and make the car weave in bends (watch `steer` swings and sideways speed); the ~2,450 m hairpin (9.1 km/h sideways in v0.14) — reject if it goes well above ~10 km/h; and `\|trackPos\|` above ~0.6 anywhere would mean the line is not behaving as designed. Damage expected to stay at 0. |
+| **Lap time** | 1:44.09 |
+| **Damage** | 0 |
+| **Top speed** | 170 km/h |
+| **Min speed** | 68 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 0.43 s faster than v0.14 (1:44.52 → 1:44.09) — the fastest lap so far, but below the predicted 0.5–1.5 s. Top speed 170 km/h (unchanged). Telemetry (`runs/run_20261001_163525.csv`): **the car did not move further out — max `\|trackPos\|` fell from 0.37 to 0.33**, against a predicted 0.4–0.5. In some corners the car moved a little further toward the line (~1,000 m −0.26 → −0.28; ~1,400–1,500 m up to +0.24), but on most straights and fast bends it sat closer to the centre. Gains at ~400 m, ~500 m, ~1,000 m (−0.07/−0.08 s each), ~1,500 m and ~3,000 m (−0.06 s each) and the ~2,450 m hairpin (−0.05 s); losses at ~600 m (+0.06 s) and the fast kink at ~2,100 m (+0.04 s, minimum speed 157 → 149 km/h). **Steering is busier:** steps with a steering change over 0.05 rose from 157 to 196 (+25%), most at ~2,900 m (2 → 11) and ~2,600 m (4 → 9). Sideways speed rose slightly in several bends (e.g. ~1,600 m 2.1 → 3.2, ~2,700 m 2.3 → 3.2 km/h); at the ~2,450 m hairpin exit 9.1 → 8.9 km/h. Slowest corner 68 km/h (~3,273 m hairpin). Braking 29% of the lap, max pedal 0.41; full throttle 16%; rear wheelspin above the traction-control threshold 3.8%. The car sits at the 160 km/h `target_speed` cap (no brake, `\|steer\|` < 0.1, ≥ 158 km/h) for 22% of the lap (19% in v0.12, 22% in v0.13–v0.14), while the `abs(steer)*50` corner reduction limits speed only 0.1% of the time. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | The new pull form brings a side effect: its `−trackPos·line_gain` part is extra centring whenever the line target is near 0 (the 60 m blend point), so the car ends up nearer the centre overall, and the stronger pull makes the steering busier. Steering bias alone gives only small gains here (0.74 s, then 0.43 s), because the heading term (`angle·15/PI`) dominates the steering and corner speed is set mainly by the braking plan. The lap data now points elsewhere: the car spends 22% of the lap pinned at the 160 km/h cap on straights, and the `abs(steer)*50` term almost never limits it. |
+
+---
+
+## v0.16 — Raise `target_speed` 160 → 180 km/h
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.16 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.16`). Line 536: `target_speed=160` → `target_speed=180`. Single value, no other changes. Racing line (`line_offset` 0.5, `line_gain` 0.20) and braking plan unchanged. |
+| **Why** | v0.15 telemetry: the car sits at the 160 km/h cap for 22% of the lap (~23 s), up from 8% in v0.9, because braking later (v0.12–v0.13) left more of each straight at full speed. The `abs(steer)*50` corner reduction limits speed only 0.1% of the time, so corners are governed by the braking plan, which also protects the higher straight speed: from 180 km/h (50 m/s) to 70 km/h at 11 m/s² needs ~96 m plus the 15 m margin, and the forward beams see up to 200 m. +20 km/h is a +12.5% step. 6th gear (above 170 km/h) reaches the limiter only at ~321 km/h. |
+| **Prediction** | Top speed around 185–190 km/h (the throttle overshoots the cap by ~10 km/h, as seen at 160). Time at the cap well below 22%; braking zones start earlier and run longer from the higher speed, with a higher max pedal. Lap time roughly 1–2 s faster than v0.15 (1:44.09), gained on the straights (~1,300, ~1,700, ~2,100–2,200, ~3,100, ~3,400 m); corner sections about the same. Corner minimums and the ~2,450 m hairpin (8.9 km/h sideways) should not change much because the braking plan sets the corner entry speed. Risk: weaving at the higher speed (steering gain does not yet fall with speed, and v0.15 already made the steering busier) — watch steering changes and sideways speed on the straights; reject on any damage or if the car gets unsettled. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -276,4 +294,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.15 implemented, awaiting run.*
+*Last updated: v0.16 implemented, awaiting run.*
