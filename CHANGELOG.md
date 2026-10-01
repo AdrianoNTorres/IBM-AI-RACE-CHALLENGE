@@ -96,4 +96,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.5 run.*
+## v0.6 — Shift gears on engine RPM instead of fixed speeds
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.6 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.6`). Replaced the fixed speed shift points (50/80/110/140/170 km/h) with RPM-based shifting (lines 575–596): shift up when `rpm > 18000`; shift down when the lower gear would put the engine below 17,000 rpm (predicted from the `car1-ow1` gear ratios `[3.9, 2.9, 2.3, 1.87, 1.68, 1.54]`); wait 10 steps (0.2 s) after any shift before shifting again; 1st gear below 10 km/h. The shift decision starts from the last commanded gear (`R['gear']`). No other changes. |
+| **Why** | `car1-ow1.xml` (in the TORCS install) shows torque peaks at 16,000–18,000 rpm with the limiter at 18,700 rpm, and 1st gear alone reaches ~127 km/h at the limiter. The old shift points changed up at only 7,400–10,800 rpm, so the engine never got near its torque peak — at 145 km/h the car was in 5th at ~9,200 rpm; in 2nd it would be ~15,900 rpm with roughly 1.8× the pushing force at the wheels. v0.5 showed acceleration between corners is where the time is. A simulated speed sweep of the new logic gives clean shifts with no hunting: up 1→2 at ~122 km/h and 2→3 at ~164 km/h; down 3→2 at ~155 km/h and 2→1 at ~115 km/h. |
+| **Prediction** | Much stronger acceleration everywhere; the car should mostly use gears 1–3 on this track. Lap time faster than v0.5 (2:27.84). Top speed should rise, but is still capped by the brake planner (~163 km/h max with 200 m of clear road). Min speed should stay near 49 km/h. Risks: more wheelspin out of slow corners in 1st (traction control should catch it), and stronger engine braking on the rear wheels when downshifting under braking, which could make the car twitchy into corners. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.6 implemented, awaiting run.*
