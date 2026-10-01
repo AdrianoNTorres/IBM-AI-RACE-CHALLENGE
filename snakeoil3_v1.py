@@ -533,7 +533,7 @@ def drive_example(c):
     '''This is only an example. It will get around the track but the
     correct thing to do is write your own `drive()` function.'''
     S,R= c.S.d,c.R.d
-    target_speed=180
+    target_speed=200
     corner_speed=70   # km/h the car must be able to slow to by the end of the visible road.
     brake_decel=11.0  # m/s^2 of deceleration assumed when planning (measured ~11.5 at pedal 0.3).
     brake_margin=15   # m of visible road kept in reserve.

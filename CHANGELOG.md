@@ -284,6 +284,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.16`). Line 536: `target_speed=160` → `target_speed=180`. Single value, no other changes. Racing line (`line_offset` 0.5, `line_gain` 0.20) and braking plan unchanged. |
 | **Why** | v0.15 telemetry: the car sits at the 160 km/h cap for 22% of the lap (~23 s), up from 8% in v0.9, because braking later (v0.12–v0.13) left more of each straight at full speed. The `abs(steer)*50` corner reduction limits speed only 0.1% of the time, so corners are governed by the braking plan, which also protects the higher straight speed: from 180 km/h (50 m/s) to 70 km/h at 11 m/s² needs ~96 m plus the 15 m margin, and the forward beams see up to 200 m. +20 km/h is a +12.5% step. 6th gear (above 170 km/h) reaches the limiter only at ~321 km/h. |
 | **Prediction** | Top speed around 185–190 km/h (the throttle overshoots the cap by ~10 km/h, as seen at 160). Time at the cap well below 22%; braking zones start earlier and run longer from the higher speed, with a higher max pedal. Lap time roughly 1–2 s faster than v0.15 (1:44.09), gained on the straights (~1,300, ~1,700, ~2,100–2,200, ~3,100, ~3,400 m); corner sections about the same. Corner minimums and the ~2,450 m hairpin (8.9 km/h sideways) should not change much because the braking plan sets the corner entry speed. Risk: weaving at the higher speed (steering gain does not yet fall with speed, and v0.15 already made the steering busier) — watch steering changes and sideways speed on the straights; reject on any damage or if the car gets unsettled. |
+| **Lap time** | 1:42.73 |
+| **Damage** | 0 |
+| **Top speed** | 193 km/h |
+| **Min speed** | 68 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 1.36 s faster than v0.15 (1:44.09 → 1:42.73) — the fastest lap so far, inside the predicted 1–2 s. Top speed 170 → 193 km/h (13 km/h over the cap, slightly more than predicted). Telemetry (`runs/run_20261001_164043.csv`): the time came from the straights as predicted — ~1,700 m (−0.28 s), ~3,400 m (−0.24 s), ~2,200 m (−0.23 s), ~1,300 m (−0.16 s), ~3,500 m (−0.13 s), ~1,800 m and ~3,100 m (−0.08 s each); corner sections were within ±0.05 s of v0.15. Time at or above 158 km/h with no brake and little steering fell from 22.0% to 17.3% of the lap; time at the new 180 cap (≥ 178 km/h) is 7.8%. Full throttle rose from 16% to 26%; braking from 29% to 33% of the lap, max pedal 0.41 → 0.47. **No sign of weaving at speed:** above 150 km/h max sideways speed 2.5 km/h (2.4 in v0.15), max `\|steer\|` 0.16 and mean steering change per step unchanged (0.0016 vs 0.0015). Slowest corner 68 km/h (~3,273 m hairpin); sideways speed at the ~2,450 m hairpin exit 9.2 km/h (8.9); max `\|trackPos\|` 0.33. Rear wheelspin above the traction-control threshold 3.8%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | Raising the straight-line cap paid off cleanly: the braking plan handled the extra speed (later braking from higher speeds, corner minimums unchanged), and the steering stayed calm at ~190 km/h even without a speed-dependent gain. The car still reaches the cap on several straights (7.8% of the lap at ≥ 178 km/h), so there is more to take there, though each step will gain less as more straights end in braking before the cap is reached. |
+
+---
+
+## v0.17 — Raise `target_speed` 180 → 200 km/h
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.17 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.17`). Line 536: `target_speed=180` → `target_speed=200`. Single value, no other changes. |
+| **Why** | v0.16 gained 1.36 s on the straights with no weaving (above 150 km/h: max sideways speed 2.5 km/h, steering activity unchanged), and the car still sits at the 180 cap for 7.8% of the lap (~1,300, ~1,700, ~2,200, ~3,100, ~3,400–3,500 m). The braking plan covers the higher speed: from 200 km/h (55.6 m/s) to 70 km/h at 11 m/s² needs ~123 m plus the 15 m margin, within the 200 m beam range. +20 km/h is a +11% step. |
+| **Prediction** | Top speed around 205–212 km/h (the throttle overshoots the cap by ~10–13 km/h). Lap time roughly 0.5–1 s faster than v0.16 (1:42.73) — less than last time, because the time at the cap is now 7.8% instead of 22% and more straights will end in braking before reaching 200. Gains on the same straights; corners unchanged; braking time and max pedal a little higher. Risk: weaving or a twitchy car at 200+ km/h (steering gain still does not fall with speed) — watch steering and sideways speed above 150 km/h; reject on any damage or if the car gets unsettled. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -294,4 +312,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.16 implemented, awaiting run.*
+*Last updated: v0.17 implemented, awaiting run.*
