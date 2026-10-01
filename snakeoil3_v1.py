@@ -538,7 +538,7 @@ def drive_example(c):
     R['steer']-= S['trackPos']*.10
 
     # Throttle Control
-    if S['speedX'] < target_speed - (R['steer']*50):
+    if S['speedX'] < target_speed - (abs(R['steer'])*50):
         R['accel']+= .01
     else:
         R['accel']-= .01
@@ -569,6 +569,12 @@ if __name__ == "__main__":
     C= Client(p=3001)
     for step in range(C.maxSteps,0,-1):
         C.get_servers_input()
+        if not C.so: break # Server ended the race.
+        # End the run as soon as any damage is taken.
+        if C.S.d.get('damage', 0) > 0:
+            print("Damage taken (%.0f) at %.1f m, lap time %.2f s. Ending run." %
+                  (C.S.d['damage'], C.S.d.get('distRaced', 0), C.S.d.get('curLapTime', 0)))
+            break
         drive_example(C)
         C.respond_to_server()
     C.shutdown()

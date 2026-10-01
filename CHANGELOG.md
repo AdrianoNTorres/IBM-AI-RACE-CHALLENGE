@@ -1,7 +1,8 @@
 # AI Racing — Experiment Changelog
 
 All experiments are conducted in TORCS via `gym_torcs`.  
-Results are real measured values only — no invented data.
+Results are real measured values only — no invented data.  
+The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git commit tagged with its version number (e.g. `v0.3`). To run an older version: `git checkout v0.2 -- snakeoil3_v1.py` (restore with `git checkout main -- snakeoil3_v1.py`).
 
 ---
 
@@ -41,4 +42,22 @@ Results are real measured values only — no invented data.
 
 ---
 
-*Last updated after v0.2 run.*
+## v0.3 — Fix signed steer in corner speed reduction (+ stop run on damage)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.3 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.3`). Line 541: `target_speed - (R['steer']*50)` → `target_speed - (abs(R['steer'])*50)`. Also added a check in the main loop that ends the run as soon as `damage > 0` and prints the damage, distance raced and current lap time. `target_speed` stays at `80` km/h; no other driving logic changed. |
+| **Why** | `steer` is signed (+ = left, − = right). The old formula lowered the target speed in left-hand corners but **raised** it in right-hand corners, so the car only slowed for half the corners. This has to be fixed before speeds go up, or right-handers will be where the car crashes. The damage stop enforces the zero-damage rule: a run that takes any damage is a failed run, so there is no point continuing it. |
+| **Prediction** | Car slows for right-hand corners as well as left-hand ones. Lap time likely the same or slightly slower than v0.2 (2:43.38), because the car now gives up speed it was carrying through right-handers. Min speed may drop slightly below 49 km/h. Damage should stay at 0 and the run should not be stopped early. |
+| **Lap time** | 2:48.72 |
+| **Damage** | 0 |
+| **Top speed** | 86 km/h |
+| **Min speed** | 49 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 5.34 s slower than v0.2 (2:43.38 → 2:48.72). Top speed fell from 109 to 86 km/h; min speed was unchanged at 49 km/h. |
+| **Decision** | ✅ Kept — slower, but this is a correctness fix that must be in place before speeds are raised |
+| **Learned** | The v0.2 top speed of 109 km/h was most likely caused by the sign bug rather than normal overshoot: in right-hand corners the target was raised by up to 50 km/h (80 → ~130), so the car was speeding up into right-handers. With the bug fixed, the car stays within ~6 km/h of the 80 km/h target. Part of v0.2's lap time came from carrying unsafe speed through right-handers — the 5.34 s loss is the honest cost of slowing for every corner. The car now needs a real brake to go faster safely. |
+
+---
+
+*Last updated after v0.3 run.*
