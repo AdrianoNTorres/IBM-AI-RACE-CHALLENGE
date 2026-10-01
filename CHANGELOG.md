@@ -122,6 +122,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.7`), built on v0.5 (v0.6 gear shifting reverted). Added an open-road steering term (lines 547–552): the bearing of the open road ahead is the average angle of the 19 track beams weighted by distance², and `R['steer'] -= bearing × lookahead_gain` with `lookahead_gain = 2.0` steer per radian. The track sensor angles moved to one list, `TRACK_ANGLES` (line 64), used both for the init message and this calculation (angles sent to the server are unchanged). Also added a telemetry logger that writes one CSV row per step to `runs/run_<date>_<time>.csv` (speed, gear, rpm, throttle, brake, steer, track position, angle, visible road ahead, rear wheelspin, damage) — it does not affect driving, and `runs/` is not committed to Git. |
 | **Why** | The steering only reacts to where the car is now (`angle` and `trackPos`), so it starts turning only after the car is already misaligned in the corner — it turns in late. The longest track beams point where the road is going, so steering toward them turns the car in earlier and more smoothly. On a straight the beams are symmetric and the term is zero; for a typical left bend it adds about +0.26 steer. This is plan item 5 (next in order after gears). Speed-scaled steering gain from the same plan item is left out because no high-speed weaving has been seen at ≤145 km/h. Telemetry is added because v0.6's result could not be explained without data. |
 | **Prediction** | Smoother, earlier turn-in and the car holding a tighter line through corners. Because steering rises earlier, the `abs(steer)*50` corner reduction also starts earlier, so the car may slow a little sooner for corners. Lap time expected similar to or slightly faster than v0.5 (2:27.84) — this change is mostly for stability, to prepare for higher speeds. Top speed similar to v0.5 (~145 km/h). Min speed may change slightly. Risk: if the gain is too high the car may cut toward the inside edge or weave on corner exit. Damage expected to stay at 0. |
+| **Lap time** | 2:19.31 |
+| **Damage** | 0 |
+| **Top speed** | 145 km/h |
+| **Min speed** | 50 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 8.53 s faster than v0.5 (2:27.84 → 2:19.31) — the fastest lap so far and the biggest single gain since braking (v0.4). Top speed unchanged at 145 km/h; min speed 49 → 50 km/h. Telemetry (`runs/run_20261001_154006.csv`, 6,574 steps — ~21 ms per step, not exactly 20 ms) shows: the car **braked for 43% of the lap** but the brake pedal never went above 0.28 (average 0.06); full throttle only 2% of the lap; max `|trackPos|` 0.37 — the car never went near the track edges; max sideways speed 2.6 km/h — no sliding at all; rear wheelspin above the traction-control threshold only 3% of the lap; gears 2–4 used almost exclusively. On the longer straights (around 1,300 m, 1,700 m, 2,200 m and 3,400 m from the start line) the car coasted with throttle closed at 120–145 km/h because it was above `target_speed`. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | Turning in earlier made a large difference even at unchanged top and min speeds, so the car was losing time mid-corner, not just on straights. The telemetry shows the car is driving far below its limits: (1) **Braking is far too gentle** — measured deceleration was ~4.9 m/s² at pedal 0.1, ~9.4 m/s² at 0.2 and ~11.5 m/s² at 0.3, but the planner assumes only `brake_decel = 5.0` m/s², so the car brakes lightly over very long distances. (2) **`target_speed` (120) is now limiting the straights** — the car coasts above it instead of accelerating. (3) **Grip and track width are unused** — no sliding and never beyond 37% of the way to an edge, so corner speeds can rise. (4) Wheelspin is rare in v0.5 gearing, so traction control (plan item 8) and edge slowdown (plan item 7) would gain little right now. The plan order is changed to follow the data: braking first, then `target_speed`, then corner speed. |
+
+---
+
+## v0.8 — Stronger braking plan (`brake_decel` 5.0 → 8.0 m/s²)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.8 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.8`). Line 538: `brake_decel=5.0` → `brake_decel=8.0`. Single value, no other changes. |
+| **Why** | v0.7 telemetry showed the car braking for 43% of the lap with an average pedal of only 0.06, because the planner assumes the car can only slow at 5 m/s². The same telemetry measured ~9.4 m/s² at pedal 0.2 and ~11.5 m/s² at pedal 0.3, so the brakes have far more to give. At 8.0 m/s² the planner lets the car brake later and harder: allowed speed with 100 m of road ahead rises from ~116 to ~142 km/h, and with 60 m from ~91 to ~111 km/h. The end-of-road speed (`corner_speed = 50` km/h) and the 15 m safety margin are unchanged, so the car still plans to reach the same corner speed — it just gets there later. 8.0 is kept well below the measured 11.5 m/s² as a safety reserve. |
+| **Prediction** | Shorter braking zones and a clearly faster lap than v0.7 (2:19.31). Time spent braking should drop well below 43% and the brake pedal should go higher (roughly 0.15–0.25). Top speed similar (~145 km/h) because `target_speed` still limits the straights. Min speed similar (~50 km/h), possibly slightly higher because the brake controller lags a few km/h behind the planned speed when braking harder. ABS may start to act. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -132,4 +150,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.7 implemented, awaiting run.*
+*Last updated: v0.8 implemented, awaiting run.*
