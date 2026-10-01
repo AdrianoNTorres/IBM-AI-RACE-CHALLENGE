@@ -549,7 +549,7 @@ def drive_example(c):
 
     # Throttle Control
     if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
-        R['accel']+= .01
+        R['accel']+= .05
     else:
         R['accel']-= .01
     if S['speedX']<10:

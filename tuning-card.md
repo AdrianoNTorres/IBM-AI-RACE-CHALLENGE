@@ -1,6 +1,6 @@
 # Tuning Card — `drive_example()` in `snakeoil3_v1.py`
 
-`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.4`. `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
+`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.5`. `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
 
 The client runs at **50 steps per second** (one step ≈ 20 ms). Every step it reads all sensors, runs `drive_example()`, and sends all actions back.
 
@@ -20,7 +20,7 @@ The client runs at **50 steps per second** (one step ≈ 20 ms). Every step it r
 | `PI` divisor in steer | 540 | `PI` (≈3.14159) | Normalises the angle (in radians) into a −1…+1 steering command. | (Lowering the divisor has the same effect as raising the gain — see row above.) | (Raising the divisor weakens the response — see row above.) | **Medium** — do not change unless you understand radian normalisation. |
 | Track-position correction (`*.10`) | 542 | `0.10` | How aggressively the car steers back toward the centre of the road when it drifts sideways. | Car snaps back to centre faster; can cause weaving on straights. | Car drifts toward the edges more easily; may run off track. | **Medium** — high values combined with a high angle gain cause oscillation. |
 | Corner speed reduction (`*50`) | 551 | `50` | Lowers the throttle's aim by `abs(steer) × 50` km/h while steering (sign bug fixed in v0.3). | Target speed drops more in corners. | Car barely slows for corners. | **High** — likely what sets the 49 km/h minimum speed. |
-| Throttle ramp-up step (`+= .01`) | 552 | `0.01` | How quickly the throttle opens each step when below the speed limit. 0 → full throttle takes 100 steps (2 s). | Throttle builds faster; quicker corner exits. | Very slow throttle response. | **Low** — larger values may cause wheelspin (traction control helps). |
+| Throttle ramp-up step (`+= .05`) | 552 | `0.05` — `0.01` until v0.4 | How quickly the throttle opens each step when below the speed limit. 0 → full throttle takes 20 steps (0.4 s). | Throttle builds faster; quicker corner exits. | Very slow throttle response. | **Low** — larger values may cause wheelspin (traction control helps). |
 | Throttle ramp-down step (`-= .01`) | 554 | `0.01` | How quickly the throttle closes each step when above the speed limit. | Throttle closes faster; less overshoot of `target_speed`. | Throttle bleeds off slowly; car overshoots target speed. | **Low** — the brake handles corners now. |
 | Low-speed boost threshold | 555 | `10` (km/h) | Speed below which an emergency throttle boost kicks in to prevent stalling. | Boost activates at higher speeds. | Boost activates only at very low speeds; car may stall on a standing start. | **Low** — mainly affects standing starts and recovery from a spin. |
 | Low-speed boost formula (`1/(speedX+.1)`) | 556 | `1 / (S['speedX'] + .1)` | Magnitude of the emergency boost — large when nearly stopped, fades as speed rises. The `+.1` prevents division by zero. | N/A (formula) — raising the numerator above 1 gives a stronger launch kick. | Reducing the numerator weakens the launch boost. | **Low** — only active below 10 km/h. |
