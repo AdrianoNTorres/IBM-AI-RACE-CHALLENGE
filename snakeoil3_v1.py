@@ -545,6 +545,7 @@ def drive_example(c):
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
+    ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
 
     # Steer To Corner
@@ -562,13 +563,20 @@ def drive_example(c):
     # target to the outside while plenty of road is visible, and to the inside
     # once the road ahead shortens near the apex. trackPos +1 = left, so the
     # outside of a right-hand bend (aim > 0) is +.
+    # Visible road ahead: the longest beam within 0.5 deg of the nose and, when
+    # the car points within ahead_angle_max of the track direction, within 0.5
+    # deg of the track direction too, so a car angled toward an edge on a
+    # straight does not see a false end of the road.
     ahead= max(S['track'][8], S['track'][9], S['track'][10])
+    track_dir= -S['angle']*180/PI   # bearing of the track direction, deg (+ = right)
+    if abs(track_dir) <= ahead_angle_max:
+        ahead= max(ahead, max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5)))
     line_target= 0
     if abs(aim) > 2:
         phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         line_target= line_offset*phase*(1 if aim > 0 else -1)
         R['steer']+= (line_target - S['trackPos'])*line_gain
-    c.aim, c.line_target= aim, line_target   # kept for telemetry only
+    c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.
     R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
@@ -618,6 +626,16 @@ def drive_example(c):
     R['gear']= gear
     return
 
+def beam_at(track, bearing):
+    '''Distance to the track edge along any bearing (deg, + = right),
+    interpolated between the two neighbouring track beams.'''
+    for i in range(len(TRACK_ANGLES)-1):
+        a0, a1= TRACK_ANGLES[i], TRACK_ANGLES[i+1]
+        if a0 <= bearing <= a1:
+            f= (bearing-a0)/(a1-a0)
+            return track[i]*(1-f) + track[i+1]*f
+    return track[0] if bearing < 0 else track[-1]
+
 # ================ MAIN ================
 if __name__ == "__main__":
     C= Client(p=3001)
@@ -627,7 +645,7 @@ if __name__ == "__main__":
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
-              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,' +
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,' +
               ','.join('track%d' % i for i in range(19)) + '\n')  # track0-18: beams at TRACK_ANGLES
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
@@ -642,11 +660,11 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%s\n' % (
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
-            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target,
+            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead,
             ','.join('%.1f' % d for d in S['track'])))
     log.close()
     C.shutdown()

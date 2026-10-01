@@ -456,4 +456,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.25 run.*
+## v0.26 — Look-ahead along the track direction (`ahead_angle_max` 3°)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.26 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.26`), built on v0.24 (v0.25 reverted). New knob `ahead_angle_max=3` (line 548). The visible road ahead (`ahead`, lines 566–573) is still the longest of the three nose beams (`track[8..10]`), and now, when the car points within 3° of the track direction, also the longest of three bearings around the track direction (`−angle` ±0.5°, interpolated between neighbouring beams by the new `beam_at()`, line 629). `ahead` is never shorter than before. Telemetry: new column `aheadPlan` (the value the plan uses); `ahead` stays the nose-only value. Item A of the major plan. |
+| **Why** | v0.25 showed that the beams are measured from the car's nose: when the racing line angled the car ~1° toward the edge at 199 km/h (~2,228 m), `ahead` fell from 195 to 72 m and the plan braked to 153 km/h on a straight. Every racing-line change (plan item C) needs this fixed first. A replay on the v0.24 lap showed that using the track direction *instead of* the nose would lower the allowed speed in corners by 1–4 km/h (in a bend the nose points into the turn, which is where the road goes), so the longer of the two is used. Without a limit, the track direction would raise the allowed speed mid-flick by up to 40 km/h (car angled 4.6–7.3°), so it is used only within 3°. |
+| **Prediction** | Replay on the v0.24 lap: `ahead` longer in 1,161 of 4,698 steps, never shorter; the plan's allowed speed rises mainly on corner exits — ~2,100 m kink exit (up to +57 km/h, `ahead` 77 → 160 m), ~2,570 m (flick exit, up to +59), ~600, ~1,200, ~2,000 m (+1–3 km/h on average). The car should accelerate earlier out of those corners; braking points and corner minimums elsewhere unchanged. Lap roughly 0–0.4 s faster than 1:39.18 — this is mainly an enabling change for the racing line. Risks: arriving faster at the corner after an exit (the plan still brakes for it); the flick is protected by the 3° limit. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.26 implemented, awaiting run.*
