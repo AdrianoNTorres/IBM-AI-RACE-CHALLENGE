@@ -539,8 +539,10 @@ def drive_example(c):
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
-    line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
-    line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
+    line_offset=0.85    # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre; wheels reach the edge at 0.8).
+    line_gain=1.5       # steer per unit of trackPos away from the racing line (while a corner is in view).
+    line_range=200      # m: a corner counts as in view while the visible road ahead is shorter than this (200 = beam range).
+    line_steer_max=.21  # most steering the racing line may add (~2.5 deg of car angle, so the road ahead is still seen along the track).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -566,10 +568,6 @@ def drive_example(c):
     if sum(weights) > 0:
         aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
         R['steer']-= aim*PI/180 * lookahead_gain
-    # Racing Line (out-in-out): in a bend (bearing over 2 deg) move the centre
-    # target to the outside while plenty of road is visible, and to the inside
-    # once the road ahead shortens near the apex. trackPos +1 = left, so the
-    # outside of a right-hand bend (aim > 0) is +.
     # Visible road ahead: the longest beam within 0.5 deg of the nose and, when
     # the car points within ahead_angle_max of the track direction, within 0.5
     # deg of the track direction too, so a car angled toward an edge on a
@@ -578,11 +576,32 @@ def drive_example(c):
     track_dir= -S['angle']*180/PI   # bearing of the track direction, deg (+ = right)
     if abs(track_dir) <= ahead_angle_max:
         ahead= max(ahead, max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5)))
-    line_target= 0
-    if abs(aim) > 2:
+    # Racing Line (out-in-out): as soon as the end of the road is in view
+    # (ahead < line_range), move to the outside of the coming corner; the side
+    # comes from the tilt of the far road edge (the beam 1 deg toward the turn
+    # reaches further, seen up to 200 m out), held when unclear. Only once the
+    # car turns in (bearing over 2 deg) does the target go to the inside, as the
+    # road ahead shortens near the apex, and back out on the exit. An earlier
+    # inside move gives an early apex (v0.30). The pull is strong enough to
+    # override the heading term (at 0.5 the car lagged the line by ~57 m), but
+    # its steering is capped at line_steer_max so the car angles under ~3 deg
+    # and the road ahead is still measured along the track (v0.25: false braking).
+    # trackPos +1 = left, so the outside of a right-hand bend (side +1) is +.
+    tilt= (S['track'][11] - S['track'][7]) / max(ahead, 1)   # + = road turns right
+    side= getattr(c, 'line_side', 0)
+    if ahead >= line_range:
+        side= 0
+    elif abs(tilt) > .02:
+        side= 1 if tilt > 0 else -1
+    if abs(aim) > 2:   # turning in: side from the bearing, inside near the apex
+        side= 1 if aim > 0 else -1
         phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-        line_target= line_offset*phase*(1 if aim > 0 else -1)
-        R['steer']+= (line_target - S['trackPos'])*line_gain
+    else:              # corner ahead: outside
+        phase= 1
+    line_target= line_offset*phase*side
+    if side != 0:
+        R['steer']+= clip((line_target - S['trackPos'])*line_gain, -line_steer_max, line_steer_max)
+    c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.
