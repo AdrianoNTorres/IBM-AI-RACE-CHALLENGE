@@ -600,4 +600,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.33 run.*
+## v0.34 — Corner speed from sharpness: `turn_grip` 6 → 7
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.34 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.34`). `turn_grip` 6.0 → 7.0 m/s² (line 550): the sideways acceleration the sharpness plan assumes when the car curves onto a beam, `v = √(turn_grip·radius)`. Grip-limited corner speeds rise by √(7/6) ≈ +8%. Step 2 of the merged improvement plan (`improvement-plan.md`). |
+| **Why** | The sharpness plan was the biggest gain so far (v0.27, −6.78 s), and 6 m/s² was a first step: the medium corners run at ≤ 8.4 km/h sideways and `\|steer\|` ≤ 0.54 (v0.31), and the hairpin shows ≥ 14 m/s² of grip. Half the medium corners were held by this grip value in v0.27. The user's plan raises it in steps of 1 (7 → 8 → 9) and stops at the first sign of trouble. |
+| **Prediction** | Replay with the real `drive_example()` of v0.33 and v0.34 on every logged v0.33 row (open loop): steering identical; the allowed speed rises in 793 of 4,322 steps (up to +15.5 km/h where a corner is grip-limited), brake differs in 287 steps, throttle in 487. Braking steps fall in ~400 m (67 → 31), ~500 m (9 → 0), ~700 m (63 → 49), ~1,500 m (16 → 4), ~2,400 m (100 → 81) and ~2,900 m (69 → 60). At the flick (~2,418–2,450 m) and the hairpin (~3,231–3,251 m) the plan is off at full lock, but the approach braking eases ~0.1 pedal, so each enters ~2 km/h faster. Driven: medium-corner minimums a few km/h higher (e.g. ~485, ~1,523, ~1,926, ~2,983 m), sideways speed there up from ≤ 8.4 toward ~9–10 km/h, lap roughly 0.3–1.0 s faster than 1:31.03. Risks: the hairpin (v0.33 66 km/h, exit −0.65; 73 km/h gave −0.86 and 75 km/h left the track) and the flick (13.3 km/h sideways; its approach at ~2,384 m already 14.3). Reject on damage or leaving the track, or if medium-corner sideways speed climbs toward ~14 km/h. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.34 implemented, awaiting run.*

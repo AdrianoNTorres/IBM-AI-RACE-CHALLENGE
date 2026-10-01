@@ -547,7 +547,7 @@ def drive_example(c):
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
-    turn_grip=6.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
+    turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
     turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
