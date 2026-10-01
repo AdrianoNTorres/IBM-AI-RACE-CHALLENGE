@@ -530,20 +530,42 @@ def drive_example(c):
     '''This is only an example. It will get around the track but the
     correct thing to do is write your own `drive()` function.'''
     S,R= c.S.d,c.R.d
-    target_speed=80
+    target_speed=120
+    corner_speed=50   # km/h the car must be able to slow to by the end of the visible road.
+    brake_decel=5.0   # m/s^2 of deceleration assumed when planning (conservative).
+    brake_margin=15   # m of visible road kept in reserve.
+    brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
 
     # Steer To Corner
     R['steer']= S['angle']*15 / PI
     # Steer To Center
     R['steer']-= S['trackPos']*.10
 
+    # Brake Planning: fastest speed from which the car can still slow to
+    # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
+    ahead= max(S['track'][8], S['track'][9], S['track'][10])
+    v_corner= corner_speed/3.6
+    allowed_speed= (v_corner**2 + 2*brake_decel*max(0, ahead-brake_margin))**.5 * 3.6
+
     # Throttle Control
-    if S['speedX'] < target_speed - (abs(R['steer'])*50):
+    if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
         R['accel']+= .01
     else:
         R['accel']-= .01
     if S['speedX']<10:
        R['accel']+= 1/(S['speedX']+.1)
+
+    # Brake Control
+    R['brake']= 0
+    if ahead >= 0 and S['speedX'] > allowed_speed:
+        R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
+        R['accel']= 0
+
+    # ABS: halve the brake if any wheel turns 20% slower than the car moves (locking).
+    if R['brake'] > 0 and S['speedX'] > 20:
+        slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
+        if slowest_wheel < .8*S['speedX']/3.6:
+            R['brake']*= .5
 
     # Traction Control System
     if ((S['wheelSpinVel'][2]+S['wheelSpinVel'][3]) -
