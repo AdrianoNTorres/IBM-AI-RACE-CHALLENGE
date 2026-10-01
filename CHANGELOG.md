@@ -86,14 +86,14 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.5`). Line 552: throttle ramp-up step `R['accel']+= .01` → `R['accel']+= .05`. Single value, no other changes. The ramp-down step (`-= .01`) is unchanged. |
 | **Why** | After every braking zone the brake logic sets the throttle to 0, and at `+0.01` per step it took 100 steps (2 s) to get back to full throttle — the car was crawling out of every corner. At `+0.05` it reaches full throttle in 20 steps (0.4 s). Only the ramp-up is changed so the effect is isolated: the ramp-down and the overshoot behaviour seen in v0.4 stay the same. Traction control (−0.2 when the rear wheels spin) is already in place to catch wheelspin from the harder throttle. |
 | **Prediction** | Faster acceleration out of corners and a faster lap than v0.4 (2:31.18). Top speed similar to or slightly above 144 km/h, since the car reaches the straights sooner. Min speed should stay near 49 km/h (still set by the corner logic). Possible brief wheelspin on exits from slow corners. Damage expected to stay at 0. |
-| **Lap time** | _Pending run_ |
-| **Damage** | _Pending run_ |
-| **Top speed** | _Pending run_ |
-| **Min speed** | _Pending run_ |
-| **Observed** | _Pending run_ |
-| **Decision** | _Pending run_ |
-| **Learned** | _Pending run_ |
+| **Lap time** | 2:27.84 |
+| **Damage** | 0 |
+| **Top speed** | 145 km/h |
+| **Min speed** | 49 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 3.34 s faster than v0.4 (2:31.18 → 2:27.84) — the fastest lap so far. Top speed was essentially unchanged (144 → 145 km/h) and min speed was unchanged at 49 km/h. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | A single-value throttle change gained 3.34 s with no change in top or min speed, so the gain came from the time spent accelerating between corners, as predicted. Top speed barely moved, which points at the car's ability to accelerate (not the throttle command) as the limit on the straights. Checking `car1-ow1.xml` confirms why: the engine's torque peaks at 16,000–18,000 rpm (limiter 18,700), but the fixed speed-based shift points change up at only 7,400–10,800 rpm — at 145 km/h the car is in 5th at ~9,200 rpm, when 2nd gear would put it at ~15,900 rpm. |
 
 ---
 
-*Last updated: v0.5 implemented, awaiting run.*
+*Last updated after v0.5 run.*
