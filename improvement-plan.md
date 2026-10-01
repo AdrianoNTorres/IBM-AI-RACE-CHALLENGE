@@ -6,7 +6,7 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.33, 1:31.03, 0 damage. Telemetry: `runs/run_20261001_193205.csv`. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
+- **Best:** v0.34, 1:30.74, 0 damage. Telemetry: `runs/run_20261001_194740.csv`. (v0.33: 1:31.03.) Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
 - **v0.32 rejected** (1:32.45). The racing-line rework (`line_offset` 0.85, `line_gain` 1.5, `line_steer_max` 0.21) created a feedback loop. The line's steering swung the nose, which changed `aim` and `ahead`, which changed the target. The target jumped 261 times per lap, and steering reversals rose from 71 to 165. The 0.21 cap also meant the car crossed the track too slowly (~0.23 `trackPos`/s), so it never reached the line.
 - **v0.33 kept** (1:31.03, −0.34 s). The line's bend is held until `|aim|` < `line_aim_off` 1°, and the phase comes from the road along the track direction. Steering reversals fell 71 → 38, and target jumps fell 81 → 38.
 - **Racing line after v0.33 (user: "it goes out, but we aren't maximising the radius").** Outside the flick and the hairpin, entries, apexes and exits use only ~±0.25 of ±1:
@@ -38,7 +38,12 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 - **Effect:** steering reversals 71 → 38, target jumps 81 → 38.
 - **What it enables:** step 5 (a stronger line), now that the target no longer follows the car's own nose.
 
-### 2. v0.34–v0.36 — Raise `turn_grip` 6 → 7 → 8 → 9 ← **next: v0.34 (7)**
+### 2. v0.34 — Raise `turn_grip` 6 → 7 ✅ done (8 and 9 skipped)
+
+- **Result:** v0.34 (7): 1:30.74, −0.29 s. Hairpin exit −0.65 → −0.56, flick sideways 13.3 → 9.5 km/h, medium corners ≤ 9.1 km/h sideways.
+- **Why it stops at 7:** classified offline, 1,248 of 1,299 braking steps in v0.34 are held by braking distance and only 15 by grip. A replay of 8 changed the brake in only 34 steps (7 changed 287). The lever is now braking (step 3). Revisit `turn_grip` after step 3 raises `brake_decel`, when grip may bind again.
+
+Original step text:
 
 - **Change:** one version per step. Stop at the first sign of trouble.
 - **Why:** this is the strongest proven lever: adding the sharpness plan in v0.27 saved 6.78 s.
@@ -55,7 +60,7 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
   - Fade the sharpness plan out near `turn_steer_max` instead of switching it off (one full-brake step at ~2,574 m in v0.27).
   - A speed plan that knows the hairpin is tighter than the 75 km/h floor, if the hairpin margin shrinks.
 
-### 3. Braking to the real limit (plan E)
+### 3. Braking to the real limit (plan E) ← **next: v0.35 = 3a (`brake_gain` 0.08)**
 
 - **Change (two parts, one version each):**
   - a. `brake_gain` 0.05 → ~0.08.
@@ -109,8 +114,8 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 | Step | Change | Est. gain | Risk | Status |
 |---|---|---|---|---|
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
-| 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ⏳ v0.34 = 7 |
-| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14 | 0.8–1.5 s | Medium (lock-ups, entry slides) | |
+| 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped (not grip-limited) |
+| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14 | 0.8–1.5 s | Medium (lock-ups, entry slides) | ⏳ v0.35 = `brake_gain` 0.08 |
 | 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |
