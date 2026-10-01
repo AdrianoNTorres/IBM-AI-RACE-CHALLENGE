@@ -541,9 +541,6 @@ def drive_example(c):
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
-    line_range=150      # m: the racing line works while the visible road ahead is shorter than this (a corner is in view).
-    line_rate=.008      # most the line target may move toward the outside (or back to centre) per metre driven.
-    line_rate_in=.025   # most the line target may move toward the inside of the corner per metre driven.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -569,6 +566,10 @@ def drive_example(c):
     if sum(weights) > 0:
         aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
         R['steer']-= aim*PI/180 * lookahead_gain
+    # Racing Line (out-in-out): in a bend (bearing over 2 deg) move the centre
+    # target to the outside while plenty of road is visible, and to the inside
+    # once the road ahead shortens near the apex. trackPos +1 = left, so the
+    # outside of a right-hand bend (aim > 0) is +.
     # Visible road ahead: the longest beam within 0.5 deg of the nose and, when
     # the car points within ahead_angle_max of the track direction, within 0.5
     # deg of the track direction too, so a car angled toward an edge on a
@@ -577,37 +578,12 @@ def drive_example(c):
     track_dir= -S['angle']*180/PI   # bearing of the track direction, deg (+ = right)
     if abs(track_dir) <= ahead_angle_max:
         ahead= max(ahead, max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5)))
-    # Racing Line (out-in-out): as soon as a corner is in view (visible road
-    # shorter than line_range), move to its outside while plenty of road is
-    # visible, and to the inside once the road ahead shortens near the apex.
-    # The turn side comes from the tilt of the far road edge: the beam 1 deg
-    # toward the turn reaches further (+1 vs -1 deg beams, seen 100-200 m out);
-    # it is held when the tilt is unclear and reset once no corner is in view.
-    # The target moves at most line_rate per metre toward the outside or the
-    # centre, so the car angles under ~3 deg and the road ahead is still seen
-    # along the track direction (v0.25 snapped the target, the nose turned to
-    # the edge and the plan braked on a straight), and line_rate_in toward the
-    # inside, enough for turn-in. trackPos +1 = left: the outside of a
-    # right-hand bend (side +1) is +.
-    tilt= (S['track'][11] - S['track'][7]) / max(ahead, 1)   # + = road turns right
-    side= getattr(c, 'line_side', 0)
-    if ahead >= line_range:
-        side= 0
-    elif abs(tilt) > .02:
-        side= 1 if tilt > 0 else -1
-    phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-    line_target= line_offset*phase*side
-    prev_target= getattr(c, 'line_target', 0)
-    step= S['speedX']/3.6*.021   # metres driven this step (~21 ms)
-    if side != 0 and (line_target - prev_target)*side < 0:
-        step*= line_rate_in      # toward the inside of the corner
-    else:
-        step*= line_rate         # toward the outside, or back to the centre
-    line_target= clip(line_target, prev_target-step, prev_target+step)
-    if side != 0 or line_target != 0:
+    line_target= 0
+    if abs(aim) > 2:
+        phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
+        line_target= line_offset*phase*(1 if aim > 0 else -1)
         R['steer']+= (line_target - S['trackPos'])*line_gain
-    c.line_side, c.line_target= side, line_target   # kept between steps
-    c.aim, c.ahead= aim, ahead   # kept for telemetry only
+    c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.
     R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
