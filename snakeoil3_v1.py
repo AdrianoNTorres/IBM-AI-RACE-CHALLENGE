@@ -544,6 +544,7 @@ def drive_example(c):
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
+    lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
 
     # Steer To Corner
@@ -603,16 +604,16 @@ def drive_example(c):
        R['accel']-= .2
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
-    # shift down only when the lower gear would land below downshift_rpm. An
-    # upshift lands the old rpm back at upshift_rpm in this check, so the speed
-    # must fall ~10% before shifting back down: the car cannot hunt between gears.
+    # shift down only when the lower gear would land below downshift_rpm, and
+    # never below lowest_running_gear: 1st gear's engine braking makes the rear
+    # step out in slow corners, so 1st is used only to start (below 10 km/h).
     gear_ratios= [3.9, 2.9, 2.3, 1.87, 1.68, 1.54]   # gears 1-6, from car1-ow1.xml
     gear= int(S['gear'])
     if gear < 1 or S['speedX'] < 10:
         gear= 1
     elif gear < 6 and S['rpm'] > upshift_rpm:
         gear+= 1
-    elif gear > 1 and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm:
+    elif gear > lowest_running_gear and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm:
         gear-= 1
     R['gear']= gear
     return
