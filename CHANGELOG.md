@@ -428,6 +428,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.24`). Telemetry only: the CSV gets 19 new columns, `track0`–`track18`, the distance of every track beam (angles in `TRACK_ANGLES`, line 64; `track9` straight ahead). `drive_example()` is unchanged from v0.23, so the driving is identical. |
 | **Why** | The user wants corner speed to depend on how sharp a turn is, a wider out-in-out line, and the car lined up for the next turn or straight. All three need to know, 50–150 m before a corner, which way and how sharply it turns. v0.23 telemetry showed `aim` (the distance²-weighted beam bearing, the only direction signal logged) cannot tell: it stays within ±1.5° until ~30–60 m before every corner, the ~3,283 m hairpin included. A replay of the v0.23 lap with a line that holds the turn side from the sign of a small `aim` (> 0.3°) put the target on the wrong side before about half the corners (~419, ~1,520, ~1,925, ~2,728 m) and raised target side changes from 32 to 49 per lap, so it was not built. The individual beams (e.g. ±0.5° to ±7°) may show the turn earlier; logging them makes this measurable. As the driver is identical, this run also measures run-to-run variation, never measured so far, while recent gains have been 0.2–0.5 s. |
 | **Prediction** | Lap time close to v0.23 (1:39.18); any difference is run-to-run noise (expected within ~±0.1 s if TORCS and the client timing are near-deterministic). Same top speed (~212 km/h), slowest corner (~69 km/h), gear use and slides. Damage expected to stay at 0. |
+| **Lap time** | 1:39.18 |
+| **Damage** | 0 |
+| **Top speed** | 212 km/h |
+| **Min speed** | 69 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time 1:39.18, exactly as v0.23; top speed 212 km/h. Telemetry (`runs/run_20261001_175347.csv`): **the run is identical to v0.23 in every one of 4,747 steps** — every logged value matches — so TORCS plus this client is fully deterministic: any lap-time difference from now on is caused by the code change, however small. **Beams before corners:** on the approach to every corner the far edge of the road appears tilted: the beams on the side the road turns toward are a few metres longer. `track7` (−1°) vs `track11` (+1°) points the right way 100–150 m (often 200 m) before all 12 corners — e.g. ~3,283 m hairpin (left) 135 vs 129 at 150 m out and 83 vs 80 at 100 m; ~1,043 m (right) 127 vs 138 and 79 vs 86; ~1,925 m (left) 168 vs 158 and 116 vs 110 — while `aim` is still within ±1.5°. The side beams (±7° and wider) only see the near track edges until ~40 m out. A replay on the logged lap of a racing line that uses this signal (side from `(track11 − track7)/ahead` above 0.02, held otherwise; line on while `ahead` < 150 m; same outside/inside phase) puts the target on the outside 60–150 m before 9 of the 12 corners and on the inside near each apex; the other three are linked bends (~485 m after ~419 m; the flick and ~2,728 m) where it stays on one side. Target side changes 32 → 44, now at the corner entries. |
+| **Decision** | ✅ Kept — telemetry only; identical lap, beam data collected |
+| **Learned** | The simulation is deterministic, so even 0.05 s differences are real. The track beams do show which way a corner turns well before it — the tilt of the far edge, seen in the near-straight-ahead beams — which `aim` (dominated by the long central beams being nearly equal) cannot. That is the missing input for an out-in-out line that starts on the outside, and probably for a sharpness-based corner speed later. |
+
+---
+
+## v0.25 — Racing line from the beams: outside before every corner (`line_range` 150)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.25 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.25`). The racing line's trigger and turn direction change (lines 562–578); its target shape does not. Before: the line acted only when the look-ahead bearing `aim` was over 2°, with the side from the sign of `aim`. Now: it acts whenever a corner is in view, `ahead` < `line_range` (new knob, 150 m, line 544), and the side comes from the tilt of the far road edge, `turn = (track[11] − track[7]) / ahead` (+1° vs −1° beams, + = right); the side is updated when `\|turn\|` > 0.02 and held otherwise, and reset when `ahead` ≥ 150 m. The phase (outside at `ahead` ≥ 80 m, inside at ≤ 40 m), `line_offset` 0.5 and `line_gain` 0.50 are unchanged. |
+| **Why** | The user wants a better racing line that uses more of the track, and the car lined up for the next corner. v0.23 showed the line drove centre → inside → inside: `aim` passes 2° only ~40 m before a corner, when the phase is already "inside", so only 74 of 2,219 active steps were on the outside. v0.24 beam data shows `track7`/`track11` give the turn direction 100–200 m before every corner. In a replay this line is on the outside 60–150 m before 9 of 12 corners. On corner exits the side follows the next corner's tilt, so the car also starts lining up for the next turn. |
+| **Prediction** | The car sits on the outside before turn-in and crosses to the inside at the apex: `\|trackPos\|` up to ~0.4 on approaches (near 0 in v0.23), more of the lap above 0.3. `ahead` in corners a little longer (wider entry), so corner minimums up a few km/h; lap roughly 0.3–1 s faster than 1:39.18. Risks: the out → in move is a full track-width crossing in ~40 m, so steering gets busier (count steps with a change over 0.05; 355 in v0.23) and sideways speed may rise at turn-in; the ~3,283 m hairpin now starts from the right-hand outside and may run wider on exit (0.56 in v0.23 — reject if near ~0.8); the flick (10.9 km/h). Reject on damage or leaving the track. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -438,4 +456,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.24 implemented, awaiting run.*
+*Last updated: v0.25 implemented, awaiting run.*

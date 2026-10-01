@@ -540,7 +540,8 @@ def drive_example(c):
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
-    line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
+    line_gain=.50       # steer per unit of trackPos away from the racing line (only while a corner is in view).
+    line_range=150      # m: the racing line is used while the visible road ahead is shorter than this.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -558,15 +559,22 @@ def drive_example(c):
     if sum(weights) > 0:
         aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
         R['steer']-= aim*PI/180 * lookahead_gain
-    # Racing Line (out-in-out): in a bend (bearing over 2 deg) move the centre
-    # target to the outside while plenty of road is visible, and to the inside
-    # once the road ahead shortens near the apex. trackPos +1 = left, so the
-    # outside of a right-hand bend (aim > 0) is +.
+    # Racing Line (out-in-out): while a corner is in view (ahead < line_range),
+    # aim for the outside while plenty of road is visible and for the inside
+    # once the road ahead shortens near the apex. The turn direction comes from
+    # the tilt of the far edge of the road: when the road turns right, the beam
+    # at +1 deg reaches further than the one at -1 deg, 100-200 m before the
+    # corner. trackPos +1 = left, so the outside of a right-hand bend is +.
     ahead= max(S['track'][8], S['track'][9], S['track'][10])
+    turn= (S['track'][11] - S['track'][7]) / max(ahead, 1)   # + = road turns right
+    if ahead >= line_range:
+        c.line_side= 0                        # no corner in view: no racing line
+    elif abs(turn) > .02:
+        c.line_side= 1 if turn > 0 else -1    # otherwise keep the last side seen
     line_target= 0
-    if abs(aim) > 2:
+    if getattr(c, 'line_side', 0):
         phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-        line_target= line_offset*phase*(1 if aim > 0 else -1)
+        line_target= line_offset*phase*c.line_side
         R['steer']+= (line_target - S['trackPos'])*line_gain
     c.aim, c.line_target= aim, line_target   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
