@@ -68,14 +68,14 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.4`). Added brake planning: the longest of the three straight-ahead beams (`track[8..10]`, −0.5° / 0° / +0.5°) gives the visible road ahead, and `allowed_speed = sqrt(v_corner² + 2·a·(ahead − margin))` is the fastest speed from which the car can still slow to `corner_speed` in that distance (`corner_speed = 50` km/h, `brake_decel = 5.0` m/s², `brake_margin = 15` m). Throttle now aims for the lower of the old corner-adjusted target and `allowed_speed`. When `speedX > allowed_speed`, the brake is applied in proportion to the excess (`0.05` per km/h, full brake at 20 km/h over) and throttle is cut to 0. Added simple ABS: if the slowest wheel turns more than 20% slower than the car is moving (above 20 km/h), the brake is halved. `target_speed` raised from `80` → `120` km/h. Steering, traction control and gears unchanged. |
 | **Why** | The car has never used `R['brake']`; its only way to slow down is releasing the throttle 0.01 per step, which is why `target_speed` has been stuck at 80. A brake that plans from the visible road lets the car go faster on straights and still arrive at corners slowly. 120 km/h is a modest first step so the brake logic can be checked before going higher. With these settings the allowed speed is ~163 km/h with 200 m of clear road, ~116 km/h at 100 m, ~67 km/h at 30 m and 50 km/h at 15 m or less. ABS is included because full brake on this car can lock the wheels, and a locked front wheel cannot steer. |
 | **Prediction** | Top speed rises toward 120 km/h on the longer straights. The car brakes visibly before corners. Min speed should stay near 49–50 km/h. Lap time should be faster than v0.3 (2:48.72), possibly faster than v0.2 (2:43.38). Damage expected to stay at 0. Corner exits will still be slow because throttle restarts from 0 after braking and only rises 0.01 per step — that is the next change. |
-| **Lap time** | _Pending run_ |
-| **Damage** | _Pending run_ |
-| **Top speed** | _Pending run_ |
-| **Min speed** | _Pending run_ |
-| **Observed** | _Pending run_ |
-| **Decision** | _Pending run_ |
-| **Learned** | _Pending run_ |
+| **Lap time** | 2:31.18 |
+| **Damage** | 0 |
+| **Top speed** | 144 km/h |
+| **Min speed** | 49 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 17.54 s faster than v0.3 (2:48.72 → 2:31.18) and 12.20 s faster than v0.2 (2:43.38) — the fastest lap so far. Top speed rose from 86 to 144 km/h, 24 km/h above the 120 km/h target. Min speed was unchanged at 49 km/h. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | Braking from the visible road works: the car went 58 km/h faster at its peak and still slowed to the same 49 km/h minimum with no damage. `target_speed` is not a hard cap — the brake only acts on `allowed_speed`, and the throttle only closes 0.01 per step, so the car can overshoot `target_speed` by ~20+ km/h on long straights. That overshoot is currently "free" speed that the brake planner keeps safe. The 49 km/h minimum has not moved since v0.2, which suggests the slowest corner is limited by the `steer*50` corner reduction (and `corner_speed = 50`), not by braking. Corner exits are still slow: after braking, throttle restarts from 0 and takes 2 s to reach full. |
 
 ---
 
-*Last updated: v0.4 implemented, awaiting run.*
+*Last updated after v0.4 run.*
