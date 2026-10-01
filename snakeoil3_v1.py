@@ -550,6 +550,8 @@ def drive_example(c):
     turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
+    lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
+    lock_throttle=.3    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -630,6 +632,15 @@ def drive_example(c):
         slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
         if slowest_wheel < .8*S['speedX']/3.6:
             R['brake']*= .5
+
+    # Throttle Near Full Lock: at full lock the car is already turning as tight
+    # as it can, so more speed only pushes it wide (v0.28: throttle 1.0 at full
+    # lock in the ~3,283 m hairpin ran the car out to trackPos -0.92). Above
+    # lock_steer the throttle is limited, falling linearly to lock_throttle at
+    # full lock. The stored throttle is limited too, so it cannot wind up and
+    # snap open as the wheel straightens; it climbs back at +0.05 per step.
+    lock= clip((abs(R['steer'])-lock_steer)/(1-lock_steer), 0, 1)   # 0 below lock_steer, 1 at full lock
+    R['accel']= min(R['accel'], 1 - lock*(1-lock_throttle))
 
     # Traction Control: how much faster the rear (driven) wheels' surface moves
     # than the fronts', in m/s (tyre radii from car1-ow1.xml), so the limit does
