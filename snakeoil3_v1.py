@@ -572,28 +572,19 @@ def drive_example(c):
        (S['wheelSpinVel'][0]+S['wheelSpinVel'][1]) > 5):
        R['accel']-= .2
 
-    # Automatic Transmission: shift on engine RPM (car1-ow1: torque peaks
-    # 16,000-18,000 rpm, limiter 18,700 rpm).
-    global shift_wait
-    gear_ratios=[3.9, 2.9, 2.3, 1.87, 1.68, 1.54]   # gears 1-6, from car1-ow1.xml
-    upshift_rpm=18000    # shift up just below the limiter.
-    downshift_rpm=17000  # shift down only if the lower gear would land below this.
-    shift_delay=10       # steps (0.2 s) to wait after a shift before shifting again.
-    gear= int(R['gear'])
-    if gear < 1 or S['speedX'] < 10:
-        gear= 1
-    elif shift_wait > 0:
-        shift_wait-= 1
-    elif gear < 6 and S['rpm'] > upshift_rpm:
-        gear+= 1
-        shift_wait= shift_delay
-    elif gear > 1 and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm:
-        gear-= 1
-        shift_wait= shift_delay
-    R['gear']= gear
+    # Automatic Transmission
+    R['gear']=1
+    if S['speedX']>50:
+        R['gear']=2
+    if S['speedX']>80:
+        R['gear']=3
+    if S['speedX']>110:
+        R['gear']=4
+    if S['speedX']>140:
+        R['gear']=5
+    if S['speedX']>170:
+        R['gear']=6
     return
-
-shift_wait= 0  # steps left before the transmission may shift again.
 
 # ================ MAIN ================
 if __name__ == "__main__":
