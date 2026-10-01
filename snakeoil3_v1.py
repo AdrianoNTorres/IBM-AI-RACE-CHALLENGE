@@ -59,6 +59,9 @@ import getopt
 import os
 import time
 PI= 3.14159265359
+# Track sensor angles (degrees, negative = left). Sent to the server at connection
+# time and used by drive_example() to know which way each track beam points.
+TRACK_ANGLES= [-45, -19, -12, -7, -4, -2.5, -1.7, -1, -.5, 0, .5, 1, 1.7, 2.5, 4, 7, 12, 19, 45]
 
 data_size = 2**17
 
@@ -155,7 +158,7 @@ class Client():
             # This string establishes track sensor angles! You can customize them.
             #a= "-90 -75 -60 -45 -30 -20 -15 -10 -5 0 5 10 15 20 30 45 60 75 90"
             # xed- Going to try something a bit more aggressive...
-            a= "-45 -19 -12 -7 -4 -2.5 -1.7 -1 -.5 0 .5 1 1.7 2.5 4 7 12 19 45"
+            a= ' '.join(str(x) for x in TRACK_ANGLES)
 
             initmsg='%s(init %s)' % (self.sid,a)
 
@@ -535,11 +538,18 @@ def drive_example(c):
     brake_decel=5.0   # m/s^2 of deceleration assumed when planning (conservative).
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
+    lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
 
     # Steer To Corner
     R['steer']= S['angle']*15 / PI
     # Steer To Center
     R['steer']-= S['trackPos']*.10
+    # Steer Toward Open Road: bearing of the open road ahead, averaged over the
+    # track beams weighted by distance squared (long beams point where the road goes).
+    weights= [max(d, 0)**2 for d in S['track']]
+    if sum(weights) > 0:
+        aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
+        R['steer']-= aim*PI/180 * lookahead_gain
 
     # Brake Planning: fastest speed from which the car can still slow to
     # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
@@ -589,6 +599,14 @@ def drive_example(c):
 # ================ MAIN ================
 if __name__ == "__main__":
     C= Client(p=3001)
+    # Telemetry: one CSV row per step in runs/ (does not affect driving).
+    run_dir= os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runs')
+    os.makedirs(run_dir, exist_ok=True)
+    log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
+    log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
+    log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage\n')
+    print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
         C.get_servers_input()
         if not C.so: break # Server ended the race.
@@ -599,4 +617,12 @@ if __name__ == "__main__":
             break
         drive_example(C)
         C.respond_to_server()
+        S,R= C.S.d,C.R.d
+        w= S['wheelSpinVel']
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f\n' % (
+            C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
+            S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
+            R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
+            (w[2]+w[3])-(w[0]+w[1]), S['damage']))
+    log.close()
     C.shutdown()

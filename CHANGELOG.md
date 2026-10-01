@@ -114,4 +114,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.6 run.*
+## v0.7 — Steer toward the open road ahead (+ telemetry log)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.7 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.7`), built on v0.5 (v0.6 gear shifting reverted). Added an open-road steering term (lines 547–552): the bearing of the open road ahead is the average angle of the 19 track beams weighted by distance², and `R['steer'] -= bearing × lookahead_gain` with `lookahead_gain = 2.0` steer per radian. The track sensor angles moved to one list, `TRACK_ANGLES` (line 64), used both for the init message and this calculation (angles sent to the server are unchanged). Also added a telemetry logger that writes one CSV row per step to `runs/run_<date>_<time>.csv` (speed, gear, rpm, throttle, brake, steer, track position, angle, visible road ahead, rear wheelspin, damage) — it does not affect driving, and `runs/` is not committed to Git. |
+| **Why** | The steering only reacts to where the car is now (`angle` and `trackPos`), so it starts turning only after the car is already misaligned in the corner — it turns in late. The longest track beams point where the road is going, so steering toward them turns the car in earlier and more smoothly. On a straight the beams are symmetric and the term is zero; for a typical left bend it adds about +0.26 steer. This is plan item 5 (next in order after gears). Speed-scaled steering gain from the same plan item is left out because no high-speed weaving has been seen at ≤145 km/h. Telemetry is added because v0.6's result could not be explained without data. |
+| **Prediction** | Smoother, earlier turn-in and the car holding a tighter line through corners. Because steering rises earlier, the `abs(steer)*50` corner reduction also starts earlier, so the car may slow a little sooner for corners. Lap time expected similar to or slightly faster than v0.5 (2:27.84) — this change is mostly for stability, to prepare for higher speeds. Top speed similar to v0.5 (~145 km/h). Min speed may change slightly. Risk: if the gain is too high the car may cut toward the inside edge or weave on corner exit. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.7 implemented, awaiting run.*
