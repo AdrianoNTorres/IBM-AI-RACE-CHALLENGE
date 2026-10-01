@@ -212,6 +212,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.12`). Line 538: `brake_decel=8.0` → `brake_decel=10.0`. Single value, no other changes. `corner_speed` stays at 70 km/h. |
 | **Why** | v0.11 showed the first slide (7.8 km/h sideways at the ~2,450 m hairpin exit), so `corner_speed` is held where it is. Braking is still 37% of the lap with a max pedal of only 0.34, and v0.7 measured ~11.5 m/s² at pedal 0.3 — the car can brake harder than 8.0 m/s². At 10.0 the planner lets the car brake later from high speed: allowed speed with 100 m of road ahead rises from ~150 to ~164 km/h, with 60 m from ~119 to ~129 km/h. In tight corners the change is small (with 22 m visible, ~80 → ~82 km/h), because `corner_speed` dominates there — so the sliding corner should not be pushed much harder. 10.0 is still below the measured 11.5 m/s². |
 | **Prediction** | Shorter, harder braking zones: braking time below 37% of the lap and max pedal rising to roughly 0.3–0.5. Lap time faster than v0.11 (1:50.71), probably by 1–3 s (less than the `corner_speed` steps, as most time is now in corners). Top speed similar (~175 km/h); slowest corner similar (~68–70 km/h). ABS may act more often. Risk: arriving at the ~2,450 m hairpin slightly faster where the car already slid. Damage expected to stay at 0. |
+| **Lap time** | 1:46.91 |
+| **Damage** | 0 |
+| **Top speed** | 173 km/h |
+| **Min speed** | 50 km/h (start line, standing start — from telemetry, not reported); 68 km/h slowest corner (telemetry, ~3,270 m hairpin) |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 3.80 s faster than v0.11 (1:50.71 → 1:46.91) — the fastest lap so far, and more than the predicted 1–3 s. Top speed 175 → 173 km/h. Telemetry (`runs/run_20261001_161453.csv`): braking fell from 37% to 31% of the lap and max pedal rose from 0.34 to 0.39. Almost every section got faster; the biggest gains were in the braking zones before corners (~100, ~300, ~900, ~1,400, ~2,600 and ~2,900 m: about −0.2 s each), and minimum speeds in fast corners rose by 5–14 km/h (e.g. ~2,100 m 140 → 154, ~1,100 m 124 → 133). Slowest corner unchanged at 68 km/h (~3,270 m hairpin). **The slide at the ~2,450 m hairpin exit grew:** sideways speed 7.8 → 8.9 km/h at ~2,490 m, with `|trackPos|` 0.35. Sideways speed elsewhere rose slightly (max 3.2 km/h at ~2,600 m, was 2.4). Max `|trackPos|` for the lap 0.37 (unchanged); minimum visible road ahead 13.9 m. Full throttle 16%, rear wheelspin above the traction-control threshold 3.5%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | The braking planner was too conservative at 8.0 m/s²: assuming harder braking moved braking points later and let the car carry more speed through fast corners, worth almost 4 s. Corner minimums in the tight hairpins did not change, as predicted — `corner_speed` still governs those. The cost is a slightly bigger slide at the ~2,450 m hairpin exit (8.9 km/h), so that corner stays the one to watch. There is still a little room before the measured ~11.5 m/s² limit. |
+
+---
+
+## v0.13 — Harder braking plan again (`brake_decel` 10.0 → 11.0 m/s²)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.13 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.13`). Line 538: `brake_decel=10.0` → `brake_decel=11.0`. Single value, no other changes. `corner_speed` stays at 70 km/h. |
+| **Why** | v0.12 (8.0 → 10.0) gained 3.80 s with zero damage, braking dropped to 31% of the lap and the max pedal was still only 0.39. v0.7 measured ~11.5 m/s² at pedal 0.3, so 11.0 is still below what the car can do (a +10% step). Allowed speed with 100 m of road ahead rises from ~164 to ~171 km/h, with 60 m from ~129 to ~134 km/h; with 22 m visible in a tight corner only ~82 → ~83 km/h. |
+| **Prediction** | Smaller gain than v0.12 (the step is half the size and closer to the limit): faster than 1:46.91 by roughly 1–2 s. Braking time slightly below 31% of the lap, max pedal rising toward ~0.4–0.5. Top speed similar (~173 km/h); slowest corner similar (~68 km/h). Risk: the ~2,450 m hairpin, where sideways speed is already 8.9 km/h — if it goes well above ~10 km/h or `|trackPos|` there rises much above 0.35, this value goes back to 10.0. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -222,4 +240,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.12 implemented, awaiting run.*
+*Last updated: v0.13 implemented, awaiting run.*

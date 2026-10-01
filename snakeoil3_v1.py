@@ -535,7 +535,7 @@ def drive_example(c):
     S,R= c.S.d,c.R.d
     target_speed=160
     corner_speed=70   # km/h the car must be able to slow to by the end of the visible road.
-    brake_decel=10.0  # m/s^2 of deceleration assumed when planning (measured ~11.5 at pedal 0.3).
+    brake_decel=11.0  # m/s^2 of deceleration assumed when planning (measured ~11.5 at pedal 0.3).
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
