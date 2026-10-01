@@ -176,6 +176,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.10`). Line 537: `corner_speed=50` → `corner_speed=60`. Single value, no other changes. |
 | **Why** | v0.9 telemetry showed corner speeds unchanged since v0.7 — every corner minimum is set by the brake planner, which only lets the car go as fast as it could still slow to `corner_speed` by the end of the visible road (minus 15 m). In corners the visible road is short (~15–25 m), so `corner_speed` is effectively the corner speed limit. The car shows no sliding and stays within the middle third of the track, so there is grip and room to spare. Raising `corner_speed` by 10 km/h (+20%) lifts the allowed speed at every distance, most of all in tight corners: with 15 m visible, 50 → 60 km/h; with 22 m, ~63 → ~71 km/h; with 30 m, ~75 → ~82 km/h; with 200 m, ~202 → ~205 km/h. |
 | **Prediction** | Higher speeds through all slower corners and a minimum speed of roughly 58–62 km/h. Lap time faster than v0.9 (2:02.25). Top speed similar (~175 km/h). The car should start using more track width (`|trackPos|` above 0.37) and may show some sideways sliding. Main risk: the two slowest corners (~2,450 m and ~3,250 m from the start line), where steering is already at full lock — the car may run wide there. Damage expected to stay at 0; if the car leaves the track in those corners, this value should come back down to ~55. |
+| **Lap time** | 1:56.26 |
+| **Damage** | 0 |
+| **Top speed** | 170 km/h |
+| **Min speed** | 50 km/h (crossing the start line after the standing start); 60 km/h slowest corner (telemetry) |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 5.99 s faster than v0.9 (2:02.25 → 1:56.26) — the first lap under 2 minutes. Top speed 175 → 170 km/h. Telemetry (`runs/run_20261001_155931.csv`): the reported 50 km/h minimum is the car crossing the start line while still accelerating from the standing start (the start-line section shows exactly 50 km/h in v0.9 too); the slowest corner was 59.9 km/h (was 50 in v0.9). Comparing time per 100 m section with v0.9, **every corner section got faster** — the biggest gains at the two slowest corners (~2,400 m: −0.69 s, ~3,200 m: −0.51 s) and at ~400 m (−0.54 s); corner minimum speeds rose 4–10 km/h everywhere. Braking 39% of the lap (max pedal 0.55), full throttle 14%. Max `|trackPos|` still 0.37 and max sideways speed 3.0 km/h (was 2.4) — still no real sliding and the edges still unused. |
+| **Decision** | ✅ Kept — fastest lap so far (first under 2:00), still zero damage |
+| **Learned** | `corner_speed` is a direct corner-speed knob: +10 km/h gave ~6 s, spread over every corner, with no loss of control. The car is still well inside its grip limit (sideways speed only up to 3.0 km/h) and still uses only the middle of the track, so there is more to gain. The start-line minimum (50 km/h) is set by the standing start and will not change with tuning — from now on the slowest corner from telemetry is the more useful “min speed”. The two full-lock corners (~2,450 m and ~3,250 m) remain the places to watch. |
+
+---
+
+## v0.11 — Raise `corner_speed` 60 → 70 km/h
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.11 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.11`). Line 537: `corner_speed=60` → `corner_speed=70`. Single value, no other changes. |
+| **Why** | v0.10 showed `corner_speed` is the knob that sets corner speed: +10 km/h made every corner faster and gained ~6 s, while the car still showed almost no sliding (max sideways speed 3.0 km/h) and stayed in the middle of the track (max `|trackPos|` 0.37). Another +10 km/h step follows the same trend. Allowed speed with 15 m of road visible goes 60 → 70 km/h; with 22 m ~71 → ~80 km/h; with 30 m ~82 → ~90 km/h. |
+| **Prediction** | Slowest corner around 68–70 km/h (from 60) and a faster lap than v0.10 (1:56.26), probably by a few seconds — the gain may be a little smaller than last time. Top speed similar (~170 km/h). Sideways speed and `|trackPos|` should start to rise as the car gets closer to its grip limit. Main risk: the two full-lock corners (~2,450 m and ~3,250 m) — if the car runs wide or slides there, this value should come back to ~65. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -186,4 +204,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.10 implemented, awaiting run.*
+*Last updated: v0.11 implemented, awaiting run.*

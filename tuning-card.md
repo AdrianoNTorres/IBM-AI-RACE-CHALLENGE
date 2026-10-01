@@ -1,6 +1,6 @@
 # Tuning Card — `drive_example()` in `snakeoil3_v1.py`
 
-`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.10`. `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
+`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.11`. `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
 
 The client runs at **50 steps per second** (one step ≈ 20 ms). Every step it reads all sensors, runs `drive_example()`, and sends all actions back.
 
@@ -11,7 +11,7 @@ The client runs at **50 steps per second** (one step ≈ 20 ms). Every step it r
 | Setting | Line | Current Value | What It Controls | Raise it → | Lower it → | Crash Risk |
 |---|---|---|---|---|---|---|
 | `target_speed` | 536 | `160` (km/h) — `300` in v0.1, `80` in v0.2–v0.3, `120` in v0.4–v0.8 | The speed the throttle aims for on straights. Also shrinks in corners (see `steer*50` on line 561). **Soft cap:** the throttle only eases off 0.01 per step and the brake does not enforce it, so the car can overshoot (144 km/h seen in v0.4). | Car holds higher speeds on straights. | Car drives more conservatively. | **Medium** — the brake planner (`allowed_speed`) now protects corners, so this is no longer the only safety knob. |
-| `corner_speed` | 537 | `60` (km/h) — `50` in v0.4–v0.9 | The speed the car must be able to slow to by the end of the visible road. Sets how fast the car may approach a corner it can't see past. | Later, harder braking; faster corner entry. | Earlier braking; slower corner entry. | **High** — too high and the car arrives at tight corners too fast. |
+| `corner_speed` | 537 | `70` (km/h) — `50` in v0.4–v0.9, `60` in v0.10 | The speed the car must be able to slow to by the end of the visible road. Sets how fast the car may approach a corner it can't see past. | Later, harder braking; faster corner entry. | Earlier braking; slower corner entry. | **High** — too high and the car arrives at tight corners too fast. |
 | `brake_decel` | 538 | `8.0` (m/s²) — `5.0` in v0.4–v0.7 | How hard the brake planner assumes the car can decelerate. Used only for planning, not the pedal. Measured in v0.7: ~4.9 m/s² at pedal 0.1, ~9.4 at 0.2, ~11.5 at 0.3. | Planner brakes later (assumes stronger brakes). | Planner brakes earlier. | **High** — set above what the car can actually do and it runs out of road. |
 | `brake_margin` | 539 | `15` (m) | Visible road kept in reserve when planning braking. | Earlier braking; more safety. | Later braking. | **Medium** |
 | `brake_gain` | 540 | `0.05` (pedal per km/h over) | How hard the brake pedal is pressed per km/h over `allowed_speed`. 20 km/h over = full brake. | Harder, more abrupt braking. | Softer braking; car may not slow in time. | **Medium** — too high locks wheels (ABS helps). |
