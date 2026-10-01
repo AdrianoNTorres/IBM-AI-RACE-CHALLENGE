@@ -546,6 +546,8 @@ def drive_example(c):
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
+    turn_grip=6.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
+    turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
 
     # Steer To Corner
@@ -585,6 +587,26 @@ def drive_example(c):
     # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
     v_corner= corner_speed/3.6
     allowed_speed= (v_corner**2 + 2*brake_decel*max(0, ahead-brake_margin))**.5 * 3.6
+    # Corner Speed From Sharpness: the car may also go as fast as it could
+    # follow any beam: able to slow to corner_speed within that beam's length
+    # (as above), and able to curve onto it -- reaching a point d metres away at
+    # angle a needs a radius of d/(2 sin a), taken at turn_grip sideways. That
+    # curve passes bearing p at 2*radius*sin(p), so every beam between the nose
+    # and this one must reach at least that far, or the curve leaves the track.
+    # Wide bends show long beams at moderate angles (more speed); hairpins only
+    # short beams at wide angles. Not used near full lock (|steer| above
+    # turn_steer_max). Never less than the plan from the road ahead.
+    from math import sin
+    if abs(R['steer']) <= turn_steer_max:
+        for d, a in zip(S['track'], TRACK_ANGLES):
+            if d <= 0 or a == 0: continue
+            radius= d / (2*sin(abs(a)*PI/180))
+            if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], TRACK_ANGLES)
+                   if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
+            v_brake= (v_corner**2 + 2*brake_decel*max(0, d-brake_margin))**.5
+            v_grip= (turn_grip*radius)**.5
+            allowed_speed= max(allowed_speed, min(v_brake, v_grip)*3.6)
+    c.allowed_speed= allowed_speed   # kept for telemetry only
 
     # Throttle Control
     if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
@@ -645,7 +667,7 @@ if __name__ == "__main__":
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
-              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,' +
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,allowed,' +
               ','.join('track%d' % i for i in range(19)) + '\n')  # track0-18: beams at TRACK_ANGLES
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
@@ -660,11 +682,11 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%s\n' % (
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
-            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead,
+            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead, C.allowed_speed,
             ','.join('%.1f' % d for d in S['track'])))
     log.close()
     C.shutdown()
