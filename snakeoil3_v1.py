@@ -540,7 +540,7 @@ def drive_example(c):
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
-    line_gain=.20       # steer per unit of trackPos away from the racing line (only in bends).
+    line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     gear_hysteresis=10  # km/h below a shift-up speed before shifting back down.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
@@ -561,9 +561,12 @@ def drive_example(c):
     # once the road ahead shortens near the apex. trackPos +1 = left, so the
     # outside of a right-hand bend (aim > 0) is +.
     ahead= max(S['track'][8], S['track'][9], S['track'][10])
+    line_target= 0
     if abs(aim) > 2:
         phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-        R['steer']+= (line_offset*phase*(1 if aim > 0 else -1) - S['trackPos'])*line_gain
+        line_target= line_offset*phase*(1 if aim > 0 else -1)
+        R['steer']+= (line_target - S['trackPos'])*line_gain
+    c.aim, c.line_target= aim, line_target   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.
     R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
@@ -625,7 +628,7 @@ if __name__ == "__main__":
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
-              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage\n')
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget\n')
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
         C.get_servers_input()
@@ -639,10 +642,10 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f\n' % (
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
-            (w[2]+w[3])-(w[0]+w[1]), S['damage']))
+            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target))
     log.close()
     C.shutdown()

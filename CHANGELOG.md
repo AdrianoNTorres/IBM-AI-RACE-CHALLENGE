@@ -356,6 +356,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.20`). New knob `gear_hysteresis=10` (line 545). After the existing shift thresholds (50/80/110/140/170 km/h, unchanged), lines 613–616 hold the current gear whenever the thresholds would shift down but the speed is still above (the current gear's shift-up speed − 10 km/h). Upshifts are unchanged; downshifts happen 10 km/h lower (e.g. 6th → 5th below 160 instead of 170). No other changes. |
 | **Why** | Bug fix. In v0.19 the car reached exactly 170 km/h on the final straight, dropped a fraction of a km/h while shifting into 6th, shifted straight back to 5th, and repeated for ~150 m, costing ~0.41 s. Upshifts and downshifts used the same speed, so this can happen at any shift point. A 10 km/h gap is far more than the speed lost during a shift. |
 | **Prediction** | No gear changes back and forth at a constant speed anywhere in the lap. The final straight back to ~208 km/h and the ~0.4 s lost in v0.19 recovered: lap roughly 0.3–0.5 s faster than v0.19 (1:41.32), with the gain at ~3,400–3,500 m. Elsewhere about the same: downshifting 10 km/h later under braking means slightly less engine braking, which the braking plan should absorb. Corners and slides should be unchanged. Damage expected to stay at 0. |
+| **Lap time** | 1:40.55 |
+| **Damage** | 0 |
+| **Top speed** | 209 km/h |
+| **Min speed** | 69 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time 0.77 s faster than v0.19 (1:41.32 → 1:40.55) — the fastest lap so far, above the predicted 0.3–0.5 s. Telemetry (`runs/run_20261001_170957.csv`): the final straight is back to normal — ~3,400 m (−0.26 s) and ~3,500 m (−0.18 s), top speed 209 km/h — and there were further gains at ~2,200 m (−0.10 s), ~2,100 m and ~200 m (−0.06 s each). **The hunting in v0.19 was much wider than the one straight:** v0.19 made 154 gear changes in the lap, 87 of them reversed within 40 m; v0.20 made 63, with 5 reversals. Upshifts still happen at only ~8,000 (1st), ~9,900 (2nd), ~10,700 (3rd), ~10,900 (4th) and ~11,700 rpm (5th) — far below the 16,000–18,000 rpm torque peak. Max brake pedal rose from 0.41 to 0.71 (less engine braking with later downshifts), with no lock-up or slide. Corners unchanged: slowest corner 69 km/h (~3,283 m); flick sideways speed 8.3 km/h (`\|trackPos\|` 0.45); ~3,250 m hairpin 4.5 km/h sideways with the exit running out to `\|trackPos\|` 0.64 (0.58). Braking 34% of the lap; full throttle 29%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage; fixes gear hunting |
+| **Learned** | Gear hunting had been costing time all over the lap, not just at 170 km/h: with the same speed for shifting up and down, any small speed loss during a shift could trigger a downshift. A 10 km/h gap removed almost all of it (87 → 5 reversals). The shift speeds themselves are still very conservative (upshifts at 8,000–11,700 rpm against a 16,000–18,000 rpm torque peak), so RPM-based shifting — rejected in v0.6, when wheelspin was the suspected cause — is worth retrying now that hunting is understood. |
+
+---
+
+## v0.21 — Racing line that actually moves the car (`line_gain` 0.20 → 0.50)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.21 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.21`). Line 543: `line_gain=.20` → `line_gain=.50`. The racing-line block (lines 559–569) now names the target `line_target` (unchanged formula: `line_offset·phase·side`, outside at `ahead` ≥ 80 m, inside at ≤ 40 m). Telemetry only, no effect on driving: the CSV gets two new columns, `aim` (look-ahead bearing, degrees, + = right) and `lineTarget` (the racing-line target `trackPos`, 0 outside bends). |
+| **Why** | Requested by the user: a better racing line. v0.14–v0.15 barely moved the car (max `\|trackPos\|` 0.37 → 0.33) because the pull is far too slow. The heading term (`angle·15/PI`) holds the car parallel to the road, so a lateral pull only tilts the car slightly toward the target: at 0.20, half a track-width of error tilts it ~1.2°, which at 90 km/h moves it sideways at ~0.5 m/s — ~6 s to cross ~3 m, while a corner lasts 2–4 s. To move within ~1.5 s it needs roughly 2.5× the pull. Because the pull fades as the car reaches the line, the car still cannot be pushed past `line_offset`: in a long bend it settles at 0.5 × 0.50 / 0.60 ≈ 0.42 (0.33 at 0.20). The new telemetry columns show where the line is active and what it is asking for, which v0.14–v0.15 could not. |
+| **Prediction** | The car visibly uses more width in bends: outside before, inside near the apex, outside on exit, with `\|trackPos\|` around 0.4–0.45 in more corners (it settles at ≤ 0.42). Lap time roughly 0–1 s faster than v0.20 (1:40.55). Risks: weaving in bends (stronger lateral correction) — count steering reversals; the ~3,250 m hairpin exit (already 0.64) must stay below ~0.8; the flick slide (8.3 km/h). Reject on damage or leaving the track. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -366,4 +384,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.20 implemented, awaiting run.*
+*Last updated: v0.21 implemented, awaiting run.*
