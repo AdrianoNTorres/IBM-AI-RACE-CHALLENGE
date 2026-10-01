@@ -539,6 +539,7 @@ def drive_example(c):
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
+    line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
 
     # Steer To Corner
     R['steer']= S['angle']*15 / PI
@@ -547,13 +548,21 @@ def drive_example(c):
     # Steer Toward Open Road: bearing of the open road ahead, averaged over the
     # track beams weighted by distance squared (long beams point where the road goes).
     weights= [max(d, 0)**2 for d in S['track']]
+    aim= 0
     if sum(weights) > 0:
         aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
         R['steer']-= aim*PI/180 * lookahead_gain
+    # Racing Line (out-in-out): in a bend (bearing over 2 deg) move the centre
+    # target to the outside while plenty of road is visible, and to the inside
+    # once the road ahead shortens near the apex. trackPos +1 = left, so the
+    # outside of a right-hand bend (aim > 0) is +.
+    ahead= max(S['track'][8], S['track'][9], S['track'][10])
+    if abs(aim) > 2:
+        phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
+        R['steer']+= line_offset*phase*(1 if aim > 0 else -1) * .10
 
     # Brake Planning: fastest speed from which the car can still slow to
     # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
-    ahead= max(S['track'][8], S['track'][9], S['track'][10])
     v_corner= corner_speed/3.6
     allowed_speed= (v_corner**2 + 2*brake_decel*max(0, ahead-brake_margin))**.5 * 3.6
 

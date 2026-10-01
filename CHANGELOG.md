@@ -230,6 +230,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.13`). Line 538: `brake_decel=10.0` → `brake_decel=11.0`. Single value, no other changes. `corner_speed` stays at 70 km/h. |
 | **Why** | v0.12 (8.0 → 10.0) gained 3.80 s with zero damage, braking dropped to 31% of the lap and the max pedal was still only 0.39. v0.7 measured ~11.5 m/s² at pedal 0.3, so 11.0 is still below what the car can do (a +10% step). Allowed speed with 100 m of road ahead rises from ~164 to ~171 km/h, with 60 m from ~129 to ~134 km/h; with 22 m visible in a tight corner only ~82 → ~83 km/h. |
 | **Prediction** | Smaller gain than v0.12 (the step is half the size and closer to the limit): faster than 1:46.91 by roughly 1–2 s. Braking time slightly below 31% of the lap, max pedal rising toward ~0.4–0.5. Top speed similar (~173 km/h); slowest corner similar (~68 km/h). Risk: the ~2,450 m hairpin, where sideways speed is already 8.9 km/h — if it goes well above ~10 km/h or `|trackPos|` there rises much above 0.35, this value goes back to 10.0. Damage expected to stay at 0. |
+| **Lap time** | 1:45.26 |
+| **Damage** | 0 |
+| **Top speed** | 175 km/h |
+| **Min speed** | 69 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 1.65 s faster than v0.12 (1:46.91 → 1:45.26) — the fastest lap so far, inside the predicted 1–2 s. Top speed 173 → 175 km/h. Telemetry (`runs/run_20261001_162125.csv`): braking fell from 31% to 29% of the lap and max pedal rose from 0.39 to 0.42. Every section was the same or faster; the biggest gains were at ~600 m (−0.13 s) and ~1,000, ~2,600 and ~2,900 m (−0.09 s each). Minimum speeds in fast corners rose by 2–5 km/h (e.g. ~2,100 m 154 → 159, ~1,600 m 116 → 121). Slowest corner 68 → 69 km/h (~3,265 m hairpin). The slide at the ~2,450 m hairpin exit did not grow: sideways speed 8.9 → 8.7 km/h at ~2,490 m. Elsewhere sideways speed peaked at 4.0 km/h at ~2,600 m (was 3.2). Max `|trackPos|` 0.40 at the ~3,250 m hairpin (was 0.37); minimum visible road ahead 13.5 m. Full throttle 16%, rear wheelspin above the traction-control threshold 3.7%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | The second `brake_decel` step paid off at almost the same rate as the first (≈1.65 s per m/s² vs ≈1.9 s), and the hairpin slide stayed put, so the car brakes well at 11.0. That value is now close to the ~11.5 m/s² measured in v0.7, so there is no real room left in the braking plan. Hairpin minimums are still set by `corner_speed`, and the car still uses only the middle ~40% of the track width — the next gain has to come from the line through the corners. |
+
+---
+
+## v0.14 — Racing line (out-in-out), `line_offset` 0.5
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.14 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.14`). New knob `line_offset=0.5` (line 542) and a racing-line block in the steering (lines 555–562). When the look-ahead bearing shows a bend (`|aim|` over 2°), the steering's centre target moves from 0 to `line_offset` on the **outside** of the bend while plenty of road is visible ahead (`ahead` ≥ 80 m), blends through 0 at 60 m, and moves to the **inside** once the road ahead is short (`ahead` ≤ 40 m, near the apex). As the bend opens up and `ahead` grows again, the target swings back to the outside for the exit. Turn direction comes from the sign of `aim`. Implemented as `steer += line_offset·phase·side·0.10`, the same 0.10 gain as the centring term, so it is exactly the centring term with a moved target. The `ahead` line moved up from the brake planning (now line 559) so both blocks use it; its value is unchanged. `aim` now defaults to 0 (line 551). With `line_offset=0` the driver is identical to v0.13. |
+| **Why** | `brake_decel` is now 11.0, close to the measured ~11.5 m/s², so the braking plan has little left to give. Corners are still the main limit, and max `|trackPos|` has never gone above 0.40 — the car drives the middle of the road. A wider line gives a larger corner radius, and because corner speed is set by the visible road (`ahead`), starting a bend from the outside should also let the straight-ahead beams see further around it, which raises `allowed_speed`. 0.5 is below the agreed limit of ~0.6. |
+| **Prediction** | A gentle effect: with a 0.10 gain, a 0.5 target adds at most ±0.05 steer. Max `|trackPos|` should rise to roughly 0.45–0.6, with the car on the outside before bends and the inside near the apexes. Lap time roughly 0–2 s faster than v0.13 (1:45.26), with corner minimums up a few km/h where it works. It could also be slightly slower if the line target fights the look-ahead steering. Risks: the ~2,450 m hairpin (sideways speed already 8.7 km/h) — reject if it goes well above ~10 km/h; and `|trackPos|` approaching ~0.8 anywhere means the offset must come down. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -240,4 +258,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.13 implemented, awaiting run.*
+*Last updated: v0.14 implemented, awaiting run.*
