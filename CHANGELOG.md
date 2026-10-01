@@ -302,6 +302,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.17`). Line 536: `target_speed=180` → `target_speed=200`. Single value, no other changes. |
 | **Why** | v0.16 gained 1.36 s on the straights with no weaving (above 150 km/h: max sideways speed 2.5 km/h, steering activity unchanged), and the car still sits at the 180 cap for 7.8% of the lap (~1,300, ~1,700, ~2,200, ~3,100, ~3,400–3,500 m). The braking plan covers the higher speed: from 200 km/h (55.6 m/s) to 70 km/h at 11 m/s² needs ~123 m plus the 15 m margin, within the 200 m beam range. +20 km/h is a +11% step. |
 | **Prediction** | Top speed around 205–212 km/h (the throttle overshoots the cap by ~10–13 km/h). Lap time roughly 0.5–1 s faster than v0.16 (1:42.73) — less than last time, because the time at the cap is now 7.8% instead of 22% and more straights will end in braking before reaching 200. Gains on the same straights; corners unchanged; braking time and max pedal a little higher. Risk: weaving or a twitchy car at 200+ km/h (steering gain still does not fall with speed) — watch steering and sideways speed above 150 km/h; reject on any damage or if the car gets unsettled. |
+| **Lap time** | 1:42.55 |
+| **Damage** | 0 |
+| **Top speed** | 209 km/h |
+| **Min speed** | 68 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was only 0.18 s faster than v0.16 (1:42.73 → 1:42.55) — the fastest lap so far, but below the predicted 0.5–1 s. Top speed 193 → 209 km/h. Telemetry (`runs/run_20261001_164805.csv`): gains on the longest straights — ~1,700 m (−0.12 s), ~3,500 m (−0.09 s), ~1,300 m (−0.08 s) — partly cancelled by small losses of +0.02–0.05 s in several other sections (e.g. ~2,800 m +0.05, ~1,600 m and ~2,200 m +0.04). Only 1.8% of the lap is spent at the new cap (≥ 198 km/h); 5.5% at ≥ 178 km/h (7.8% in v0.16). Full throttle 26% → 30%; braking 33% → 34% of the lap, max pedal 0.43. Still no weaving at speed: above 150 km/h max sideways speed 2.5 km/h and steering activity unchanged. Slowest corner 68 km/h (~3,274 m hairpin); sideways speed at the ~2,450 m hairpin exit 9.1 km/h; max `\|trackPos\|` 0.33. **A closer look at the two hairpins:** the ~2,450 m "hairpin" is a left–right flick, and its slide starts when the steering snaps from −0.06 to −0.58 and then −0.98 in two steps at ~2,484 m while braking; sideways speed then rises 0.5 → 5.5 → 9.1 km/h. At the ~3,250 m hairpin the car runs at full lock with only ~2 km/h sideways — speed there is held by the braking plan (`ahead` 14–16 m), not by grip. Over the lap only 14 steps change the steering by more than 0.2; the largest three are all at the ~2,450 m flick, and there is ±0.3 steering jitter at ~2,750 m. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | Straights are close to used up: the gain fell from 1.36 s (160 → 180) to 0.18 s (180 → 200), as only a few straights are long enough to reach the higher cap before braking. The hairpin slide that has blocked raising `corner_speed` since v0.11 is not a grip limit at corner entry: it comes from a one-step steering snap at the ~2,484 m direction change. The other hairpin still has plenty of grip in reserve (~2 km/h sideways at full lock). |
+
+---
+
+## v0.18 — Steering rate limit (`max_steer_step` 0.2)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.18 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.18`). New knob `max_steer_step=.2` (line 544) and `prev_steer` (line 545, the steering sent the previous step). After all steering terms, the new steering is clipped to within ±0.2 of the previous step's value (lines 566–568). All steering terms, speeds and the braking plan are unchanged. |
+| **Why** | v0.17 telemetry showed the slide at the ~2,450 m hairpin comes from a steering snap: −0.06 → −0.58 → −0.98 in two steps (~42 ms) at ~2,484 m, after which sideways speed rises to 9.1 km/h. That slide is what has kept `corner_speed` at 70 since v0.11. Only 14 steps per lap change the steering by more than 0.2, so the limit only touches those snaps (and the ±0.3 jitter at ~2,750 m); everywhere else steering is unaffected. At 0.2 per step the wheel can still go from centre to full lock in 5 steps (~0.1 s). |
+| **Prediction** | Sideways speed at the ~2,450 m flick drops clearly, to roughly 4–6 km/h (from 9.1), and no step changes steering by more than 0.2. Lap time about the same as v0.17 (1:42.55), within ~±0.3 s; maybe slightly faster through the ~2,450–2,500 m and ~2,750 m sections. This is mainly an enabling change: with the slide gone, `corner_speed` can be raised. Risk: slightly later turn-in at the flick, so the car may run a little wider there (`\|trackPos\|` around 2,480–2,500 m). Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -312,4 +330,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.17 implemented, awaiting run.*
+*Last updated: v0.18 implemented, awaiting run.*

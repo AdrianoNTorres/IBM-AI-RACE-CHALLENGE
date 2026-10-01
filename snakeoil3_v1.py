@@ -541,6 +541,8 @@ def drive_example(c):
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.20       # steer per unit of trackPos away from the racing line (only in bends).
+    max_steer_step=.2   # most the steering may change in one step (~21 ms).
+    prev_steer= R['steer']  # steering sent last step (R persists between steps).
 
     # Steer To Corner
     R['steer']= S['angle']*15 / PI
@@ -561,6 +563,9 @@ def drive_example(c):
     if abs(aim) > 2:
         phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         R['steer']+= (line_offset*phase*(1 if aim > 0 else -1) - S['trackPos'])*line_gain
+    # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
+    # cannot snap the wheel; it moves at most max_steer_step per step.
+    R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
 
     # Brake Planning: fastest speed from which the car can still slow to
     # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
