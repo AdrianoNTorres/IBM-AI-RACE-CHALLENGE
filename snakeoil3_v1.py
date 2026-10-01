@@ -627,7 +627,8 @@ if __name__ == "__main__":
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
-              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget\n')
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,' +
+              ','.join('track%d' % i for i in range(19)) + '\n')  # track0-18: beams at TRACK_ANGLES
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
         C.get_servers_input()
@@ -641,10 +642,11 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f\n' % (
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
-            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target))
+            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target,
+            ','.join('%.1f' % d for d in S['track'])))
     log.close()
     C.shutdown()

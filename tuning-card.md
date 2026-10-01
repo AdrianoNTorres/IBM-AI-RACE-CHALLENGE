@@ -1,6 +1,6 @@
 # Tuning Card — `drive_example()` in `snakeoil3_v1.py`
 
-`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.23`. `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
+`snakeoil3_v1.py` is the only driver file; each version is a Git tag (see the changelog). Section 1 below describes `v0.24` (driving identical to `v0.23`). `snakeoil3_gym.py` is the untouched original (`target_speed = 300`) and is what `gym_torcs.py` imports.
 
 The client runs at **50 steps per second** (one step ≈ 20 ms). Every step it reads all sensors, runs `drive_example()`, and sends all actions back.
 
