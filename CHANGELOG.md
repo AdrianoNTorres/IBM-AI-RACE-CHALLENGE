@@ -194,6 +194,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.11`). Line 537: `corner_speed=60` → `corner_speed=70`. Single value, no other changes. |
 | **Why** | v0.10 showed `corner_speed` is the knob that sets corner speed: +10 km/h made every corner faster and gained ~6 s, while the car still showed almost no sliding (max sideways speed 3.0 km/h) and stayed in the middle of the track (max `|trackPos|` 0.37). Another +10 km/h step follows the same trend. Allowed speed with 15 m of road visible goes 60 → 70 km/h; with 22 m ~71 → ~80 km/h; with 30 m ~82 → ~90 km/h. |
 | **Prediction** | Slowest corner around 68–70 km/h (from 60) and a faster lap than v0.10 (1:56.26), probably by a few seconds — the gain may be a little smaller than last time. Top speed similar (~170 km/h). Sideways speed and `|trackPos|` should start to rise as the car gets closer to its grip limit. Main risk: the two full-lock corners (~2,450 m and ~3,250 m) — if the car runs wide or slides there, this value should come back to ~65. Damage expected to stay at 0. |
+| **Lap time** | 1:50.71 |
+| **Damage** | 0 |
+| **Top speed** | 175 km/h |
+| **Min speed** | 50 km/h (start line, standing start); 68 km/h slowest corner (telemetry) |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time was 5.55 s faster than v0.10 (1:56.26 → 1:50.71) — the fastest lap so far. Top speed 170 → 175 km/h. Telemetry (`runs/run_20261001_160629.csv`): slowest corner 60 → 68 km/h; every corner section faster again, biggest gains at ~2,400 m (−0.48 s), ~400 m (−0.47 s) and ~700 m (−0.35 s). **First sign of sliding:** sideways speed reached 7.8 km/h at ~2,490 m (exit of the ~2,450 m hairpin, where steering swings from full left lock to the right) — everywhere else it stayed at 2.4 km/h or below. Track position in that section reached 0.36 (was 0.20). Braking 37% of the lap with max pedal only 0.34; full throttle 16%. |
+| **Decision** | ✅ Kept — fastest lap so far, still zero damage |
+| **Learned** | The second +10 km/h step on `corner_speed` gained almost as much as the first (5.55 s vs 5.99 s), so corner speed was still the main limit. But the ~2,450 m hairpin is now near the grip limit — the slide at its exit is the first in any run. Raising `corner_speed` further would most likely push that corner over the limit first, so the next gain should come from somewhere else: braking is still 37% of the lap and the pedal never goes above 0.34, while ~11.5 m/s² was measured at pedal 0.3 in v0.7. |
+
+---
+
+## v0.12 — Harder braking plan (`brake_decel` 8.0 → 10.0 m/s²)
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.12 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.12`). Line 538: `brake_decel=8.0` → `brake_decel=10.0`. Single value, no other changes. `corner_speed` stays at 70 km/h. |
+| **Why** | v0.11 showed the first slide (7.8 km/h sideways at the ~2,450 m hairpin exit), so `corner_speed` is held where it is. Braking is still 37% of the lap with a max pedal of only 0.34, and v0.7 measured ~11.5 m/s² at pedal 0.3 — the car can brake harder than 8.0 m/s². At 10.0 the planner lets the car brake later from high speed: allowed speed with 100 m of road ahead rises from ~150 to ~164 km/h, with 60 m from ~119 to ~129 km/h. In tight corners the change is small (with 22 m visible, ~80 → ~82 km/h), because `corner_speed` dominates there — so the sliding corner should not be pushed much harder. 10.0 is still below the measured 11.5 m/s². |
+| **Prediction** | Shorter, harder braking zones: braking time below 37% of the lap and max pedal rising to roughly 0.3–0.5. Lap time faster than v0.11 (1:50.71), probably by 1–3 s (less than the `corner_speed` steps, as most time is now in corners). Top speed similar (~175 km/h); slowest corner similar (~68–70 km/h). ABS may act more often. Risk: arriving at the ~2,450 m hairpin slightly faster where the car already slid. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -204,4 +222,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.11 implemented, awaiting run.*
+*Last updated: v0.12 implemented, awaiting run.*
