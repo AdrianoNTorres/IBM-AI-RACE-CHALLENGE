@@ -320,6 +320,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.18`). New knob `max_steer_step=.2` (line 544) and `prev_steer` (line 545, the steering sent the previous step). After all steering terms, the new steering is clipped to within ±0.2 of the previous step's value (lines 566–568). All steering terms, speeds and the braking plan are unchanged. |
 | **Why** | v0.17 telemetry showed the slide at the ~2,450 m hairpin comes from a steering snap: −0.06 → −0.58 → −0.98 in two steps (~42 ms) at ~2,484 m, after which sideways speed rises to 9.1 km/h. That slide is what has kept `corner_speed` at 70 since v0.11. Only 14 steps per lap change the steering by more than 0.2, so the limit only touches those snaps (and the ±0.3 jitter at ~2,750 m); everywhere else steering is unaffected. At 0.2 per step the wheel can still go from centre to full lock in 5 steps (~0.1 s). |
 | **Prediction** | Sideways speed at the ~2,450 m flick drops clearly, to roughly 4–6 km/h (from 9.1), and no step changes steering by more than 0.2. Lap time about the same as v0.17 (1:42.55), within ~±0.3 s; maybe slightly faster through the ~2,450–2,500 m and ~2,750 m sections. This is mainly an enabling change: with the slide gone, `corner_speed` can be raised. Risk: slightly later turn-in at the flick, so the car may run a little wider there (`\|trackPos\|` around 2,480–2,500 m). Damage expected to stay at 0. |
+| **Lap time** | 1:42.50 |
+| **Damage** | 0 |
+| **Top speed** | 209 km/h |
+| **Min speed** | 68 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time 0.05 s faster than v0.17 (1:42.55 → 1:42.50), within the predicted ±0.3 s — every 100 m section within ±0.01 s of v0.17. Top speed 209 km/h. Telemetry (`runs/run_20261001_165557.csv`): the limit works as designed — the largest steering change in one step is now exactly 0.20 (0.59 in v0.17), and no step exceeds it (14 did in v0.17). **But the slide at the ~2,450 m flick barely changed:** sideways speed 9.1 → 8.8 km/h, against a predicted 4–6. Step by step: steering now ramps from −0.04 to −1.00 over ~6 steps (2,482.7–2,485.9 m) instead of 2, but it still reaches full right lock at ~77 km/h while braking (pedal 0.1–0.23), straight after the left-hand part of the flick; sideways speed then climbs 0.9 → 8.8 km/h over the next ~5 m while the rear wheels turn up to 15 rad/s slower than the fronts. The ±0.3 jitter at ~2,750 m is unchanged (steer 0.03…0.46), as those changes were already near 0.2. `\|trackPos\|` at the flick 0.33 (unchanged), so no running wide. Slowest corner 68 km/h (~3,274 m hairpin). Braking 35% of the lap, max pedal 0.43; full throttle 30%. |
+| **Decision** | ✅ Kept — marginally faster (0.05 s), still zero damage, and removes one-step steering snaps without any cost |
+| **Learned** | The slide at the ~2,450 m flick is not caused by how *fast* the steering moves but by *where* it goes: full opposite lock at ~77 km/h, with light braking, right after a left turn, makes the rear step out. The rate limit is harmless and stays as a safety net, but it does not unlock `corner_speed` by itself. The rest of the lap still has plenty of grip (the ~3,250 m hairpin runs full lock with ~2 km/h sideways). |
+
+---
+
+## v0.19 — Raise `corner_speed` 70 → 75 km/h
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.19 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.19`). Line 537: `corner_speed=70` → `corner_speed=75`. Single value, no other changes. Steering rate limit (`max_steer_step` 0.2) stays. |
+| **Why** | Corners are the biggest remaining time (the slowest sections are the two hairpins and the ~400 m corner, each ~4.2–4.4 s), straights are nearly used up (v0.17 gained only 0.18 s), and `brake_decel` is at its limit. Earlier `corner_speed` steps were the biggest gains of the project (+10 km/h ≈ 5.5–6 s in v0.10 and v0.11). It was held at 70 since v0.11 because of the slide at the ~2,450 m flick. v0.18 showed that slide comes from full opposite lock at the flick, not from steering speed, and that it recovers cleanly (`\|trackPos\|` 0.33, 0 damage); elsewhere there is plenty of grip (~2 km/h sideways at full lock in the ~3,250 m hairpin). A +5 km/h step (+7%) is half the earlier steps. Allowed speed with 15 m of road visible goes 70 → 75 km/h; with 22 m ~83 → ~87 km/h. |
+| **Prediction** | Slowest corner ~73–75 km/h (from 68). Lap time roughly 2–3 s faster than v0.18 (1:42.50), mostly in the hairpins and tight corners (~400, ~700, ~1,500, ~1,900, ~2,400–2,500, ~3,200 m). Sideways speed at the ~2,450 m flick will rise, probably to ~10–12 km/h, and `\|trackPos\|` there may grow. Risk: the flick — if the car leaves the track or takes damage, reject; if it stays on track but slides clearly more (well above ~12 km/h or `\|trackPos\|` above ~0.6), the next version should tackle the flick (e.g. no braking at full lock, or a tighter steering rate) before going further. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -330,4 +348,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.18 implemented, awaiting run.*
+*Last updated: v0.19 implemented, awaiting run.*
