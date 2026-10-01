@@ -548,7 +548,10 @@ def drive_example(c):
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=6.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
     turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
+    tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
+    tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
+    R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
     # Steer To Corner
     R['steer']= S['angle']*15 / PI
@@ -628,10 +631,17 @@ def drive_example(c):
         if slowest_wheel < .8*S['speedX']/3.6:
             R['brake']*= .5
 
-    # Traction Control System
-    if ((S['wheelSpinVel'][2]+S['wheelSpinVel'][3]) -
-       (S['wheelSpinVel'][0]+S['wheelSpinVel'][1]) > 5):
-       R['accel']-= .2
+    # Traction Control: how much faster the rear (driven) wheels' surface moves
+    # than the fronts', in m/s (tyre radii from car1-ow1.xml), so the limit does
+    # not change with speed. Measured on our laps, acceleration peaks at 2-2.5
+    # m/s of over-speed and the car starts to slide sideways above ~2.5, so
+    # beyond tc_slip the throttle sent is cut in proportion. The cut is not
+    # kept: next step starts from the throttle before it (c.throttle), so a
+    # burst of wheelspin does not cost a slow climb back at +0.05 per step.
+    w= S['wheelSpinVel']
+    rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
+    c.throttle= clip(R['accel'], 0, 1)
+    R['accel']= c.throttle - clip((rear_over-tc_slip)*tc_gain, 0, 1)
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
     # shift down only when the lower gear would land below downshift_rpm, and
@@ -667,7 +677,7 @@ if __name__ == "__main__":
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
-              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,allowed,' +
+              'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,allowed,throttle,' +
               ','.join('track%d' % i for i in range(19)) + '\n')  # track0-18: beams at TRACK_ANGLES
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
@@ -682,11 +692,11 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%s\n' % (
+        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%.3f,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
-            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead, C.allowed_speed,
+            (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead, C.allowed_speed, C.throttle,
             ','.join('%.1f' % d for d in S['track'])))
     log.close()
     C.shutdown()
