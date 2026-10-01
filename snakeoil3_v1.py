@@ -551,7 +551,7 @@ def drive_example(c):
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
-    lock_throttle=.3    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
+    lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 

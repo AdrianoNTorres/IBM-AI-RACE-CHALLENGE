@@ -546,4 +546,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.30 run.*
+## v0.31 — Slower at full lock: `lock_throttle` 0.3 → 0.2
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.31 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.31`), built on v0.29 (v0.30 reverted). `lock_throttle` 0.3 → 0.2 (line 554): the most throttle allowed at full lock. Nothing else changes. |
+| **Why** | The ~3,283 m hairpin exit is the blocker for the racing line, and the user chose to fix it first. At full lock the car cannot turn any tighter, so its speed sets how wide it runs: at 0.3 the throttle holds the car at 73.1–73.6 km/h and it exits at `trackPos` −0.86 (v0.29); at 75 km/h it left the track (−1.01, v0.30). In v0.27 the throttle at full lock averaged ~0.2 (chopped between 0.15 and 0.35), the car slowed to 68.3 km/h and exited at −0.50. |
+| **Prediction** | Replay with the real `drive_example()` on every logged v0.29 row: steering, brake and gear identical; the throttle differs only where `\|steer\|` > 0.69 — hairpin 67 steps (throttle sent mean 0.30 → 0.20), flick 35 steps (0.32 → 0.23); nowhere else. Driven: the car slows at full lock in the hairpin toward ~68–70 km/h and its exit comes in to roughly −0.5 to −0.7; flick sideways speed ≤ 16 km/h. Lap time about the same as v0.29 (1:31.26), within ~±0.15 s — slower through the hairpin and flick, possibly faster on the exits if the car is better placed. If a little slower, it would be kept as an enabling change: a safe hairpin is needed before the racing line is reworked. Reject on damage or leaving the track. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.31 implemented, awaiting run.*
