@@ -541,6 +541,7 @@ def drive_example(c):
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
     line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
+    line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -578,11 +579,23 @@ def drive_example(c):
     track_dir= -S['angle']*180/PI   # bearing of the track direction, deg (+ = right)
     if abs(track_dir) <= ahead_angle_max:
         ahead= max(ahead, max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5)))
-    line_target= 0
+    # The target must not follow the car's own nose, or the line's steering moves
+    # the target that moves the steering (v0.32: target jumped 261 times a lap).
+    # So the bend is held until the bearing falls below line_aim_off (side from
+    # the bearing while it is over 2 deg), and the bend's progress is the road
+    # visible along the track direction, which does not swing with the nose.
+    side= getattr(c, 'line_side', 0)
     if abs(aim) > 2:
-        phase= clip((ahead-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-        line_target= line_offset*phase*(1 if aim > 0 else -1)
+        side= 1 if aim > 0 else -1
+    elif abs(aim) < line_aim_off:
+        side= 0
+    line_target= 0
+    if side != 0:
+        road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
+        phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
+        line_target= line_offset*phase*side
         R['steer']+= (line_target - S['trackPos'])*line_gain
+    c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.

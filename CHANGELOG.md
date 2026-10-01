@@ -582,4 +582,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.32 run.*
+## v0.33 — Steady racing-line target: bend held until the bearing falls below `line_aim_off` 1°, phase from the road along the track direction
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.33 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.33`), built on v0.31 (v0.32 rejected). The racing-line target (lines 582–599) no longer follows the car's own nose: (1) a bend starts when the look-ahead bearing `\|aim\|` passes 2° (side = its sign, as before) but now lasts until `\|aim\|` falls below the new `line_aim_off=1` (line 544); in between, the side is held between steps (`c.line_side`); (2) the bend's progress (outside ≥ 80 m, inside ≤ 40 m) is measured as the road visible **along the track direction** (`beam_at(−angle ± 0.5°)`, longest of three) instead of `ahead`, which uses the nose beams. `line_offset` 0.5, `line_gain` 0.50 and the phase thresholds are unchanged; `ahead` for the braking plan is unchanged. |
+| **Why** | v0.32 showed the line target is a feedback loop: the line's steering swings the nose, the nose beams change `ahead` (51 ↔ 75 m at ~1,190–1,260 m) and `aim` (crossing 2° 142 times a lap), and both set the target, which jumped by more than 0.2 in 261 steps; the user saw the wheel oscillate a lot. v0.31 has the same loop in a weaker form: 81 target jumps and 64 crossings of 2° per lap. A stronger line pull (the user's priority, plan C) cannot work until the target is steady. In corners the road along the track direction changes 0.86 m per step on both logs against 1.4–1.6 m for the nose `ahead`. Offline on the logged signals, each part alone removes only part of the jumps (v0.31 log: hysteresis 81 → 70, track-direction phase 81 → 59; both 81 → 44; v0.32 log 148 → 44), so the two go together as one mechanism. |
+| **Prediction** | Replay with the real `drive_example()` of v0.31 and v0.33 on every logged v0.31 row (line state carried, open loop): steering differs in 594 of 4,337 steps (mean 0.10 where different, max 0.46), brake in 0, throttle in 23; gears identical. Target jumps 81 → 44; steering reversals 75 → 61 (the replayed v0.31 gives 75 against 71 logged). Fewer reversals at ~3,500 m (8 → 1), ~2,300 m (4 → 2), ~2,500 m (8 → 6). The inside windows stay within a few metres of v0.31's in every corner (e.g. ~2,935–3,011 m, hairpin ~3,235–3,286 m), so the apexes do not move; the hairpin entry is identical on the v0.31 log. One change of note: at the flick (~2,471–2,473 m) the bend is held while `aim` falls from 2° to 1.2°, so the left-bend pull stays on ~3 steps longer and the wheel stays at full lock ~60 ms longer. Driven: steering calmer in corners (logged reversals below 71), lap time about the same as v0.31 (1:31.37, ±0.2 s), `\|trackPos\|` about as in v0.31 (max ~0.6). If it is a little slower but calmer it would be kept as an enabling change for a stronger line pull. Watch the flick's sideways speed (14.0 km/h in v0.31) and the hairpin exit (−0.59). Reject on damage or leaving the track. Damage expected to stay at 0. |
+| **Lap time** | _Pending run_ |
+| **Damage** | _Pending run_ |
+| **Top speed** | _Pending run_ |
+| **Min speed** | _Pending run_ |
+| **Observed** | _Pending run_ |
+| **Decision** | _Pending run_ |
+| **Learned** | _Pending run_ |
+
+---
+
+*Last updated: v0.33 implemented, awaiting run.*
