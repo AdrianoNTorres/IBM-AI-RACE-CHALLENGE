@@ -30,7 +30,7 @@ DRIVER = os.path.join(REPO, 'snakeoil3_v1.py')
 TORCS_DIR = r'C:\torcs\torcs'
 WORK = os.path.join(tempfile.gettempdir(), 'torcs_tools')
 SLOTS = list(range(1, 10)) + [0]  # scr_server slots in order of use (port 3001+slot); slot 0 (run_race.py's) only at n=10
-DEFAULT_N = 9                 # byte-identical telemetry measured at n=1,4,8,9,10 (10 = all slots, hard cap)
+DEFAULT_N = 4                 # CPU heat (user, 2026-10-02: cores hit 100 C at 9-10); byte-identical at n=1,4,8,9,10
 TIMEOUT = 120                 # s per race (a lap takes ~2 s)
 UDP_TIMEOUT_US = 1000000      # wtorcs -t: how long the server waits for the client's answer each step
                               # (default 10 ms: under load a late answer is skipped and the last action

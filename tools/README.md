@@ -1,6 +1,6 @@
 # tools/ — parallel race harness (read this, not the scripts)
 
-Races run 9 at once (one TORCS per scr_server slot 1–9, ports 3002–3010), each on a private copy of the driver in `%TEMP%\torcs_tools`, so **never edit `snakeoil3_v1.py` to try a value**. Parallel runs are byte-identical to serial ones and to `run_race.py` (TORCS is launched with `-t 1000000`, so the server always waits for the driver). One race ≈ 1.9 s alone; a 30-run suite ≈ 9.5 s. TORCS must not be open. Run everything from the repo root.
+Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002+; `-n` up to 10, but keep it at 4: the CPU hit 100 °C at 9–10), each on a private copy of the driver in `%TEMP%\torcs_tools`, so **never edit `snakeoil3_v1.py` to try a value**. Parallel runs are byte-identical to serial ones and to `run_race.py` (TORCS is launched with `-t 1000000`, so the server always waits for the driver). One race ≈ 1.9 s alone; a 30-run suite ≈ 15–20 s at n=4 (9.5 s at n=9). TORCS must not be open. Run everything from the repo root.
 
 | Task | Command |
 |---|---|
