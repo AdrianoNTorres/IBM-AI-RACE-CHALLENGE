@@ -533,7 +533,7 @@ def drive_example(c):
     '''This is only an example. It will get around the track but the
     correct thing to do is write your own `drive()` function.'''
     S,R= c.S.d,c.R.d
-    target_speed=200
+    target_speed=250  # km/h throttle aim on straights (the braking plan, not this, now sets the speed into corners).
     corner_speed=75   # km/h the car must be able to slow to by the end of the visible road.
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
     brake_aero=.004   # extra planned deceleration per (m/s)^2 of speed: brake_decel + brake_aero*v^2 (drag and downforce).

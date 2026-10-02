@@ -6,7 +6,8 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.40, 1:25.95, 0 damage. Telemetry: `runs/run_20261001_204628.csv`. (v0.39: 1:27.44, v0.37: 1:27.59, v0.36: 1:28.99.) Gap to ~1:24: ~2 s.
+- **Best:** v0.41, 1:24.35, 0 damage. Telemetry: `runs/run_20261001_205914.csv`. (v0.40: 1:25.95, v0.39: 1:27.44, v0.37: 1:27.59.) Gap to ~1:24: ~0.35 s.
+- **v0.41 (off-plan, own candidate): `target_speed` 200 → 250, −1.60 s ✅.** "Straights used up" (v0.17) was only true while braking was weak; with the v0.40 brakes the 200 cap held every long straight at ~210 km/h. Closed-loop trials on v0.40, for comparison: `turn_grip` 8 → −0.82 s, 9 → −1.12 s (so step 2's "not grip-limited" was wrong: the count looked at braking steps, but medium corners ride the sharpness-plan speed on part throttle); `corner_speed` 80 and `brake_margin` 10 leave the track at the flick; `brake_gain` 0.08 +0.30 s. Two-knob trials on v0.41 (informational): + `turn_grip` 9 → 83.17 s (flick `|trackPos|` 0.81, kink 15.4 km/h); + `brake_aero` 0.005 → 83.69 s (flick 0.66).
 - **Races now run automatically** (`run_race.py`, ~4 s per lap), so values are chosen from closed-loop trials, not only open-loop replays. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
 - **v0.32 rejected** (1:32.45). The racing-line rework (`line_offset` 0.85, `line_gain` 1.5, `line_steer_max` 0.21) created a feedback loop. The line's steering swung the nose, which changed `aim` and `ahead`, which changed the target. The target jumped 261 times per lap, and steering reversals rose from 71 to 165. The 0.21 cap also meant the car crossed the track too slowly (~0.23 `trackPos`/s), so it never reached the line.
 - **v0.33 kept** (1:31.03, −0.34 s). The line's bend is held until `|aim|` < `line_aim_off` 1°, and the phase comes from the road along the track direction. Steering reversals fell 71 → 38, and target jumps fell 81 → 38.
@@ -41,7 +42,7 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 - **Effect:** steering reversals 71 → 38, target jumps 81 → 38.
 - **What it enables:** step 5 (a stronger line), now that the target no longer follows the car's own nose.
 
-### 2. v0.34 — Raise `turn_grip` 6 → 7 ✅ done (8 and 9 skipped)
+### 2. v0.34 — Raise `turn_grip` 6 → 7 ✅ done (8 and 9 skipped; re-opened after v0.41: 9 gave −1.12 s on v0.40)
 
 - **Result:** v0.34 (7): 1:30.74, −0.29 s. Hairpin exit −0.65 → −0.56, flick sideways 13.3 → 9.5 km/h, medium corners ≤ 9.1 km/h sideways.
 - **Why it stops at 7:** classified offline, 1,248 of 1,299 braking steps in v0.34 are held by braking distance and only 15 by grip. A replay of 8 changed the brake in only 34 steps (7 changed 287). The lever is now braking (step 3). Revisit `turn_grip` after step 3 raises `brake_decel`, when grip may bind again.
@@ -132,11 +133,12 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 | Step | Change | Est. gain | Risk | Status |
 |---|---|---|---|---|
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
-| 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped (not grip-limited) |
+| 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped, then re-tested (v0.41 trials): 9 −1.12 s on v0.40, open |
 | 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; 14 ✅ −1.40 s; slide brake ❌ (v0.38); 3c `brake_aero` ✅ −1.49 s (v0.40) |
 | 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | 4b fade ✅ −0.15 s (v0.39) |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |
+| — | Off-plan: `target_speed` 200 → 250 | — | Low | ✅ −1.60 s (v0.41) |
 | | **Total** | **~4–8 s** | | |
 
 ## Standing notes
