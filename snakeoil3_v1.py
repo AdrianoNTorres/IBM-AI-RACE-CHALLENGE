@@ -554,8 +554,8 @@ def drive_example(c):
     line_ifade=.25      # ... fading out over this much more |steer| (none from 0.65: hairpin, flick) ...
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
-    upshift_rpm=18500   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
-    downshift_rpm=13500 # shift down only if the lower gear would land below this.
+    upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
+    downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
