@@ -1,0 +1,1 @@
+optuna>=3.0   # tools/opt.py (tested with 5.0.0); everything else is the standard library
