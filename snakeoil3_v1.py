@@ -569,6 +569,9 @@ def drive_example(c):
     turn_steer_fade=.17 # its credit fades out linearly over this much |steer| below turn_steer_max (full credit up to 0.61).
     fade_lp=.9          # that |steer| is smoothed: share of the previous smoothed value kept per step (v0.57; 0 = raw steer).
     turn_grip_aero=1.5e-4  # turn_grip rises by this share per (m/s)^2 of speed (downforce): +12% at 100 km/h, +46% at 200.
+    grip_boost=.3       # v0.60: turn_grip is raised by this share while the smoothed |steer| is below boost_steer ...
+    boost_steer=.2      # ... (light steering = grip to spare: steady medium bends ride the plan at |steer| 0.15-0.3) ...
+    boost_fade=.1       # ... fading out over this much more |steer| (none from 0.3).
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
@@ -733,6 +736,14 @@ def drive_example(c):
     from math import sin
     road_plan= sharp= allowed_speed
     c.steer_f= fade_lp*getattr(c, 'steer_f', abs(R['steer'])) + (1-fade_lp)*abs(R['steer'])
+    # Grip To Spare (v0.60): in the steady medium bends (1,520 m, 2,977 m) the
+    # car rode exactly on this plan at only |steer| 0.15-0.3 and 5-9 km/h of
+    # slide (v0.59): the tyres were not at their limit, the assumed grip was.
+    # So while the smoothed |steer| is light the plan assumes grip_boost more
+    # grip, fading out from boost_steer over boost_fade; near the limit
+    # (hairpin, flick, 448 m at |steer| 0.5-0.7) nothing changes, and as the
+    # extra speed asks for more steering the extra fades: self-limiting.
+    tg= turn_grip*(1 + grip_boost*clip((boost_steer+boost_fade-c.steer_f)/boost_fade, 0, 1))
     if c.steer_f <= turn_steer_max:
         for d, a in zip(S['track'], TRACK_ANGLES):
             if d <= 0 or a == 0: continue
@@ -740,7 +751,7 @@ def drive_example(c):
             if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], TRACK_ANGLES)
                    if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
             v_brake= brake_speed(d)
-            v_grip= (turn_grip*radius/max(1 - turn_grip*turn_grip_aero*radius, .1))**.5
+            v_grip= (tg*radius/max(1 - tg*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
         allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-c.steer_f)/turn_steer_fade, 0, 1)
     c.allowed_speed= allowed_speed   # kept for telemetry only
