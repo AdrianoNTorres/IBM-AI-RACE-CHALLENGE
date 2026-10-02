@@ -536,6 +536,7 @@ def drive_example(c):
     target_speed=200
     corner_speed=75   # km/h the car must be able to slow to by the end of the visible road.
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
+    brake_aero=.004   # extra planned deceleration per (m/s)^2 of speed: brake_decel + brake_aero*v^2 (drag and downforce).
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
@@ -603,9 +604,19 @@ def drive_example(c):
     R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
 
     # Brake Planning: fastest speed from which the car can still slow to
-    # corner_speed within the road visible straight ahead (v^2 = v0^2 + 2ad).
+    # corner_speed within the road visible straight ahead. The car slows harder
+    # at speed (drag and downforce: per unit of pedal ~50-55 m/s^2 below
+    # 160 km/h, 60-72 at 180-220 in v0.36-v0.39), so the plan assumes
+    # brake_decel + brake_aero*v^2. Slowing from v to v0 over d metres then
+    # gives v^2 = ((a + c*v0^2)*exp(2*c*d) - a)/c, which is v0^2 + 2ad when c = 0.
+    from math import exp
     v_corner= corner_speed/3.6
-    allowed_speed= (v_corner**2 + 2*brake_decel*max(0, ahead-brake_margin))**.5 * 3.6
+    def brake_speed(d):   # m/s from which the car can slow to v_corner in d metres
+        d= max(0, d-brake_margin)
+        if brake_aero <= 0:
+            return (v_corner**2 + 2*brake_decel*d)**.5
+        return (((brake_decel + brake_aero*v_corner**2)*exp(min(2*brake_aero*d, 50)) - brake_decel)/brake_aero)**.5
+    allowed_speed= brake_speed(ahead) * 3.6
     # Corner Speed From Sharpness: the car may also go as fast as it could
     # follow any beam: able to slow to corner_speed within that beam's length
     # (as above), and able to curve onto it -- reaching a point d metres away at
@@ -622,7 +633,7 @@ def drive_example(c):
             radius= d / (2*sin(abs(a)*PI/180))
             if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], TRACK_ANGLES)
                    if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
-            v_brake= (v_corner**2 + 2*brake_decel*max(0, d-brake_margin))**.5
+            v_brake= brake_speed(d)
             v_grip= (turn_grip*radius)**.5
             allowed_speed= max(allowed_speed, min(v_brake, v_grip)*3.6)
     c.allowed_speed= allowed_speed   # kept for telemetry only

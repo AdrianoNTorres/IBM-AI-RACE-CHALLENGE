@@ -708,4 +708,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.39 run.*
+## v0.40 — Braking plan expects more deceleration at speed: `brake_aero` 0.004
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.40 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.40`). New knob `brake_aero=.004` (line 539). The braking plan (lines 606–619) now assumes a deceleration of `brake_decel + brake_aero·v²` (v in m/s) instead of a flat `brake_decel`, for both the road ahead and every beam of the sharpness plan (`brake_speed(d)`, used at line 636). Slowing from v to the corner speed v0 over d metres then gives v² = ((a + c·v0²)·e^(2c·d) − a)/c, which is v0² + 2ad when c = 0. At 100 km/h the plan assumes 14 + 3.1 = 17.1 m/s², at 150 km/h 14 + 6.9 = 20.9, at 200 km/h 14 + 12.3 = 26.3. Plan step 3c. |
+| **Why** | Braking distance still limited ~95% of braking steps (v0.37), and the car slows harder at speed. Measured on straight braking (pedal 0.15–0.4, `\|steer\|` < 0.15, v0.36–v0.39, Corkscrew transition excluded): deceleration per unit of pedal 50–55 m/s² from 80 to 160 km/h, 60 at 160–180, 63 at 180–200, 72 at 200–220 (drag and downforce); v0.35 showed ~30 m/s² at full pedal at ~190 km/h. A flat 14 m/s² leaves that unused exactly where braking zones are longest. |
+| **Prediction** | Chosen from closed-loop trials (full laps with `run_race.py`): `brake_aero` 0 → 87.45 s (= v0.39); 0.001 → 86.82; 0.002 → 86.59; 0.003 → 86.25 (max `\|trackPos\|` 0.733); **0.004 → 85.95** (0.706); 0.005 → 85.42 (0.707); 0.006 → 85.03 (0.722); **0.007 → left the track** (`\|trackPos\|` 1.064); **0.008 → left the track at the flick** (−1.94 at ~2,467 m, run ended). All finished laps had 0 damage. 0.004 is ~40% below the first failure; 0.005–0.006 are faster but next to it. Reject on damage or leaving the track. |
+| **Lap time** | 1:25.95 |
+| **Damage** | 0 |
+| **Top speed** | 214 km/h |
+| **Min speed** | 64 km/h |
+| **Observed** | Run automatically (`runs/run_20261001_204628.csv`); TORCS time **85.954 s** → on screen 1:25:95. Lap **1.49 s faster** than v0.39 (1:27.44 → 1:25.95) — **the fastest lap so far**. Zero damage, on track (max `\|trackPos\|` 0.706 at ~2,477 m, the flick). Gains in every high-speed braking zone: ~300 m −0.16 s, ~1,800 m −0.14, ~900 m −0.13, ~1,400 m −0.12, ~600 m −0.11, ~2,900 m −0.11, ~2,300 m −0.10, ~2,600 m −0.09, ~3,100/3,200 m −0.09 each; entry speeds into the braking zones up (e.g. ~2,900 m max 176 → 207 km/h, ~3,100 m min 166 → 193). Braking 1,039 (v0.37) → 779 steps (16.4 s); the car runs a median 7.5 km/h over the allowed speed (p90 10.6) with a median pedal of 0.36 (p90 0.53). **The kink (~2,385 m) slide fell 18.3 → 10.5 km/h**: braking now ends before the kink's turn instead of running through it. Flick switch 11.7 → 17.3 km/h. Hairpin 64 km/h, exit −0.60. Top speed 214 km/h. Slowest corner 64 km/h (~3,283 m, the hairpin). |
+| **Decision** | ✅ Kept — fastest lap so far (−1.49 s) |
+| **Learned** | The braking plan was the limit, and the car's real deceleration rises with speed: a speed-dependent plan gained 1.49 s at a conservative setting and also cured the kink slide (braking finishes before the turn). The new limit is the flick: from `brake_aero` 0.007 the car arrives too fast and leaves the track there. The pedal (gain 0.05) now runs ~7.5 km/h over the plan to reach the higher deceleration, so `brake_gain` may be worth a new look at these levels. |
+
+---
+
+*Last updated after v0.40 run.*
