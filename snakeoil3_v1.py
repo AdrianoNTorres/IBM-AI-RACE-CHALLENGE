@@ -562,6 +562,9 @@ def drive_example(c):
     tc_slip_slide=20    # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
+    lock_throttle_edge=.1  # most throttle at full lock once the outside edge is lock_room_near or closer.
+    lock_room_near=.3   # trackPos units to the outside edge where the full-lock limit reaches lock_throttle_edge.
+    lock_room_far=.8    # ... and from which it is lock_throttle (linear between).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -699,7 +702,13 @@ def drive_example(c):
     # full lock. The stored throttle is limited too, so it cannot wind up and
     # snap open as the wheel straightens; it climbs back at +0.05 per step.
     lock= clip((abs(R['steer'])-lock_steer)/(1-lock_steer), 0, 1)   # 0 below lock_steer, 1 at full lock
-    R['accel']= min(R['accel'], 1 - lock*(1-lock_throttle))
+    # The full-lock arc drifts outward (hairpin: trackPos +0.1 -> -0.78 at full
+    # lock), so the limit also falls as the outside edge comes closer: from
+    # lock_throttle with lock_room_far or more of room to lock_throttle_edge at
+    # lock_room_near. Outside = right in a left turn (steer +), left in a right turn.
+    room= 1 + (1 if R['steer'] > 0 else -1)*S['trackPos']   # trackPos units to the outside edge
+    lt= lock_throttle_edge + (lock_throttle-lock_throttle_edge)*clip((room-lock_room_near)/(lock_room_far-lock_room_near), 0, 1)
+    R['accel']= min(R['accel'], 1 - lock*(1-lt))
 
     # Traction Control: how much faster the rear (driven) wheels' surface moves
     # than the fronts', in m/s (tyre radii from car1-ow1.xml), so the limit does
