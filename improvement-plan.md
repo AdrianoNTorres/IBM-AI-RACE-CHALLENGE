@@ -153,6 +153,35 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 | — | Off-plan: `target_speed` 200 → 250 → 300 | — | Low | ✅ −1.60 s (v0.41); ✅ 300 −0.07 s (v0.46, cap removed) |
 | | **Total** | **~4–8 s** | | |
 
+## Batch 4 theme: the racing line (user, 2026-10-02)
+
+The user asked to make the racing line the focus of batch 4: carrying momentum through corners, since the line is still far from optimal. This promotes plan step 5 (5b–5c) over the ranked ideas below; agents still form their own view first.
+
+**Width use on v0.57** (`runs/run_20261002_141255.csv`; + = outside of the bend, − = inside, ±1 = edge; a textbook line is ~+0.8 → −0.85 → +0.8):
+
+| Corner | Slowest speed | Entry (−80 m) | Slowest point | Exit (+80 m) | Speed in / out |
+|---|---|---|---|---|---|
+| 448 m L | 98 km/h | −0.08 | **+0.15** | +0.21 | 204 / 120 |
+| 786 m R | 114 | +0.15 | −0.09 | +0.10 | 190 / 184 |
+| 1041 m R | 146 | +0.04 | −0.54 | +0.12 | 227 / 196 |
+| 1523 m L | 131 | −0.13 | −0.37 | −0.28 | 222 / 172 |
+| 1926 m L | 115 | +0.06 | −0.21 | +0.04 | 252 / 180 |
+| 2477 m R (flick) | 64 | +0.32 | −0.80 | −0.09 | 184 / 143 |
+| 2989 m R | 134 | −0.07 | −0.39 | +0.13 | 217 / 196 |
+| 3283 m L (hairpin) | 60 | −0.10 | **+0.62** | +0.40 | 204 / 172 |
+
+Measured with `python tools/width.py [csv]`: corners = speed minima (lowest within ±120 m, < 200 km/h); side from the sign of `steer` at the minimum; value = −side·`trackPos` at −80 m / the minimum / +80 m.
+
+**Why the current line can't reach this:** it is a pull (`(target − trackPos)·line_gain`, plus the v0.53 inside integral) on top of a centre-following controller (`angle·15/π − trackPos·0.10 − aim·lookahead_gain`); the target is active only within ~50 m of a corner, too late to set up wide (v0.47: −0.34 of a −0.5 target in 100 m); the heading and centring terms cancel it; and it has no notion of exit speed. A wider outside target broke the flick approach (v0.52: 5–7 of 30 off).
+
+**Direction (hypothesis):**
+1. **Planned line + path-following steering:** read each corner's direction and sharpness early (longest beam, 100+ m), set a target path outside → late apex → outside, and steer toward a point on that path a set distance ahead (pure pursuit) instead of adding a pull, so the base terms don't fight it. The sharpness plan reads the beams from the car's actual position, so a real outside position already earns more allowed speed.
+2. **Exit-weighted apexes** where a long straight follows (hairpin → finish straight, 448 m, 1926 m): give up a little entry speed for exit speed.
+3. **The flick as an S-bend:** line up for its second part, not its first.
+4. **The hairpin:** no beam signal before ~40 m (track memory on hold): at most a tighter inside point.
+
+**Estimate:** geometry only — a 90° corner using ~9.6 m of width instead of the centre gains ~30 m of radius; on a 50 m corner ≈ +25 % corner speed. Not measured. The first version may be slower while tuned: an enabling change under rule 8.
+
 ## Strongest open ideas (measured, updated v0.57)
 
 Each is a hypothesis for the next agent, not an instruction. Measured with the `tools/` harness (3×10 perturbation suites, `tools/README.md`); compare suite means, not single laps (chaotic by ~±0.2 s). "All-30" = mean of the 30 suite runs. The **flick** is the shared limit: the v0.57 suite maximum (0.918) is at its left→right steering flip (~2,477 m), and every braking or speed gain in batch 3 spent flick margin first. Single-knob nudges around v0.55–v0.57 are within ±0.05 s: new *mechanisms* are what has paid (batch 3: integral, shift points, ABS, smoothing).
