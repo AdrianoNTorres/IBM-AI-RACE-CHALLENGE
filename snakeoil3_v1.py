@@ -548,6 +548,11 @@ def drive_example(c):
     line_apex=.34       # extra trackPos aimed for on the inside near the apex (on top of line_offset) ...
     apex_steer=.3       # ... in full while |steer| is below this ...
     apex_steer_fade=.25 # ... and fading out over this much more |steer| (none from 0.55: hairpin, flick).
+    line_ki=1.5         # inside line integral: steer added per second per unit of trackPos short of the inside target ...
+    line_imax=.4        # ... at most this much steer ...
+    line_isteer=.4      # ... in full while |steer| is below this ...
+    line_ifade=.25      # ... fading out over this much more |steer| (none from 0.65: hairpin, flick) ...
+    line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18500   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -622,6 +627,22 @@ def drive_example(c):
             offset+= line_apex*clip((apex_steer+apex_steer_fade-abs(prev_steer))/apex_steer_fade, 0, 1)
         line_target= offset*phase*side
         R['steer']+= (line_target - S['trackPos'])*line_gain
+    # Inside line integral: in a steady bend the heading term (angle*15/PI)
+    # pushes back on the line term, because the body is yawed by the slip
+    # angle (v0.52, ~2,655-2,760 m: angle -0.035 rad = vy/vx, -0.17 steer),
+    # so the car held trackPos 0.23 against an inside target of 0.81 for
+    # 100 m. The remaining error is integrated (steer per second per unit
+    # of trackPos), only on the inside half of a bend (phase < 0, where the
+    # line gains time) and faded out with |steer| like the apex extra (none
+    # near full lock). Elsewhere it fades by line_idecay per step: an
+    # integral carried through the outside phase or out of a bend ran the
+    # flick approach off the track (v0.53 trials, 9-10 of 30 off).
+    fi= 0
+    if side != 0 and phase < 0:
+        fi= clip((line_isteer+line_ifade-abs(prev_steer))/line_ifade, 0, 1)
+    c.line_i= clip(getattr(c, 'line_i', 0)*(line_idecay + (1-line_idecay)*fi)
+                   + (line_target - S['trackPos'])*.021*line_ki*fi, -line_imax, line_imax)
+    R['steer']+= c.line_i
     c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
