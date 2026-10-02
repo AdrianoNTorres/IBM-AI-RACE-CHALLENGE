@@ -542,9 +542,12 @@ def drive_example(c):
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
-    line_offset=0.5     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
+    line_offset=.47     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
+    line_apex=.34       # extra trackPos aimed for on the inside near the apex (on top of line_offset) ...
+    apex_steer=.3       # ... in full while |steer| is below this ...
+    apex_steer_fade=.25 # ... and fading out over this much more |steer| (none from 0.55: hairpin, flick).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18500   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
@@ -608,7 +611,16 @@ def drive_example(c):
     if side != 0:
         road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
         phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
-        line_target= line_offset*phase*side
+        # Apex: in medium bends (moderate steering) the car can hold a tighter
+        # inside line, which opens the radius of the whole bend (v0.52 trials:
+        # inside offset 0.7-0.8 alone was 0.3-0.5 s faster over 30 perturbed
+        # laps, a wider outside 0.6 was not). Near full lock (hairpin, flick)
+        # it cannot: a target further inside only asks for more lock, so the
+        # extra fades out with |steer| between apex_steer and +apex_steer_fade.
+        offset= line_offset
+        if phase < 0:
+            offset+= line_apex*clip((apex_steer+apex_steer_fade-abs(prev_steer))/apex_steer_fade, 0, 1)
+        line_target= offset*phase*side
         R['steer']+= (line_target - S['trackPos'])*line_gain
     c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
