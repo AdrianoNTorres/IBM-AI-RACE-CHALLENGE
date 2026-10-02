@@ -549,7 +549,8 @@ def drive_example(c):
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
-    turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
+    turn_steer_max=.75  # curving onto beams is not planned above this |steer| (near full lock).
+    turn_steer_fade=.25 # its credit fades out linearly over this much |steer| below turn_steer_max (full credit up to 0.5).
     turn_grip_aero=1.5e-4  # turn_grip rises by this share per (m/s)^2 of speed (downforce): +12% at 100 km/h, +46% at 200.
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
@@ -635,7 +636,14 @@ def drive_example(c):
     # turn_grip*(1 + turn_grip_aero*v^2); at the speed that just follows the
     # curve, v^2 = turn_grip*radius*(1 + turn_grip_aero*v^2), which gives
     # v^2 = turn_grip*radius/(1 - turn_grip*turn_grip_aero*radius).
+    # The credit above the road-ahead plan fades out with |steer| instead of
+    # switching off at one value: an on/off switch at 0.6 turned a one-step
+    # steering spike at a corner exit into a full brake (v0.46: ~513 m, the
+    # -19 deg beam opening), and a hard switch higher up (0.65-0.7) ran wide
+    # at the flick. Full credit up to turn_steer_max - turn_steer_fade, none
+    # from turn_steer_max.
     from math import sin
+    road_plan= sharp= allowed_speed
     if abs(R['steer']) <= turn_steer_max:
         for d, a in zip(S['track'], TRACK_ANGLES):
             if d <= 0 or a == 0: continue
@@ -644,7 +652,8 @@ def drive_example(c):
                    if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
             v_brake= brake_speed(d)
             v_grip= (turn_grip*radius/max(1 - turn_grip*turn_grip_aero*radius, .1))**.5
-            allowed_speed= max(allowed_speed, min(v_brake, v_grip)*3.6)
+            sharp= max(sharp, min(v_brake, v_grip)*3.6)
+        allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-abs(R['steer']))/turn_steer_fade, 0, 1)
     c.allowed_speed= allowed_speed   # kept for telemetry only
 
     # Throttle Control
