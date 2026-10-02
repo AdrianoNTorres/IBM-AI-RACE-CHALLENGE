@@ -559,8 +559,9 @@ def drive_example(c):
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
-    turn_steer_max=.75  # curving onto beams is not planned above this |steer| (near full lock).
-    turn_steer_fade=.25 # its credit fades out linearly over this much |steer| below turn_steer_max (full credit up to 0.5).
+    turn_steer_max=.78  # curving onto beams is not planned above this |steer| (near full lock).
+    turn_steer_fade=.17 # its credit fades out linearly over this much |steer| below turn_steer_max (full credit up to 0.61).
+    fade_lp=.9          # that |steer| is smoothed: share of the previous smoothed value kept per step (v0.57; 0 = raw steer).
     turn_grip_aero=1.5e-4  # turn_grip rises by this share per (m/s)^2 of speed (downforce): +12% at 100 km/h, +46% at 200.
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
@@ -699,9 +700,16 @@ def drive_example(c):
     # -19 deg beam opening), and a hard switch higher up (0.65-0.7) ran wide
     # at the flick. Full credit up to turn_steer_max - turn_steer_fade, none
     # from turn_steer_max.
+    # The |steer| that fades the credit is smoothed (fade_lp per step, ~0.2 s):
+    # in steady medium corners the steering jitters 0.5-0.62 step to step, and
+    # the raw value swung the allowed speed by 10-18 km/h within 50 m (v0.55,
+    # ~400-520 m: 97-115 km/h), a brake/throttle sawtooth (brake 0.1-0.3, then
+    # the stored throttle climbs back from 0). v0.57 trials: smoothing alone
+    # -0.05 s over 30 perturbed laps, with the window co-tuned -0.15 s.
     from math import sin
     road_plan= sharp= allowed_speed
-    if abs(R['steer']) <= turn_steer_max:
+    c.steer_f= fade_lp*getattr(c, 'steer_f', abs(R['steer'])) + (1-fade_lp)*abs(R['steer'])
+    if c.steer_f <= turn_steer_max:
         for d, a in zip(S['track'], TRACK_ANGLES):
             if d <= 0 or a == 0: continue
             radius= d / (2*sin(abs(a)*PI/180))
@@ -710,7 +718,7 @@ def drive_example(c):
             v_brake= brake_speed(d)
             v_grip= (turn_grip*radius/max(1 - turn_grip*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
-        allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-abs(R['steer']))/turn_steer_fade, 0, 1)
+        allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-c.steer_f)/turn_steer_fade, 0, 1)
     c.allowed_speed= allowed_speed   # kept for telemetry only
 
     # Throttle Control
