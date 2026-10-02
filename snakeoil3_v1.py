@@ -565,6 +565,9 @@ def drive_example(c):
     lock_throttle_edge=.1  # most throttle at full lock once the outside edge is lock_room_near or closer.
     lock_room_near=.3   # trackPos units to the outside edge where the full-lock limit reaches lock_throttle_edge.
     lock_room_far=.8    # ... and from which it is lock_throttle (linear between).
+    lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
+    lift_v0=86          # km/h: no lift band below this speed (slow corners brake at once) ...
+    lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -684,10 +687,23 @@ def drive_example(c):
        R['accel']+= 1/(S['speedX']+.1)
 
     # Brake Control
+    # Lift Band: in steady medium corners the car rides the plan, and every
+    # brake touch 0.5-1 km/h over it zeroed the stored throttle, which then
+    # climbed back at +0.05 per step (v0.50: a ~0.3 s brake/throttle sawtooth,
+    # ~141-144 km/h at ~2,670-2,740 m). So up to lift_pct % of the speed over
+    # the allowed speed the car only lifts: throttle 0 this step, no brake, and
+    # the stored throttle is kept (the -0.01 above is undone). Beyond the band
+    # it brakes for the excess over the band. Faded in from lift_v0 over
+    # lift_vw km/h: the slow corners (hairpin, Corkscrew) brake at once.
+    lift_band= lift_pct/100*S['speedX']*clip((S['speedX']-lift_v0)/lift_vw, 0, 1)
+    lift= False
     R['brake']= 0
-    if ahead >= 0 and S['speedX'] > allowed_speed:
-        R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
+    if ahead >= 0 and S['speedX'] > allowed_speed + lift_band:
+        R['brake']= min(1, (S['speedX']-allowed_speed-lift_band)*brake_gain)
         R['accel']= 0
+    elif ahead >= 0 and S['speedX'] > allowed_speed:
+        lift= True
+        R['accel']= max(R['accel']+.01, 0)   # stored throttle kept; the throttle sent is 0 (end of drive_example)
 
     # ABS: halve the brake if any wheel turns 20% slower than the car moves (locking).
     if R['brake'] > 0 and S['speedX'] > 20:
@@ -738,6 +754,7 @@ def drive_example(c):
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
+    if lift: R['accel']= 0   # lift band: nothing sent, c.throttle stays for the next step
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
     # shift down only when the lower gear would land below downshift_rpm, and
