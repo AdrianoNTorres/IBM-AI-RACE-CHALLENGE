@@ -536,7 +536,9 @@ def drive_example(c):
     target_speed=300  # km/h throttle aim on straights; above the car's ~270 top speed, so it no longer caps (the braking plan sets corner speeds).
     corner_speed=75   # km/h the car must be able to slow to by the end of the visible road.
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
-    brake_aero=.004   # extra planned deceleration per (m/s)^2 of speed: brake_decel + brake_aero*v^2 (drag and downforce).
+    brake_aero=.006   # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce).
+    brake_max=28      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+).
+    brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share.
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
@@ -614,13 +616,27 @@ def drive_example(c):
     # 160 km/h, 60-72 at 180-220 in v0.36-v0.39), so the plan assumes
     # brake_decel + brake_aero*v^2. Slowing from v to v0 over d metres then
     # gives v^2 = ((a + c*v0^2)*exp(2*c*d) - a)/c, which is v0^2 + 2ad when c = 0.
-    from math import exp
+    # Measured on v0.46-v0.47 laps, the car slows at ~19 m/s^2 at 100 km/h,
+    # ~24-26 at 140-160 and only ~27-30 at 200-240, so a larger brake_aero
+    # fits the middle speeds but would claim 40+ m/s^2 at 240 km/h: the plan
+    # is capped at brake_max. Above brake_max the slowing is constant:
+    # v^2 = v_cap^2 + 2*brake_max*(d - d_cap), with v_cap where the curve meets
+    # the cap and d_cap = ln(brake_max/(a + c*v0^2))/(2c) the distance below it.
+    # Crests (the flick approach, ~2,364-2,433 m) unload the tyres: the
+    # mechanical part brake_decel is scaled by the load 1 + a_z/g, from the
+    # change of speedZ (km/h per ~21 ms step, smoothed), between brake_load_min and 1.
+    from math import exp, log
     v_corner= corner_speed/3.6
+    vz= S['speedZ']; az= (vz - getattr(c, 'vz_prev', vz))/3.6/.021; c.vz_prev= vz
+    c.az= .7*getattr(c, 'az', 0) + .3*az   # m/s^2, smoothed
+    a_mech= brake_decel*clip(1 + c.az/9.81, brake_load_min, 1)
     def brake_speed(d):   # m/s from which the car can slow to v_corner in d metres
         d= max(0, d-brake_margin)
-        if brake_aero <= 0:
-            return (v_corner**2 + 2*brake_decel*d)**.5
-        return (((brake_decel + brake_aero*v_corner**2)*exp(min(2*brake_aero*d, 50)) - brake_decel)/brake_aero)**.5
+        a0= a_mech + brake_aero*v_corner**2   # planned deceleration at v_corner
+        if a0 >= brake_max: return (v_corner**2 + 2*brake_max*d)**.5
+        d_cap= log(brake_max/a0)/(2*brake_aero)
+        if d <= d_cap: return ((a0*exp(2*brake_aero*d) - a_mech)/brake_aero)**.5
+        return ((brake_max - a_mech)/brake_aero + 2*brake_max*(d - d_cap))**.5
     allowed_speed= brake_speed(ahead) * 3.6
     # Corner Speed From Sharpness: the car may also go as fast as it could
     # follow any beam: able to slow to corner_speed within that beam's length
