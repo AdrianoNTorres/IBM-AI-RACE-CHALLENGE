@@ -6,7 +6,8 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.41, 1:24.35, 0 damage. Telemetry: `runs/run_20261001_205914.csv`. (v0.40: 1:25.95, v0.39: 1:27.44, v0.37: 1:27.59.) Gap to ~1:24: ~0.35 s.
+- **Best:** v0.42, 1:23.12, 0 damage. Telemetry: `runs/run_20261001_211338.csv`. (v0.41: 1:24.35, v0.40: 1:25.95, v0.39: 1:27.44.) The ~1:24 target is beaten by ~0.9 s; the goal is now as far below it as possible.
+- **v0.42 (step 6 taken early): `upshift_rpm` 15,000 → 18,500, −1.23 s ✅.** Power rises to the limiter and the ratios are close, so shifting at 15,000 landed every gear at 12,000–13,500 rpm. No watch point moved; shifts 66 → 41, gear reversals 6 → 0 (the 2↔3 hunting fix is no longer needed). Trials on v0.41: 20,000 never leaves 2nd at speed; `turn_grip` 9/10 → 83.17/83.01 s (flick 0.81/0.88); `brake_aero` 0.006 → 83.54; brake dead band (step 4a) 1–3 km/h → no gain; **new: full-lock brake** (pedal ≥ 0.05 above `\|steer\|` 0.95) → +0.09 s alone, but flick `\|trackPos\|` 0.71 → 0.53 and hairpin 0.59 → 0.34 (hairpin 64 → 52 km/h). Combos on 18,500 (informational): + `turn_grip` 9 → 81.80; + full-lock brake + `corner_speed` 80 → 82.47 (flick 0.62); + full-lock brake + `turn_grip` 10 → 81.77 (flick 0.57); `brake_aero` 0.008 leaves the track at ~2,467 m with or without the full-lock brake.
 - **v0.41 (off-plan, own candidate): `target_speed` 200 → 250, −1.60 s ✅.** "Straights used up" (v0.17) was only true while braking was weak; with the v0.40 brakes the 200 cap held every long straight at ~210 km/h. Closed-loop trials on v0.40, for comparison: `turn_grip` 8 → −0.82 s, 9 → −1.12 s (so step 2's "not grip-limited" was wrong: the count looked at braking steps, but medium corners ride the sharpness-plan speed on part throttle); `corner_speed` 80 and `brake_margin` 10 leave the track at the flick; `brake_gain` 0.08 +0.30 s. Two-knob trials on v0.41 (informational): + `turn_grip` 9 → 83.17 s (flick `|trackPos|` 0.81, kink 15.4 km/h); + `brake_aero` 0.005 → 83.69 s (flick 0.66).
 - **Races now run automatically** (`run_race.py`, ~4 s per lap), so values are chosen from closed-loop trials, not only open-loop replays. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
 - **v0.32 rejected** (1:32.45). The racing-line rework (`line_offset` 0.85, `line_gain` 1.5, `line_steer_max` 0.21) created a feedback loop. The line's steering swung the nose, which changed `aim` and `ahead`, which changed the target. The target jumped 261 times per lap, and steering reversals rose from 71 to 165. The 0.21 cap also meant the car crossed the track too slowly (~0.23 `trackPos`/s), so it never reached the line.
@@ -120,7 +121,7 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 - **Reject if:** any damage, `|trackPos|` > 1, or the steering oscillation of v0.32 comes back.
 - **5d. Steering smoothness (plan G), only if oscillation remains after 5b–5c.** Steering gain falling with speed, and a rate limit falling with speed.
 
-### 6. Gearbox (plan F)
+### 6. Gearbox (plan F) — upshift done early (v0.42, 18,500: −1.23 s); hunting gone as a side effect; `downshift_rpm` still open
 
 - **Change:** `upshift_rpm` 15,000 → ~17,000, then (separate version) fix the 2↔3 gear hunting around 2,550–2,650 m.
 - **Why:** torque peaks at 16,000–18,000 rpm; shifting at 15,000 drops the engine below the peak in every gear.
@@ -137,7 +138,7 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 | 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; 14 ✅ −1.40 s; slide brake ❌ (v0.38); 3c `brake_aero` ✅ −1.49 s (v0.40) |
 | 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | 4b fade ✅ −0.15 s (v0.39) |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
-| 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |
+| 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | ✅ 18,500: −1.23 s (v0.42); hunting gone; `downshift_rpm` open |
 | — | Off-plan: `target_speed` 200 → 250 | — | Low | ✅ −1.60 s (v0.41) |
 | | **Total** | **~4–8 s** | | |
 

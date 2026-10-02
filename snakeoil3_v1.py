@@ -544,7 +544,7 @@ def drive_example(c):
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
-    upshift_rpm=15000   # shift up above this (torque peak 16,000-18,000, limiter 18,700).
+    upshift_rpm=18500   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=13500 # shift down only if the lower gear would land below this.
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
