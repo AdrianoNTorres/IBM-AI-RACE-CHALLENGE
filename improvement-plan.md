@@ -6,7 +6,8 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.37, 1:27.59, 0 damage. Telemetry: `runs/run_20261001_201950.csv`. (v0.36: 1:28.99, v0.34: 1:30.74, v0.33: 1:31.03.) Gap to ~1:24: ~3.6 s. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
+- **Best:** v0.39, 1:27.44, 0 damage. Telemetry: `runs/run_20261001_203931.csv`. (v0.37: 1:27.59, v0.36: 1:28.99, v0.34: 1:30.74.) Gap to ~1:24: ~3.4 s.
+- **Races now run automatically** (`run_race.py`, ~4 s per lap), so values are chosen from closed-loop trials, not only open-loop replays. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
 - **v0.32 rejected** (1:32.45). The racing-line rework (`line_offset` 0.85, `line_gain` 1.5, `line_steer_max` 0.21) created a feedback loop. The line's steering swung the nose, which changed `aim` and `ahead`, which changed the target. The target jumped 261 times per lap, and steering reversals rose from 71 to 165. The 0.21 cap also meant the car crossed the track too slowly (~0.23 `trackPos`/s), so it never reached the line.
 - **v0.33 kept** (1:31.03, −0.34 s). The line's bend is held until `|aim|` < `line_aim_off` 1°, and the phase comes from the road along the track direction. Steering reversals fell 71 → 38, and target jumps fell 81 → 38.
 - **Racing line after v0.33 (user: "it goes out, but we aren't maximising the radius").** Outside the flick and the hairpin, entries, apexes and exits use only ~±0.25 of ±1:
@@ -60,7 +61,9 @@ Original step text:
   - Fade the sharpness plan out near `turn_steer_max` instead of switching it off (one full-brake step at ~2,574 m in v0.27).
   - A speed plan that knows the hairpin is tighter than the 75 km/h floor, if the hairpin margin shrinks.
 
-### 3. Braking to the real limit (plan E) ← **next: v0.38 = slide under braking (`slide_brake` 5 km/h)**
+### 3. Braking to the real limit (plan E) ← **next: the kink slide (~2,385 m, 18.3 km/h under braking), then 3c speed-dependent `brake_decel`, `brake_margin` 15 → 8**
+
+- **v0.38 (`slide_brake` 5 km/h): 1:27.57, ❌ rejected.** Halving the brake once the car slides > 5 km/h came too late (kink 18.3 → 17.4), and the flick slide grew to 25.7 km/h. That slide turned out to be traction-control chatter, so step 4b was done next as v0.39.
 
 - **v0.37 (`brake_decel` 14): 1:27.59, −1.40 s ✅.** 11 → 14 gained 3.15 s in two steps. But the slides where the car brakes while turning grew each step: the kink ~2,385 m 14.3 → 16.4 → 18.3 km/h, the flick 19.4 km/h with `|trackPos|` 0.70. So the next version is the braking-while-turning item, done as a slide-triggered brake ease (halve the brake while `|speedY|` > 5 km/h). A `|steer|`-based pedal limit was rejected in replay: it missed the kink and removed hairpin-entry braking. After that: 3c speed-dependent `brake_decel`, `brake_margin` 15 → 8.
 
@@ -83,7 +86,9 @@ Original step text:
 - **Reject if:** any damage, `|trackPos|` > 1, or slides on corner entry.
 - **Later follow-ups in this area:** `brake_margin` 15 → 8 m. Then trail braking (user request): taper the pedal as `|steer|` rises, so part of the slowing happens after turn-in. 87% of braking is at `|steer|` < 0.2 now.
 
-### 4. Throttle and traction control (plan D, step 2)
+### 4. Throttle and traction control (plan D, step 2) — 4b partly done early (v0.39)
+
+- **v0.39 (`tc_hold` 0.8, the cut fades instead of releasing at once): 1:27.44, −0.15 s ✅.** Flick slide 19.4 → 11.7 km/h, throttle jumps 363 → 40. Still open: 4a brake dead band, and a speed-dependent slip target.
 
 - **Change (two parts, one version each):**
   - a. **Brake dead band:** don't brake when less than ~2–3 km/h over the allowed speed, and don't zero the stored throttle on light touches.
@@ -124,8 +129,8 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 |---|---|---|---|---|
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
 | 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped (not grip-limited) |
-| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; 14 ✅ −1.40 s; ⏳ v0.38 slide brake |
-| 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | |
+| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; 14 ✅ −1.40 s; slide brake ❌ (v0.38) |
+| 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | 4b fade ✅ −0.15 s (v0.39) |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |
 | | **Total** | **~4–8 s** | | |

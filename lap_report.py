@@ -9,8 +9,10 @@ official time. Otherwise the log stops just before the line (< ~1 m), and the
 time is the last curLapTime plus the remaining distance at the last speed.
 Checked against every lap time the user reported from v0.7 to v0.36
 (all within 0.01 s). Times are shown as m:ss:cc, the format the user reads
-off the screen (1:28:99 = 1:28.99).'''
-import csv, glob, os, sys
+off the screen (1:28:99 = 1:28.99). The screen truncates to hundredths
+(v0.37: TORCS 87.596 s, screen 1:27:59), so the time shown here is truncated
+too; since v0.39 the log writes times with 3 decimals so this is exact.'''
+import csv, glob, math, os, sys
 
 LAP_LENGTH = 3608.3   # m, largest distFromStart seen before the line wraps to 0
 
@@ -33,8 +35,10 @@ def report(path):
     if lap_time is None:
         print('Lap time:     not finished (stopped at %.0f m, %.2f s)' % (last['distFromStart'], last['curLapTime']))
     else:
-        m, s = divmod(round(lap_time, 2), 60)
-        print('Lap time:     %d:%02d:%02d   (= %d:%05.2f, %.2f s)' % (m, int(s), round((s - int(s)) * 100), m, s, lap_time))
+        shown = math.floor(round(lap_time * 1000)) / 1000   # TORCS time, 3 decimals in logs from v0.39
+        cs = int(math.floor(shown * 100 + 1e-6))             # truncated to hundredths, as on screen
+        m, s = divmod(cs // 100, 60)
+        print('Lap time:     %d:%02d:%02d   (= %d:%02d.%02d, TORCS %.3f s)' % (m, s, cs % 100, m, s, cs % 100, lap_time))
     # Logged to 0.1 km/h; the on-screen value is truncated, so a logged X.0 may show as X-1.
     print('Top speed:    %d km/h   (logged %.1f)' % (int(max(r['speedX'] for r in lap)), max(r['speedX'] for r in lap)))
     print('Min speed:    %.0f km/h  (slowest corner, ~%.0f m)' % (corner['speedX'], corner['distFromStart']))

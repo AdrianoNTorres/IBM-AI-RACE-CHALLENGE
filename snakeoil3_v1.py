@@ -551,9 +551,9 @@ def drive_example(c):
     turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
+    tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
-    slide_brake=5       # km/h of sideways speed above which the brake is halved (the rear is stepping out).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -640,13 +640,6 @@ def drive_example(c):
     if ahead >= 0 and S['speedX'] > allowed_speed:
         R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
         R['accel']= 0
-    # Slide Under Braking: braking moves grip to the front, and in a bend the
-    # rear can step out (v0.36-v0.37: ~2,384 m kink 16-18 km/h sideways under a
-    # 0.1-0.2 pedal at ~170 km/h; straight braking stays under ~5 km/h). Once
-    # the car slides sideways faster than slide_brake, the brake is halved so
-    # the rear tyres get their grip back, as ABS does for a locking wheel.
-    if R['brake'] > 0 and abs(S['speedY']) > slide_brake:
-        R['brake']*= .5
 
     # ABS: halve the brake if any wheel turns 20% slower than the car moves (locking).
     if R['brake'] > 0 and S['speedX'] > 20:
@@ -670,10 +663,16 @@ def drive_example(c):
     # beyond tc_slip the throttle sent is cut in proportion. The cut is not
     # kept: next step starts from the throttle before it (c.throttle), so a
     # burst of wheelspin does not cost a slow climb back at +0.05 per step.
+    # But a cut released at once lets the throttle snap back to the same
+    # value, the rear spins again, and under sustained spin the throttle sent
+    # chatters 0 <-> 1 (v0.38: ~20 steps on the Corkscrew exit, 25.7 km/h
+    # sideways). So the cut fades out: at least tc_hold of last step's cut
+    # stays, and it lasts a few steps after the spin stops.
     w= S['wheelSpinVel']
     rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
     c.throttle= clip(R['accel'], 0, 1)
-    R['accel']= c.throttle - clip((rear_over-tc_slip)*tc_gain, 0, 1)
+    c.tc_cut= max(clip((rear_over-tc_slip)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
+    R['accel']= c.throttle - c.tc_cut
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
     # shift down only when the lower gear would land below downshift_rpm, and
@@ -724,7 +723,7 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.2f,%.2f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%.3f,%s\n' % (
+        log.write('%d,%.3f,%.3f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%.3f,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),

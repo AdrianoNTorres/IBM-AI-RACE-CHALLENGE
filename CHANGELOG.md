@@ -680,14 +680,32 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.38`). New knob `slide_brake=5` (line 556) and a new step after the brake is set (lines 643–649): while braking, if the sideways speed `\|speedY\|` is over `slide_brake` km/h, the brake is halved (before ABS, which may halve it again). Part of plan step 3 (braking while turning / trail braking). |
 | **Why** | v0.36–v0.37 made the slides where the car brakes while turning grow with every `brake_decel` step: the kink at ~2,385 m 14.3 → 16.4 → 18.3 km/h, the flick to 19.4 km/h with `\|trackPos\|` 0.70. Braking puts grip on the front tyres and the rear steps out. A limit from `\|steer\|` alone was tried in replay and rejected before running: it hardly touched the kink (2 steps; there the slide grows at `\|steer\|` 0.1–0.17 at ~170 km/h) and mostly removed braking at the hairpin entry (14 steps, ~12 km/h less slowing — dangerous). Reacting to the slide itself targets exactly the slides: straight braking stays under ~5 km/h sideways (57–65 of ~1,000–1,160 braking steps per lap are above it), and our data shows a pedal under 0.1 lets the sideways speed settle while 0.1–0.3 grows it. Same idea as ABS (halve when a wheel locks), applied to the rear stepping out. |
 | **Prediction** | Replay with the real `drive_example()` of v0.37 and v0.38 on every logged v0.37 row (open loop): only the brake differs, in 64 steps — the kink ~2,300 m (18 steps), the flick entry ~2,400 m (22), ~400 m (16, tiny), ~1,900 m (6), one at the hairpin (~3,200 m) and one at ~1,500 m; steering, throttle and gears identical. Driven: kink sideways speed 18.3 → roughly 10–13 km/h; the flick entry slide smaller (~8 instead of 10.8 km/h) — but the flick's left → right switch (~2,476 m) happens off the brake, so that part may change little. The car slows a little less while sliding (a few km/h, caught by straight braking after the kink), so the lap is about the same (±0.15 s). It is a safety/enabling change before braking is pushed further (speed-dependent `brake_decel`, `brake_margin`). Reject on damage or leaving the track. Damage expected to stay at 0. |
-| **Lap time** | _Pending run_ |
-| **Damage** | _Pending run_ |
-| **Top speed** | _Pending run_ |
-| **Min speed** | _Pending run_ |
-| **Observed** | _Pending run_ |
-| **Decision** | _Pending run_ |
-| **Learned** | _Pending run_ |
+| **Lap time** | 1:27.57 |
+| **Damage** | 0 |
+| **Top speed** | 212 km/h |
+| **Min speed** | 65 km/h |
+| **Observed** | Car completed a full lap with zero damage and stayed on track. Lap time 0.02 s faster than v0.37 (1:27.59 → 1:27.57; confirmed by the user against the screen: 1:27:57, 212 km/h, 0 damage). Telemetry (`runs/run_20261001_203129.csv`): **the slide brake barely acted on its target**: kink (~2,385 m) 18.3 → 17.4 km/h sideways, flick entry 11.0 → 10.9, braking steps with `\|speedY\|` > 5 km/h unchanged at 65 — by the time the slide passes 5 km/h it is established, and half the pedal (0.1) still lets it grow. **The flick's left → right switch got worse**: 19.4 → **25.7** km/h sideways, max `\|trackPos\|` 0.72 (~2,478 m). That slide happens off the brake: after the switch (~2,484–2,499 m) the stored throttle climbs to 1.0 while the rear wheels spin (the car has just come off the Corkscrew crest), and traction control cuts the sent throttle to 0 and releases it to ~1.0 the next step, alternating for ~20 steps; each release kicks the rear loose again. **First automatic run:** `run_race.py` started TORCS from the race file (`wtorcs.exe -r`), and the run (`runs/run_20261001_203505.csv`) reproduced this manual run in all 4,220 rows; it also logs past the line, where `lastLapTime` gives TORCS's own time (87.57). Slowest corner 65 km/h (~3,284 m, the hairpin). |
+| **Decision** | ❌ Rejected — no effect on the slides it targeted, and the flick slide grew (25.7 km/h). Driver code and tuning card reverted to v0.37 (`git checkout v0.37 -- snakeoil3_v1.py tuning-card.md`). |
+| **Learned** | A brake ease triggered by the sideways speed comes too late: once the car slides at 5 km/h, half the pedal still grows the slide. The flick's biggest slide is not braking at all but traction-control chatter on the Corkscrew exit (throttle sent 0 ↔ 1 under sustained rear spin), plan step 4b. With automatic runs (`run_race.py`, ~4 s per lap) candidate values can now be tried closed-loop instead of only replayed open-loop. |
 
 ---
 
-*Last updated: v0.38 implemented, awaiting run.*
+## v0.39 — Traction-control cut fades out instead of releasing at once: `tc_hold` 0.8
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.39 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.39`), built on v0.37 (v0.38 rejected). New knob `tc_hold=.8` (line 554). Traction control (lines 659–675): the cut is now `max(new cut, tc_hold × last step's cut)`, kept in `c.tc_cut`, so after a burst of wheelspin it fades over a few steps (0.8 per step, ~10 steps to 10%) instead of vanishing the next step. Only the throttle sent is cut, as before; the stored throttle is untouched. Telemetry only (no driving effect): `curLapTime` and `lastLapTime` are logged with 3 decimals (line 726). Plan step 4b, taken early as a safety fix for the flick. |
+| **Why** | v0.38 showed the flick's worst slide (25.7 km/h, `\|trackPos\|` 0.72) is traction-control chatter on the Corkscrew exit: the cut releases at once, the throttle snaps back to ~1.0, the unloaded rear spins again, and the sent throttle alternates 0 ↔ 1 for ~20 steps. Across the lap the sent throttle jumped by more than 0.5 in 363 steps (v0.37). A cut that fades out gives a steady partial throttle under sustained spin. The value was chosen from closed-loop trials (`run_race.py`, full laps): `tc_hold` 0 (= v0.37) 87.596 s, flick switch 19.4 km/h, max `\|trackPos\|` 0.696, 363 throttle jumps; 0.5 87.55 / 16.5 / 0.678 / 66; 0.7 87.50 / 15.7 / 0.665 / 47; 0.75 87.43 / 13.7 / 0.643 / 40; **0.8 87.45 / 11.7 / 0.625 / 40**; 0.85 87.48 / 14.9 / 0.643 / 37; 0.9 87.51 / 9.8 / 0.592 / 33. 0.8 is among the fastest with the most flick margin of those; differences of ~0.03 s between neighbours are within the run-to-run sensitivity of small changes. |
+| **Prediction** | Measured directly (closed-loop trial, see Why) rather than predicted: about 1:27.44–1:27.45, flick calmer. Reject on damage or leaving the track. |
+| **Lap time** | 1:27.44 |
+| **Damage** | 0 |
+| **Top speed** | 213 km/h |
+| **Min speed** | 64 km/h |
+| **Observed** | Run automatically with `run_race.py` (`runs/run_20261001_203931.csv`); TORCS time **87.448 s** → on screen 1:27:44 (the screen truncates: v0.37 was 87.596 s → 1:27:59). Lap 0.15 s faster than v0.37 (1:27.59 → 1:27.44) — **the fastest lap so far**. Zero damage, on track. **Flick:** left → right switch 19.4 → **11.7** km/h sideways, max `\|trackPos\|` 0.696 → **0.625** (~2,479 m). **Throttle:** sent-throttle jumps > 0.5 363 → **40**; traction control now cuts for 18.6 s of the lap (v0.37 10.8 s) but gently, full throttle 28% → 16%, mean sideways speed 1.70 → 1.60 m/s. Gains mostly on corner exits (~800 m −0.06 s, hairpin exit ~3,300 m −0.05 s). Kink (~2,385 m) unchanged at 18.3 km/h (a braking slide; v0.38 did not fix it). Hairpin exit −0.53. Slowest corner 64 km/h (~3,282 m, the hairpin). |
+| **Decision** | ✅ Kept — fastest lap so far (−0.15 s), flick slide 19.4 → 11.7 km/h, throttle chatter gone |
+| **Learned** | Releasing the traction-control cut at once (v0.28) made the throttle chatter under sustained spin; fading it is both safer and faster, even though full throttle drops from 28% to 16% of the lap — the throttle that was being sent only spun the wheels. The time on screen is TORCS's time truncated to hundredths; logs now carry 3 decimals. Closed-loop trials with `run_race.py` replace open-loop replays for picking values; neighbouring values differ by a few hundredths in a non-monotonic way, so prefer values with margin over the single fastest. |
+
+---
+
+*Last updated after v0.39 run.*
