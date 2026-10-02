@@ -6,7 +6,7 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.34, 1:30.74, 0 damage. Telemetry: `runs/run_20261001_194740.csv`. (v0.33: 1:31.03.) Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
+- **Best:** v0.36, 1:28.99, 0 damage. Telemetry: `runs/run_20261001_201155.csv`. (v0.34: 1:30.74, v0.33: 1:31.03.) Gap to ~1:24: ~5 s. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
 - **v0.32 rejected** (1:32.45). The racing-line rework (`line_offset` 0.85, `line_gain` 1.5, `line_steer_max` 0.21) created a feedback loop. The line's steering swung the nose, which changed `aim` and `ahead`, which changed the target. The target jumped 261 times per lap, and steering reversals rose from 71 to 165. The 0.21 cap also meant the car crossed the track too slowly (~0.23 `trackPos`/s), so it never reached the line.
 - **v0.33 kept** (1:31.03, −0.34 s). The line's bend is held until `|aim|` < `line_aim_off` 1°, and the phase comes from the road along the track direction. Steering reversals fell 71 → 38, and target jumps fell 81 → 38.
 - **Racing line after v0.33 (user: "it goes out, but we aren't maximising the radius").** Outside the flick and the hairpin, entries, apexes and exits use only ~±0.25 of ±1:
@@ -60,7 +60,9 @@ Original step text:
   - Fade the sharpness plan out near `turn_steer_max` instead of switching it off (one full-brake step at ~2,574 m in v0.27).
   - A speed plan that knows the hairpin is tighter than the 75 km/h floor, if the hairpin margin shrinks.
 
-### 3. Braking to the real limit (plan E) ← **next: v0.36 = 3b (`brake_decel` 12.5)**
+### 3. Braking to the real limit (plan E) ← **next: v0.37 = 3b (`brake_decel` 14)**
+
+- **3b result so far:** v0.36 (`brake_decel` 12.5): 1:28.99, **−1.76 s** ✅. Hairpin exit −0.53. Braking distance still limits 1,105 of 1,159 braking steps. New watch point: the kink at ~2,384 m, where braking while turning makes the rear step out (16.4 km/h sideways, caught). That argues for trail-braking logic (pedal tapered as `|steer|` rises) as a later part of this step.
 
 - **3a result:** v0.35 (`brake_gain` 0.08): 1:31.18, +0.44 s, ❌ rejected. Over-speed while braking fell 3.2 → 2.2 km/h, but that only made the car brake earlier (~+0.02 s in every braking section). The ~3 km/h over-speed at gain 0.05 is effectively later braking on a curve the car can follow. So 3b goes ahead on `brake_gain` 0.05.
 - **New measurement (v0.35):** pedal 0.3–0.5 gives 18–21 m/s², full pedal at ~190 km/h ~30 m/s² (aero downforce). This adds **3c: a speed-dependent `brake_decel`** (more at high speed), designed from measured deceleration against speed. Exclude the Corkscrew transition (~2,475–2,490 m), where the car unloads or jumps (user) and the wheel data is unreliable.
@@ -120,7 +122,7 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 |---|---|---|---|---|
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
 | 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped (not grip-limited) |
-| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); ⏳ v0.36 = `brake_decel` 12.5 |
+| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; ⏳ v0.37 = 14 |
 | 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |

@@ -644,6 +644,24 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 | **What changed** | `snakeoil3_v1.py` (Git tag `v0.36`), built on v0.34 (v0.35 rejected; `brake_gain` stays 0.05). `brake_decel` 11.0 → 12.5 m/s² (line 538): the deceleration the braking plan assumes, both for the road ahead and for every beam in the sharpness plan. Step 3b of `improvement-plan.md`. |
 | **Why** | In v0.34, 1,248 of 1,299 braking steps are held by braking distance, i.e. by `brake_decel`. The car can do more than 11 m/s²: pedal 0.2–0.3 gave 12.5 m/s² (v0.34), pedal 0.3–0.5 gave 18–21, and full pedal at ~190 km/h ~30 (v0.35). With `brake_gain` 0.05 the car runs ~3 km/h over the curve, and pedal 0.25 (5 km/h over) gives ~12.5 m/s², so 12.5 is a step the pedal can still deliver. v0.35 showed that tightening the pedal alone costs time. |
 | **Prediction** | Replay with the real `drive_example()` of v0.34 and v0.36 on every logged v0.34 row (open loop): steering identical; the allowed speed rises in 4,148 of 4,308 steps, so at the logged speeds braking drops from 1,302 to 199 steps (open loop, the real car will instead carry more speed and brake later). Allowed speed at the corner minimums: ~485 m +2.3 km/h, ~1,523 m +3.9, ~1,926 m +2.9, ~2,983 m +3.9; flick approach +2.1, hairpin approach +2.6. Driven: braking points later, corner minimums ~2–4 km/h higher, lap roughly 0.4–1.0 s faster than 1:30.74. Risks: the car arrives at each corner a few km/h faster and the pedal needs ~5 km/h over the curve to reach 12.5 m/s², so watch sideways speed on corner entries (≤ 9.1 km/h in v0.34), the hairpin (65 km/h, exit −0.56; 73 km/h gave −0.86) and the flick (9.5 km/h sideways). Reject on damage or leaving the track. Damage expected to stay at 0. |
+| **Lap time** | 1:28.99 |
+| **Damage** | 0 |
+| **Top speed** | 213 km/h |
+| **Min speed** | 65 km/h |
+| **Observed** | Car completed a full lap with zero damage and the damage stop never triggered. Lap time **1.76 s faster** than v0.34 (1:30.74 → 1:28.99) — **the fastest lap so far** and the biggest gain since v0.27, above the predicted 0.4–1.0 s. Top speed 213 km/h. Telemetry (`runs/run_20261001_201155.csv`): faster in almost every braking section (~300 m −0.10 s, ~700 m −0.11, ~900 m −0.11, ~1,400 m −0.12, ~1,800 m −0.10, ~2,300 m −0.10, ~2,600 m −0.11, ~2,900 m −0.13); only ~1,900 m (+0.04), ~2,500 m (+0.02) and ~3,400 m (+0.03) lost a little. Corner minimums up 1–7 km/h (~300 m 111 → 116, ~600 m 149 → 156, ~900 m 120 → 126, ~1,200 m 175 → 184, ~2,800 m 160 → 168). Braking: 1,299 → 1,159 steps (27.3 → 24.3 s), phases 81 → 73, over-speed while braking median 3.2 → 3.9 km/h, pedal median 0.16 → 0.19; pedal 0.2–0.3 now gives 13.9 m/s². Braking distance still limits 1,105 of 1,159 braking steps (grip 12). Hairpin 65 km/h, exit **−0.53** (v0.34 −0.56). Flick sideways speed 9.5 → **11.7** km/h, max `\|trackPos\|` 0.59 (~2,480 m). **Kink before the flick (~2,378–2,388 m):** braking at ~0.2 pedal while steering right (−0.33) at ~165 km/h, the rear steps out and is caught (steer +0.24 within ~10 m): sideways speed 14.3 → **16.4** km/h, the highest of the lap, `trackPos` stays ~+0.15. Steering reversals 32. Slowest corner 65 km/h (~3,282 m, the hairpin). |
+| **Decision** | ✅ Kept — fastest lap so far (−1.76 s) |
+| **Learned** | Braking distance was the main limit after v0.34, and the plan's 11 m/s² was far below what the car can do: 12.5 gained 1.76 s with no damage and the hairpin margin intact. The pedal (gain 0.05) still delivers it by running ~4 km/h over the curve. The cost shows where the car brakes while turning: the kink at ~2,384 m (16.4 km/h sideways, caught). That is the watch point for higher values and an argument for trail-braking logic (pedal tapered as `\|steer\|` rises) later in step 3. |
+
+---
+
+## v0.37 — Braking plan: `brake_decel` 12.5 → 14
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.37 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.37`). `brake_decel` 12.5 → 14.0 m/s² (line 538). Step 3b of `improvement-plan.md`, second value. |
+| **Why** | v0.36 (12.5) gained 1.76 s, and braking distance still limits 1,105 of 1,159 braking steps. The car delivers it: pedal 0.2–0.3 gave 13.9 m/s² in v0.36, 0.3–0.5 gave 18, full pedal at speed ~28–30. The user's plan steps `brake_decel` 12.5 → 14. |
+| **Prediction** | Replay with the real `drive_example()` of v0.36 and v0.37 on every logged v0.36 row (open loop): steering identical; allowed speed rises in 4,121 of 4,229 steps; at the logged speeds braking drops 1,168 → 279 steps (open loop; the real car carries more speed and brakes later). Allowed speed at the corner minimums: ~485 m +2.3 km/h, ~1,523 m +3.7, ~1,926 m +2.7, ~2,983 m +3.8; flick approach +2.0, hairpin approach +2.5; the kink at ~2,384 m +7.6 (no braking left there at the logged speed). Same shape as the v0.36 replay, so roughly 0.6–1.3 s faster than 1:28.99 (smaller than v0.36's gain as the step is the same but braking time is shorter). To reach 14 m/s² the pedal needs ~0.25–0.3, i.e. ~5–6 km/h over the curve, so the car arrives a little faster than planned. Risks: the kink at ~2,384 m (16.4 km/h sideways under braking in v0.36 — reject if it grows past ~20 km/h or `\|trackPos\|` there climbs), corner-entry slides, the flick (11.7 km/h, max `\|trackPos\|` 0.59) and the hairpin (65 km/h, exit −0.53). Reject on damage or leaving the track. Damage expected to stay at 0. |
 | **Lap time** | _Pending run_ |
 | **Damage** | _Pending run_ |
 | **Top speed** | _Pending run_ |
@@ -654,4 +672,4 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated: v0.36 implemented, awaiting run.*
+*Last updated: v0.37 implemented, awaiting run.*
