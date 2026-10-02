@@ -576,6 +576,8 @@ def drive_example(c):
     lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
     lift_v0=86          # km/h: no lift band below this speed (slow corners brake at once) ...
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
+    abs_ratio=.85       # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: was 0.8) ...
+    abs_cut=.5          # ... to this share of the pedal.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -738,11 +740,14 @@ def drive_example(c):
         lift= True
         R['accel']= max(R['accel']+.01, 0)   # stored throttle kept; the throttle sent is 0 (end of drive_example)
 
-    # ABS: halve the brake if any wheel turns 20% slower than the car moves (locking).
+    # ABS: cut the brake to abs_cut once any wheel turns below abs_ratio of the
+    # car speed (locking). v0.55: from 0.8 to 0.85 the cut starts earlier; the
+    # big braking zones were lock-limited (pedal ~0.4-0.5 after the cut) and
+    # releasing sooner keeps the tyres nearer their peak (3x10 suites -0.23 s).
     if R['brake'] > 0 and S['speedX'] > 20:
         slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
-        if slowest_wheel < .8*S['speedX']/3.6:
-            R['brake']*= .5
+        if slowest_wheel < abs_ratio*S['speedX']/3.6:
+            R['brake']*= abs_cut
 
     # Throttle Near Full Lock: at full lock the car is already turning as tight
     # as it can, so more speed only pushes it wide (v0.28: throttle 1.0 at full
