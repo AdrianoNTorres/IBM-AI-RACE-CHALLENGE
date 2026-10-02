@@ -578,6 +578,8 @@ def drive_example(c):
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     abs_ratio=.85       # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: was 0.8) ...
     abs_cut=.5          # ... to this share of the pedal.
+    plan_rise=3         # km/h: while braking (and plan_hold steps after), the allowed speed may rise at most this much per step ...
+    plan_hold=10        # ... steps after the last brake touch (v0.56: steadies the plan on the flick-approach crest).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -711,6 +713,14 @@ def drive_example(c):
             v_grip= (turn_grip*radius/max(1 - turn_grip*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
         allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-abs(R['steer']))/turn_steer_fade, 0, 1)
+    # Plan Hold: on the flick-approach crest (~2,313-2,363 m) the sharpness
+    # plan flickers (allowed 237 -> 302 -> 228 -> 267 -> 190 km/h), so the
+    # car brakes, re-accelerates to full throttle and brakes again, arriving
+    # up to 40 km/h over the plan. While braking and for plan_hold steps
+    # after, the allowed speed may rise by at most plan_rise km/h per step.
+    if getattr(c, 'brake_hist', 0) > 0:
+        allowed_speed= min(allowed_speed, getattr(c, 'allowed_prev', allowed_speed) + plan_rise)
+    c.allowed_prev= allowed_speed
     c.allowed_speed= allowed_speed   # kept for telemetry only
 
     # Throttle Control
@@ -744,6 +754,7 @@ def drive_example(c):
     # car speed (locking). v0.55: from 0.8 to 0.85 the cut starts earlier; the
     # big braking zones were lock-limited (pedal ~0.4-0.5 after the cut) and
     # releasing sooner keeps the tyres nearer their peak (3x10 suites -0.23 s).
+    c.brake_hist= plan_hold if R['brake'] > 0 else max(0, getattr(c, 'brake_hist', 0) - 1)   # steps left of the plan hold
     if R['brake'] > 0 and S['speedX'] > 20:
         slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
         if slowest_wheel < abs_ratio*S['speedX']/3.6:
