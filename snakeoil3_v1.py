@@ -555,8 +555,9 @@ def drive_example(c):
     setup_dist=160      # m: corner set-up (v0.58): with less road than this visible along the track direction ...
     setup_beam=2        # deg: ... the beams this far either side of it ...
     setup_min=3         # m: ... differing by more than this tell the coming bend's side early.
-    setup_offset=.7     # trackPos aimed for on the outside during the set-up (while over 80 m of road is visible).
-    setup_steer=.02     # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
+    setup_offset=.85    # trackPos aimed for on the outside during the set-up ...
+    setup_road=95       # m: ... while more road than this is visible along the track direction.
+    setup_steer=.045    # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
@@ -629,12 +630,15 @@ def drive_example(c):
     # beams just left and right of the track direction differ by metres from
     # ~150 m out, the longer side being the way the road turns. Until the
     # bend is detected, that side moves the car to the outside.
+    # v0.59: wider (0.85) and ended earlier (95 m of road, was 80), with the
+    # steering gate at 0.045 (was 0.02); only in that combination (offset
+    # alone 0.85 or end 95 m alone: slower).
     setup= 0
     if side == 0 and 0 < road < setup_dist and abs(prev_steer) < setup_steer:
         asym= beam_at(S['track'], track_dir+setup_beam) - beam_at(S['track'], track_dir-setup_beam)
         if abs(asym) > setup_min:
             setup= 1 if asym > 0 else -1   # longer road to the right: right-hand bend
-    if setup != 0 and road > 80:
+    if setup != 0 and road > setup_road:
         line_target= setup_offset*setup
         R['steer']+= (line_target - S['trackPos'])*line_gain
     if side != 0:
