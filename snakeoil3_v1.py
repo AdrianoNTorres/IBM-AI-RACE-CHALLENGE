@@ -550,6 +550,7 @@ def drive_example(c):
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
     turn_steer_max=.6   # curving onto beams is only planned while |steer| is at most this (not near full lock).
+    turn_grip_aero=1.5e-4  # turn_grip rises by this share per (m/s)^2 of speed (downforce): +12% at 100 km/h, +46% at 200.
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
@@ -629,6 +630,11 @@ def drive_example(c):
     # Wide bends show long beams at moderate angles (more speed); hairpins only
     # short beams at wide angles. Not used near full lock (|steer| above
     # turn_steer_max). Never less than the plan from the road ahead.
+    # Grip rises with speed (downforce; braking per unit of pedal is ~40% higher
+    # at 210 km/h than at 80), so the sideways acceleration assumed is
+    # turn_grip*(1 + turn_grip_aero*v^2); at the speed that just follows the
+    # curve, v^2 = turn_grip*radius*(1 + turn_grip_aero*v^2), which gives
+    # v^2 = turn_grip*radius/(1 - turn_grip*turn_grip_aero*radius).
     from math import sin
     if abs(R['steer']) <= turn_steer_max:
         for d, a in zip(S['track'], TRACK_ANGLES):
@@ -637,7 +643,7 @@ def drive_example(c):
             if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], TRACK_ANGLES)
                    if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
             v_brake= brake_speed(d)
-            v_grip= (turn_grip*radius)**.5
+            v_grip= (turn_grip*radius/max(1 - turn_grip*turn_grip_aero*radius, .1))**.5
             allowed_speed= max(allowed_speed, min(v_brake, v_grip)*3.6)
     c.allowed_speed= allowed_speed   # kept for telemetry only
 
