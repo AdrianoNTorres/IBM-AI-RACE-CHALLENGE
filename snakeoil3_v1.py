@@ -565,6 +565,7 @@ def drive_example(c):
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
+    upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
@@ -873,8 +874,10 @@ def drive_example(c):
         gear= 1
     elif gear < 6 and S['rpm'] > upshift_rpm:
         gear+= 1
-    elif gear > lowest_running_gear and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm:
+    elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
+          and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm):
         gear-= 1
+    c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
     R['gear']= gear
     return
 
