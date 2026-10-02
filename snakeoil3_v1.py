@@ -552,6 +552,11 @@ def drive_example(c):
     line_imax=.4        # ... at most this much steer ...
     line_isteer=.4      # ... in full while |steer| is below this ...
     line_ifade=.25      # ... fading out over this much more |steer| (none from 0.65: hairpin, flick) ...
+    setup_dist=160      # m: corner set-up (v0.58): with less road than this visible along the track direction ...
+    setup_beam=2        # deg: ... the beams this far either side of it ...
+    setup_min=3         # m: ... differing by more than this tell the coming bend's side early.
+    setup_offset=.7     # trackPos aimed for on the outside during the set-up (while over 80 m of road is visible).
+    setup_steer=.02     # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
@@ -616,8 +621,23 @@ def drive_example(c):
     elif abs(aim) < line_aim_off:
         side= 0
     line_target= 0
+    road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
+    # Corner set-up: the bend is only detected (bearing over 2 deg) some 35 m
+    # before it, when the road ahead is already under 60 m, so the line went
+    # straight to the inside and entries used +-0.15 of the width (v0.57).
+    # On the straight before a bend the end of the road is a slanted edge:
+    # beams just left and right of the track direction differ by metres from
+    # ~150 m out, the longer side being the way the road turns. Until the
+    # bend is detected, that side moves the car to the outside.
+    setup= 0
+    if side == 0 and 0 < road < setup_dist and abs(prev_steer) < setup_steer:
+        asym= beam_at(S['track'], track_dir+setup_beam) - beam_at(S['track'], track_dir-setup_beam)
+        if abs(asym) > setup_min:
+            setup= 1 if asym > 0 else -1   # longer road to the right: right-hand bend
+    if setup != 0 and road > 80:
+        line_target= setup_offset*setup
+        R['steer']+= (line_target - S['trackPos'])*line_gain
     if side != 0:
-        road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
         phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         # Apex: in medium bends (moderate steering) the car can hold a tighter
         # inside line, which opens the radius of the whole bend (v0.52 trials:
