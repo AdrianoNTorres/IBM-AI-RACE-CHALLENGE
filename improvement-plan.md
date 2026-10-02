@@ -60,7 +60,12 @@ Original step text:
   - Fade the sharpness plan out near `turn_steer_max` instead of switching it off (one full-brake step at ~2,574 m in v0.27).
   - A speed plan that knows the hairpin is tighter than the 75 km/h floor, if the hairpin margin shrinks.
 
-### 3. Braking to the real limit (plan E) ← **next: v0.35 = 3a (`brake_gain` 0.08)**
+### 3. Braking to the real limit (plan E) ← **next: v0.36 = 3b (`brake_decel` 12.5)**
+
+- **3a result:** v0.35 (`brake_gain` 0.08): 1:31.18, +0.44 s, ❌ rejected. Over-speed while braking fell 3.2 → 2.2 km/h, but that only made the car brake earlier (~+0.02 s in every braking section). The ~3 km/h over-speed at gain 0.05 is effectively later braking on a curve the car can follow. So 3b goes ahead on `brake_gain` 0.05.
+- **New measurement (v0.35):** pedal 0.3–0.5 gives 18–21 m/s², full pedal at ~190 km/h ~30 m/s² (aero downforce). This adds **3c: a speed-dependent `brake_decel`** (more at high speed), designed from measured deceleration against speed. Exclude the Corkscrew transition (~2,475–2,490 m), where the car unloads or jumps (user) and the wheel data is unreliable.
+
+Original step text:
 
 - **Change (two parts, one version each):**
   - a. `brake_gain` 0.05 → ~0.08.
@@ -115,7 +120,7 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 |---|---|---|---|---|
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
 | 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped (not grip-limited) |
-| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14 | 0.8–1.5 s | Medium (lock-ups, entry slides) | ⏳ v0.35 = `brake_gain` 0.08 |
+| 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); ⏳ v0.36 = `brake_decel` 12.5 |
 | 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | |
