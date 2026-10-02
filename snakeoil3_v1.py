@@ -559,6 +559,9 @@ def drive_example(c):
     setup_road=95       # m: ... while more road than this is visible along the track direction.
     setup_steer=.045    # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
+    rel_start=7         # m: exit release (v0.61): once the road along the track has grown this much past the bend's shortest ...
+    rel_width=2         # m: ... the inside target is released over this much more road ...
+    rel_share=.8        # ... by this share (the car runs out toward the exit; the inside integral is kept).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
@@ -655,6 +658,19 @@ def drive_example(c):
         offset= line_offset
         if phase < 0:
             offset+= line_apex*clip((apex_steer+apex_steer_fade-abs(prev_steer))/apex_steer_fade, 0, 1)
+        # Exit release (v0.61): the road along the track direction stays short
+        # through a bend and only grows once the car is past the apex, but the
+        # phase stays at -1 (inside) until it is back over 60 m, so the line
+        # held the car on the inside up to the bend's end (448 m: target
+        # +0.5 inside to 529 m; 1,522 m: to 1,590 m), asking for steering the
+        # exit could have spent on throttle. Once the road has grown rel_start
+        # past the bend's shortest road, the inside target is released by
+        # rel_share (over rel_width), so the car unwinds toward the outside.
+        if getattr(c, 'line_side', 0) != side:
+            c.road_min= road
+        c.road_min= min(getattr(c, 'road_min', road), road)
+        if phase < 0:
+            phase*= 1 - rel_share*clip((road - c.road_min - rel_start)/rel_width, 0, 1)
         line_target= offset*phase*side
         R['steer']+= (line_target - S['trackPos'])*line_gain
     # Inside line integral: in a steady bend the heading term (angle*15/PI)
