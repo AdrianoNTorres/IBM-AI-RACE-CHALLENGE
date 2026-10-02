@@ -575,7 +575,7 @@ def drive_example(c):
     grip_boost=.3       # v0.60: turn_grip is raised by this share while the smoothed |steer| is below boost_steer ...
     boost_steer=.2      # ... (light steering = grip to spare: steady medium bends ride the plan at |steer| 0.15-0.3) ...
     boost_fade=.1       # ... fading out over this much more |steer| (none from 0.3).
-    tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
+    tc_slip=4.5         # m/s the rear wheels may outrun the fronts before traction control cuts (v0.63: 2.5 -> 4.5; 2.5 was the v0.28 peak, the car now exits on the line with grip to spare).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
     tc_slip_straight=5.0  # m/s of extra over-speed allowed when the car goes straight (the rears carry no sideways load).
