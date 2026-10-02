@@ -33,6 +33,8 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## The plan (in this order)
 
+> **This order is a starting point, not a commitment (user, 2026-10-01).** Each new session or iteration agent forms its own view from the telemetry first, proposes at least 3 candidates of its own (at least one new), and may reorder, drop or replace steps when the evidence says so, recording why. Earlier conclusions, including rejections, are hypotheses that can be re-tested when the car or the code has changed. See CLAUDE.md, "Sessions and agents".
+
 ### 1. v0.33 — Steady line target ✅ done
 
 - **Result:** 1:31.03, −0.34 s, best lap. Better than the predicted ±0.2 s.
