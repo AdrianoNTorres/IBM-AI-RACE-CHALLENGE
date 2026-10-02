@@ -6,7 +6,8 @@ This plan merges the user's improvement plan (written against v0.31) with Claude
 
 ## Current state
 
-- **Best:** v0.42, 1:23.12, 0 damage. Telemetry: `runs/run_20261001_211338.csv`. (v0.41: 1:24.35, v0.40: 1:25.95, v0.39: 1:27.44.) The ~1:24 target is beaten by ~0.9 s; the goal is now as far below it as possible.
+- **Best:** v0.43, 1:22.23, 0 damage. Telemetry: `runs/run_20261001_213459.csv`. (v0.42: 1:23.12, v0.41: 1:24.35, v0.40: 1:25.95, v0.39: 1:27.44.) The ~1:24 target is beaten by ~0.9 s; the goal is now as far below it as possible.
+- **v0.43 (off-plan, own candidate, step 4b area): straight-line traction control, −0.89 s ✅.** The slip limit rises from `tc_slip` 2.5 by up to `tc_slip_straight` 5.0 m/s as the wheel straightens (`tc_slip_steer` 0.7) and the car stops sliding (`tc_slip_slide` 8 km/h). Traction control had cut the throttle for 30.8 s of the v0.42 lap; now 17.9 s. Trials on v0.42: **steering cap (new) 0.6–0.9 left the track at the hairpin exit** (less lock kept 72–73 km/h but could not turn tight enough); throttle ramp 0.1–1/step → 82.66–82.90 s; flat `tc_slip` 3–6 → 82.10–82.84 (flick slide 25–36 km/h); steering-only extra → 82.05 but medium-corner exits slid 13–19 km/h (counter-steer raised the limit); full-lock brake → 82.07; `corner_speed` 80 → off track at the flick; `downshift_rpm` 15,500/16,000 → 82.21/82.01.
 - **v0.42 (step 6 taken early): `upshift_rpm` 15,000 → 18,500, −1.23 s ✅.** Power rises to the limiter and the ratios are close, so shifting at 15,000 landed every gear at 12,000–13,500 rpm. No watch point moved; shifts 66 → 41, gear reversals 6 → 0 (the 2↔3 hunting fix is no longer needed). Trials on v0.41: 20,000 never leaves 2nd at speed; `turn_grip` 9/10 → 83.17/83.01 s (flick 0.81/0.88); `brake_aero` 0.006 → 83.54; brake dead band (step 4a) 1–3 km/h → no gain; **new: full-lock brake** (pedal ≥ 0.05 above `\|steer\|` 0.95) → +0.09 s alone, but flick `\|trackPos\|` 0.71 → 0.53 and hairpin 0.59 → 0.34 (hairpin 64 → 52 km/h). Combos on 18,500 (informational): + `turn_grip` 9 → 81.80; + full-lock brake + `corner_speed` 80 → 82.47 (flick 0.62); + full-lock brake + `turn_grip` 10 → 81.77 (flick 0.57); `brake_aero` 0.008 leaves the track at ~2,467 m with or without the full-lock brake.
 - **v0.41 (off-plan, own candidate): `target_speed` 200 → 250, −1.60 s ✅.** "Straights used up" (v0.17) was only true while braking was weak; with the v0.40 brakes the 200 cap held every long straight at ~210 km/h. Closed-loop trials on v0.40, for comparison: `turn_grip` 8 → −0.82 s, 9 → −1.12 s (so step 2's "not grip-limited" was wrong: the count looked at braking steps, but medium corners ride the sharpness-plan speed on part throttle); `corner_speed` 80 and `brake_margin` 10 leave the track at the flick; `brake_gain` 0.08 +0.30 s. Two-knob trials on v0.41 (informational): + `turn_grip` 9 → 83.17 s (flick `|trackPos|` 0.81, kink 15.4 km/h); + `brake_aero` 0.005 → 83.69 s (flick 0.66).
 - **Races now run automatically** (`run_race.py`, ~4 s per lap), so values are chosen from closed-loop trials, not only open-loop replays. Baseline for this plan was v0.31 (1:31.37, `runs/run_20261001_191013.csv`).
@@ -92,7 +93,7 @@ Original step text:
 - **Reject if:** any damage, `|trackPos|` > 1, or slides on corner entry.
 - **Later follow-ups in this area:** `brake_margin` 15 → 8 m. Then trail braking (user request): taper the pedal as `|steer|` rises, so part of the slowing happens after turn-in. 87% of braking is at `|steer|` < 0.2 now.
 
-### 4. Throttle and traction control (plan D, step 2) — 4b partly done early (v0.39)
+### 4. Throttle and traction control (plan D, step 2) — 4b partly done early (v0.39); straight-line slip limit done (v0.43, −0.89 s); 4a (dead band) no gain (v0.42 trials)
 
 - **v0.39 (`tc_hold` 0.8, the cut fades instead of releasing at once): 1:27.44, −0.15 s ✅.** Flick slide 19.4 → 11.7 km/h, throttle jumps 363 → 40. Still open: 4a brake dead band, and a speed-dependent slip target.
 
@@ -136,11 +137,26 @@ Merged: the user's "strengthen the line" step, plus the angle-safe braking plan 
 | 1 | Steady line target (v0.33) | ~0 s (enabling) | Low | ✅ −0.34 s |
 | 2 | `turn_grip` 6 → 7 → 8 → 9 | 1–3 s | Medium (corner slides, hairpin entry) | ✅ 7: −0.29 s; 8/9 skipped, then re-tested (v0.41 trials): 9 −1.12 s on v0.40, open |
 | 3 | `brake_gain` 0.08, then `brake_decel` 12.5 → 14, then speed-dependent `brake_decel` | 0.8–1.5 s | Medium (lock-ups, entry slides) | 3a ❌ (+0.44 s); 12.5 ✅ −1.76 s; 14 ✅ −1.40 s; slide brake ❌ (v0.38); 3c `brake_aero` ✅ −1.49 s (v0.40) |
-| 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | 4b fade ✅ −0.15 s (v0.39) |
+| 4 | Brake dead band, then speed-dependent traction control | 0.5–1.5 s | Low–medium | 4b fade ✅ −0.15 s (v0.39); straight-line slip limit ✅ −0.89 s (v0.43); dead band no gain |
 | 5 | Angle-safe braking plan, line aimed by heading (larger angle), `line_offset` ~0.85 | 1–2 s | High (track limits, hairpin) | |
 | 6 | `upshift_rpm` ~17,000, fix 2↔3 hunting | 0.3–1 s | Low | ✅ 18,500: −1.23 s (v0.42); hunting gone; `downshift_rpm` open |
 | — | Off-plan: `target_speed` 200 → 250 | — | Low | ✅ −1.60 s (v0.41) |
 | | **Total** | **~4–8 s** | | |
+
+## Strongest open ideas (measured, updated v0.43)
+
+Closed-loop full laps with `run_race.py` (TORCS s). "On v0.43" = added to the committed v0.43 (82.236). Each is a hypothesis for the next agent, not an instruction.
+
+| Rank | Idea | Measured | Watch / risk |
+|---|---|---|---|
+| 1 | `turn_grip` 7 → 9 | on v0.43: **80.704** (−1.53 s) | flick `\|trackPos\|` 0.84, kink 16.8 km/h (v0.43: 0.71, 10.6); 10 on v0.41 → flick 0.88 |
+| 2 | `turn_grip` 9 + full-lock brake (pedal ≥ 0.05, throttle 0 above `\|steer\|` 0.95 and 50 km/h) | on v0.43: **80.786** | flick 0.54 (safer), hairpin 64 → 52 km/h, kink 16.8 km/h; two mechanisms |
+| 3 | `brake_aero` 0.004 → 0.006 | on v0.43: **81.058** (−1.18 s) | flick 0.76, flick slide 11.6 km/h; 0.007–0.008 left the track at the flick on v0.40/v0.42 |
+| 4 | Throttle ramp +0.05 → +0.2 per step (new, v0.43 trials) | on v0.42: 82.858 (−0.27); on v0.43: 81.936 (−0.30) | flick 0.72; +1 per step 82.662 on v0.42 (flick slide 26.6 km/h) |
+| 5 | Full-lock brake alone (enabling for the flick) | on v0.43: 82.352 (+0.12) | flick 0.71 → 0.53, hairpin 0.56 → 0.33 but 64 → 52 km/h; makes `corner_speed` 80 finish (82.466 on v0.42) |
+| 6 | Hairpin-specific speed plan (new idea, untested): the hairpin and the flick run ~60 m at the 75 km/h floor at full lock and bleed to 64–72 km/h | — | needs a corner-radius estimate at full lock; `corner_speed` 80 alone leaves the track at the flick |
+| 7 | `downshift_rpm` 13,500 → 15,500–16,000 | on v0.43: 82.214 / 82.010 | ~no gain |
+| — | Rejected in v0.43 trials: steering cap 0.6–0.9 (new) | 83.83–84.69 on v0.42, **off track at the hairpin exit** (1.09–1.19) | full lock is needed at the hairpin |
 
 ## Standing notes
 

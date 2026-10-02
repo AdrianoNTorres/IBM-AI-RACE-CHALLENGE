@@ -553,6 +553,9 @@ def drive_example(c):
     tc_slip=2.5         # m/s the rear wheels may outrun the fronts before traction control cuts (acceleration peaks at 2-2.5).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
+    tc_slip_straight=5.0  # m/s of extra over-speed allowed when the car goes straight (the rears carry no sideways load).
+    tc_slip_steer=.7    # |steer| at which that extra is gone (it falls linearly from steer 0 to here).
+    tc_slip_slide=8     # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
@@ -679,10 +682,19 @@ def drive_example(c):
     # chatters 0 <-> 1 (v0.38: ~20 steps on the Corkscrew exit, 25.7 km/h
     # sideways). So the cut fades out: at least tc_hold of last step's cut
     # stays, and it lasts a few steps after the spin stops.
+    # The 2.5 m/s limit was measured with the car turning; on a straight exit
+    # the rear tyres carry no sideways load and pull harder with more slip
+    # (v0.43 trials: a flat 3.5-6 m/s was 0.7-1.0 s faster, but let the flick
+    # slide reach 25-36 km/h). So the limit rises by up to tc_slip_straight
+    # as the wheel straightens: full extra at steer 0, none from tc_slip_steer.
+    # A car that slides is counter-steering toward 0, which would raise the
+    # limit and feed the slide (19 km/h at ~500 m without this), so the extra
+    # also fades out with sideways speed, gone at tc_slip_slide.
     w= S['wheelSpinVel']
     rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
+    slip_target= tc_slip + tc_slip_straight*clip(1-abs(R['steer'])/tc_slip_steer, 0, 1)*clip(1-abs(S['speedY'])/tc_slip_slide, 0, 1)
     c.throttle= clip(R['accel'], 0, 1)
-    c.tc_cut= max(clip((rear_over-tc_slip)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
+    c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
