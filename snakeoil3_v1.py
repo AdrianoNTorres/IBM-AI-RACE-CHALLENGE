@@ -589,6 +589,8 @@ def drive_example(c):
     lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
     lift_v0=86          # km/h: no lift band below this speed (slow corners brake at once) ...
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
+    touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
+    touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
     abs_ratio=.85       # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: was 0.8) ...
     abs_cut=.5          # ... to this share of the pedal.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
@@ -794,6 +796,12 @@ def drive_example(c):
     R['brake']= 0
     if ahead >= 0 and S['speedX'] > allowed_speed + lift_band:
         R['brake']= min(1, (S['speedX']-allowed_speed-lift_band)*brake_gain)
+        # Brake Touch (v0.64): in medium corners the car rides the plan and a
+        # 1-3 km/h excess gives a 0.05-0.15 brake touch, which zeroed the stored
+        # throttle; it then climbed back at +0.05 per step (~0.3 s at part
+        # throttle: v0.63, 448 m bend, 100-112 km/h sawtooth). A touch lighter
+        # than touch_brake keeps touch_keep of it; nothing is sent while braking.
+        touch_thr= R['accel']*touch_keep*(R['brake'] < touch_brake)
         R['accel']= 0
     elif ahead >= 0 and S['speedX'] > allowed_speed:
         lift= True
@@ -851,6 +859,8 @@ def drive_example(c):
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
+    if 0 < R['brake'] < touch_brake:   # brake touch: stored throttle kept, nothing sent
+        c.throttle= min(c.throttle + touch_thr, 1); R['accel']= 0
     if lift: R['accel']= 0   # lift band: nothing sent, c.throttle stays for the next step
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
