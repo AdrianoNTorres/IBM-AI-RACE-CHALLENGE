@@ -556,7 +556,7 @@ def drive_example(c):
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
     tc_slip_straight=5.0  # m/s of extra over-speed allowed when the car goes straight (the rears carry no sideways load).
     tc_slip_steer=.7    # |steer| at which that extra is gone (it falls linearly from steer 0 to here).
-    tc_slip_slide=8     # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
+    tc_slip_slide=14    # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
@@ -695,7 +695,8 @@ def drive_example(c):
     # as the wheel straightens: full extra at steer 0, none from tc_slip_steer.
     # A car that slides is counter-steering toward 0, which would raise the
     # limit and feed the slide (19 km/h at ~500 m without this), so the extra
-    # also fades out with sideways speed, gone at tc_slip_slide.
+    # also fades out with sideways speed, gone at tc_slip_slide. That is set
+    # above the 7-9.5 km/h every medium corner's exit runs at anyway (v0.45).
     w= S['wheelSpinVel']
     rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
     slip_target= tc_slip + tc_slip_straight*clip(1-abs(R['steer'])/tc_slip_steer, 0, 1)*clip(1-abs(S['speedY'])/tc_slip_slide, 0, 1)
