@@ -553,6 +553,7 @@ def drive_example(c):
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
+    slide_brake=5       # km/h of sideways speed above which the brake is halved (the rear is stepping out).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -639,6 +640,13 @@ def drive_example(c):
     if ahead >= 0 and S['speedX'] > allowed_speed:
         R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
         R['accel']= 0
+    # Slide Under Braking: braking moves grip to the front, and in a bend the
+    # rear can step out (v0.36-v0.37: ~2,384 m kink 16-18 km/h sideways under a
+    # 0.1-0.2 pedal at ~170 km/h; straight braking stays under ~5 km/h). Once
+    # the car slides sideways faster than slide_brake, the brake is halved so
+    # the rear tyres get their grip back, as ABS does for a locking wheel.
+    if R['brake'] > 0 and abs(S['speedY']) > slide_brake:
+        R['brake']*= .5
 
     # ABS: halve the brake if any wheel turns 20% slower than the car moves (locking).
     if R['brake'] > 0 and S['speedX'] > 20:
