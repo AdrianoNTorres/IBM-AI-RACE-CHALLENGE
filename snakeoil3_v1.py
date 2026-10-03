@@ -598,9 +598,9 @@ def drive_example(c):
     launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts (in practice no cut).
     exit_steer=.3       # v0.72: below launch_v after the launch, launch_slip also applies while the car runs straight (out of the hairpin and the Corkscrew), full at steer 0, none from this |steer| ...
     exit_vy=6           # ... and none from this sideways speed (km/h; no extra while the car slides).
-    clutch_slip=.7      # v0.78: clutch pedal while accelerating with the engine below its torque peak (the engine revs up freely and still passes its full torque) ...
-    clutch_rpm=14000    # ... full while the rpm the gear would give at the car's speed is this far or more below ...
-    clutch_fade=2000    # ... clutch_rpm, fading to no slip at clutch_rpm (rpm).
+    clutch_slip=.667    # most clutch pedal while accelerating (v0.78: .7; v0.79: 2/3, the most at which TORCS still passes the full engine torque: min(3*(1 - pedal), 1)) ...
+    clutch_top=17000    # ... v0.79: slipped in every gear while the rpm of the driven wheels (rear wheel speed * gear ratio * final drive) is below this ...
+    clutch_k=60         # ... easing off toward it: pedal = 1 - (clutch_k/(clutch_top - wheel rpm + clutch_k))^(1/4) (rpm; larger = closed sooner).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -915,12 +915,25 @@ def drive_example(c):
     # over 30 perturbed laps, 0.8 loses drive: 76.163). So while accelerating, the
     # clutch is slipped whenever the rpm the gear gives at the car's speed
     # (ground rpm: speed / rear radius 0.315 m * gear ratio * final drive 4.5)
-    # is below clutch_rpm, fading in over clutch_fade. No upshift while the
-    # clutch slips (the engine rpm is then not the gear's rpm).
-    rpm_ground= max(S['speedX'], 0)/3.6/.315*[3.9, 2.9, 2.3, 1.87, 1.68, 1.54][max(int(S['gear']), 1)-1]*4.5*60/(2*PI)
+    # was below clutch_rpm 14,000, fading in over clutch_fade 2,000 (both removed
+    # in v0.79, see below).
+    # Slip In Every Gear (v0.79): v0.78 slipped only below 14,000 ground rpm, on
+    # the idea that the gain was the torque peak. The simulator's source
+    # (simuv2 engine.cpp/transmission.cpp) says otherwise: the torque curve is
+    # nearly flat (340-360 N.m from 9,000 to 18,000 rpm); the torque passed is
+    # engine torque * min(3*(1 - pedal), 1), so all of it up to pedal 2/3 (0.9 of
+    # it at the old 0.7); the engine speed follows the wheels only by
+    # (1 - pedal)^4 per simulation step; and above the 18,700 limiter the engine
+    # torque is 0. So the slip is useful in every gear, as long as the engine
+    # stays under the limiter: the pedal eases off as the driven wheels' rpm
+    # (rear wheel speed * gear ratio * final drive) nears clutch_top, with the
+    # coupling (1 - pedal)^4 = clutch_k/(clutch_top - wheel rpm + clutch_k).
+    # The engine rpm is then no longer the gear's rpm, so the upshift reads the
+    # driven wheels' rpm instead (same value when the clutch is closed).
+    axle_rpm= (w[2]+w[3])/2*[3.9, 2.9, 2.3, 1.87, 1.68, 1.54][max(int(S['gear']), 1)-1]*4.5*60/(2*PI)
     R['clutch']= 0
-    if R['brake'] == 0 and c.throttle > 0:
-        R['clutch']= clutch_slip*clip((clutch_rpm-rpm_ground)/clutch_fade, 0, 1)
+    if R['brake'] == 0 and c.throttle > 0 and axle_rpm < clutch_top:
+        R['clutch']= min(clutch_slip, 1 - (clutch_k/(clutch_top-axle_rpm+clutch_k))**.25)
 
     # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
     # shift down only when the lower gear would land below downshift_rpm, and
@@ -930,7 +943,7 @@ def drive_example(c):
     gear= int(S['gear'])
     if gear < 1 or S['speedX'] < 10:
         gear= 1
-    elif gear < 6 and S['rpm'] > upshift_rpm and R['clutch'] == 0:
+    elif gear < 6 and axle_rpm > upshift_rpm:
         gear+= 1
     elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
           and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm):
