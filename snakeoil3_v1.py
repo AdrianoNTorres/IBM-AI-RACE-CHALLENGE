@@ -556,8 +556,9 @@ def drive_example(c):
     setup_beam=2        # deg: ... the beams this far either side of it ...
     setup_min=3         # m: ... differing by more than this tell the coming bend's side early.
     setup_offset=.85    # trackPos aimed for on the outside during the set-up ...
-    setup_road=95       # m: ... while more road than this is visible along the track direction.
-    setup_steer=.045    # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
+    setup_road=80       # m: ... while more road than this is visible along the track direction (v0.80: 95 -> 80 with the held set-up).
+    setup_steer=.045    # no set-up starts while |steer| is above this (the car is still in a bend: kink, flick approach); v0.80: once started it is held.
+    setup_pull=.15      # v0.80: most steer the set-up pull may add (uncapped it reached ~0.28 and the held set-up left the track at the flick).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     rel_start=7         # m: exit release (v0.61): once the road along the track has grown this much past the bend's shortest ...
     rel_width=2         # m: ... the inside target is released over this much more road ...
@@ -649,14 +650,28 @@ def drive_example(c):
     # v0.59: wider (0.85) and ended earlier (95 m of road, was 80), with the
     # steering gate at 0.045 (was 0.02); only in that combination (offset
     # alone 0.85 or end 95 m alone: slower).
+    # Held set-up (v0.80): the pull itself (~0.28 steer at once) closed the
+    # steering gate on the next step, so the set-up switched on and off every
+    # 2-3 steps all the way down the approach (v0.79: 283 steering reversals,
+    # 12.1 s of the lap in oscillation, 326 target flips) and the car moved
+    # only ~0.05 of the 0.57 to its target. Now the gate applies only when the
+    # set-up starts; it is then held until the road falls to setup_road, a
+    # bend is detected, or the beams show the other side by setup_min. The
+    # pull is capped at setup_pull: the heading and look-ahead terms push back
+    # with ~6.8 steer per radian of yaw, so 0.15 holds the car ~0.02 rad
+    # toward the outside (the uncapped held pull left the track at the flick).
     setup= 0
-    if side == 0 and 0 < road < setup_dist and abs(prev_steer) < setup_steer:
+    held= getattr(c, 'setup_side', 0)
+    if side == 0 and setup_road < road < setup_dist:
         asym= beam_at(S['track'], track_dir+setup_beam) - beam_at(S['track'], track_dir-setup_beam)
-        if abs(asym) > setup_min:
+        if held != 0 and asym*held > -setup_min:
+            setup= held
+        elif abs(prev_steer) < setup_steer and abs(asym) > setup_min:
             setup= 1 if asym > 0 else -1   # longer road to the right: right-hand bend
-    if setup != 0 and road > setup_road:
+    c.setup_side= setup   # kept between steps
+    if setup != 0:
         line_target= setup_offset*setup
-        R['steer']+= (line_target - S['trackPos'])*line_gain
+        R['steer']+= clip((line_target - S['trackPos'])*line_gain, -setup_pull, setup_pull)
     if side != 0:
         phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         # Apex: in medium bends (moderate steering) the car can hold a tighter
