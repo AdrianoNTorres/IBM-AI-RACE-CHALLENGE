@@ -596,6 +596,8 @@ def drive_example(c):
     abs_cut=.5          # ... to this share of the pedal.
     launch_v=130        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ...
     launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts (in practice no cut).
+    exit_steer=.3       # v0.72: below launch_v after the launch, launch_slip also applies while the car runs straight (out of the hairpin and the Corkscrew), full at steer 0, none from this |steer| ...
+    exit_vy=6           # ... and none from this sideways speed (km/h; no extra while the car slides).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -867,6 +869,15 @@ def drive_example(c):
     # rest of the run once launch_v is first reached.
     c.launch= getattr(c, 'launch', True) and S['speedX'] < launch_v
     if c.launch: slip_target+= launch_slip
+    # Straight Exits (v0.72): out of the hairpin (57 km/h, 2nd gear at ~6,800
+    # rpm, far below the 16-18k torque peak) and the Corkscrew the car runs
+    # straight, yet traction control cut the throttle by 0.15-0.3 for ~100 m
+    # (rear over-speed beyond the 9.5 m/s straight limit): the same state as
+    # the standing start. So below launch_v the launch allowance applies again,
+    # faded out with |steer| (none from exit_steer) and sideways speed (none
+    # from exit_vy): only while the car is straight and not sliding.
+    elif S['speedX'] < launch_v:
+        slip_target+= launch_slip*clip(1-abs(R['steer'])/exit_steer, 0, 1)*clip(1-abs(S['speedY'])/exit_vy, 0, 1)
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
