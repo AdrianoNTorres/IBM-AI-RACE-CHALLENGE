@@ -556,7 +556,7 @@ def drive_example(c):
     setup_beam=2        # deg: ... the beams this far either side of it ...
     setup_min=3         # m: ... differing by more than this tell the coming bend's side early.
     setup_offset=.85    # trackPos aimed for on the outside during the set-up ...
-    setup_road=80       # m: ... while more road than this is visible along the track direction (v0.80: 95 -> 80 with the held set-up).
+    setup_road=85       # m: ... while more road than this is visible along the track direction (v0.80: 95 -> 80 with the held set-up; v0.82: 85, 0.035 s over 30 perturbed laps; a set-up held closer to the bend, 30-70 m, is 0.03-0.55 s slower: the outward yaw brings the bend detection and the turn-in forward).
     setup_steer=.045    # no set-up starts while |steer| is above this (the car is still in a bend: kink, flick approach); v0.80: once started it is held.
     setup_pull=.15      # v0.80: most steer the set-up pull may add (uncapped it reached ~0.28 and the held set-up left the track at the flick).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
