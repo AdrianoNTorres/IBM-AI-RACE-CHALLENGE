@@ -536,7 +536,7 @@ def drive_example(c):
     target_speed=300  # km/h throttle aim on straights; above the car's ~270 top speed, so it no longer caps (the braking plan sets corner speeds).
     corner_speed=78   # km/h the car must be able to slow to by the end of the visible road (v0.68: 76 -> 79; v0.70: 78, enabling change: hairpin/flick margin for the launch, 79 + launch leaves the track 1 of 30, 78 + launch 0).
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
-    brake_aero=.006   # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce).
+    brake_aero=.0065  # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce; v0.77: .006 -> .0065, with abs_ratio .8).
     brake_max=28      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+).
     brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share.
     brake_margin=15   # m of visible road kept in reserve.
@@ -592,7 +592,7 @@ def drive_example(c):
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
     touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
-    abs_ratio=.85       # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: was 0.8) ...
+    abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
     launch_v=130        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ...
     launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts (in practice no cut).
@@ -816,6 +816,10 @@ def drive_example(c):
     # car speed (locking). v0.55: from 0.8 to 0.85 the cut starts earlier; the
     # big braking zones were lock-limited (pedal ~0.4-0.5 after the cut) and
     # releasing sooner keeps the tyres nearer their peak (3x10 suites -0.23 s).
+    # v0.77: back to 0.8 together with a later braking plan (brake_aero .0065).
+    # On the v0.76 car 0.78-0.83 costs no time and narrows the flick and hairpin
+    # drift (suite max |trackPos| 0.889 -> 0.81-0.84); the later plan, which
+    # left the track at 0.85 (1 of 30), spends that margin: 3x10 suites -0.12 s.
     if R['brake'] > 0 and S['speedX'] > 20:
         slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
         if slowest_wheel < abs_ratio*S['speedX']/3.6:

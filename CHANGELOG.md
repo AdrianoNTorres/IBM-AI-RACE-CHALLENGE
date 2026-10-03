@@ -1374,4 +1374,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.76 run.*
+## v0.77 — Braking refit on the v0.76 margin: ABS back at 20 % slip, later braking plan
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.77 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.77`). One mechanism, braking to the limit, two knobs changed together: `abs_ratio` 0.85 → **0.8** (line 595; the brake is halved once the slowest wheel turns below 80 % of the car speed, as before v0.55) and `brake_aero` 0.006 → **0.0065** (line 539; the plan's speed-dependent deceleration, so the plan brakes later at speed). Comment added at the ABS block (lines 819–822). No other knob or code changed. |
+| **Why** | v0.76 gave the lap margin at the flick and hairpin for the first time since batch 5 (suite max 0.960 → 0.889, shifted bases 0 of 40 off), but the gains that had been waiting behind that margin were flat on it (`corner_speed` 79: 75.664; v0.75's mechanism: 75.684; d^2.1–2.2: 1–3 off). This version looks for where the margin does convert. **Measured on v0.76 (all 30; base 75.647, max 0.889):** ABS at 0.8 alone costs no time and narrows the drift further (75.654, max **0.807**: fewer ABS cuts on the approach, so the car is nearer the plan speed when full lock is reached); the later plan alone is as fast as the base but leaves the track (`brake_aero` 0.0065 at `abs_ratio` 0.85: 75.651, **1 of 30 off**, `brake_margin` −2, max 1.154). Together the later plan spends the ABS margin: **75.527** (−0.12 s), 0 of 30 off, max 0.854. **Neighbours (all 30, all 0 off):** `abs_ratio` 0.78 / 0.82 at `brake_aero` 0.0065 → 75.582 (max 0.838) / 75.556 (max 0.901); `brake_aero` 0.00625 / 0.00675 / 0.007 at `abs_ratio` 0.8 → 75.595 (max 0.824) / 75.625 (max 0.904) / 75.672 (max 0.994). Every neighbour is faster than v0.76, so the direction is real; the chosen point is the best of the plateau and part of its lead over the neighbours (0.03–0.10 s) is probably chaos. **Challenged:** v0.55's "ABS at 15 % slip is the plateau (0.83–0.87)", measured before the full-lock throttle rule existed, and the outside analysis's advice to stop touching the braking plan and ABS threshold. **Record note:** the iteration agent that chose this change was cut off (session limit) after recording the run and before writing its notes, so its other trials are not on record; every number here was re-measured by the orchestrator on the final code. Alternatives measured earlier in the batch are in the v0.73–v0.76 entries. |
+| **Prediction** | Measured directly (`tools/suite.py`): all-30 75.527 (−0.120 s vs v0.76), 0 of 30 off, max 0.776/0.854/0.780; shifted bases 1 of 40 off. |
+| **Lap time** | 1:15.27 |
+| **Damage** | 0 |
+| **Top speed** | 275 km/h |
+| **Min speed** | 57 km/h |
+| **Observed** | Run automatically (`runs/run_20261003_000058.csv`; `tools/finalize.py --verify` rerun byte-identical); TORCS time **75.278 s** → on screen 1:15:27, **new best** (v0.76 75.482, −0.204 s; spread over the lap in steps of ~0.02 s per 100 m section, largest at 200 m −0.04). Suites **75.455/75.606/75.519** (v0.76 75.625/75.651/75.665; all-30 75.647 → **75.527**), **0 of 30 off, max \|trackPos\| 0.776/0.854/0.780** (v0.76 0.889/0.886/0.768). **Shifted bases** (suites 1–2 at `brake_margin` 14 and `line_offset` 0.5, 40 runs): **1 of 40 off** (`brake_margin` 14 with `turn_grip` +0.5, max 1.673; the other 39: means 75.594/75.594, max 0.997 and 0.948); v0.76 0 of 40, v0.72 1 of 40. Watch points (v0.76 in brackets): max \|trackPos\| 0.709 at ~2,473 m, flick (0.693); flick slide 14.5 km/h (12.4), exit slide 12.2 (11.2), kink slide 9.0 (8.7); hairpin min 57.2 km/h (57.6), \|trackPos\| 0.65 (0.65), exit slide 13.6 km/h (13.4); largest slide elsewhere 17.8 km/h at ~510 m (17.1 at ~508 m). |
+| **Decision** | ✅ Kept — new best lap (75.278) and all-30 75.647 → 75.527 (−0.120 s), 0 of 30 off, suite maximum 0.889 → 0.854; shifted bases 1 of 40 off (within the batch's limit of 1; v0.76 had 0). |
+| **Learned** | The flick/hairpin margin converts into time through the braking plan, not through `corner_speed` or the line: an ABS that cuts later (20 % slip) puts the car nearer the plan speed at full-lock onset, and a later plan at speed (`brake_aero` 0.0065) spends that. Neither knob works alone (0.8 alone: no time; 0.0065 alone: 1 of 30 off). Margin is thinner again on the shifted bases (1 of 40, `turn_grip` +0.5 at `brake_margin` 14), so the next speed gain needs new margin first. Inherited "plateau" results for braking knobs do not survive a change in how the car behaves at full lock: re-scan them after each margin gain. |
+
+---
+
+*Last updated after v0.77 run.*
