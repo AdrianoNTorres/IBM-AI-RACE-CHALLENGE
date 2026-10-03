@@ -602,7 +602,7 @@ def drive_example(c):
     lock_tte_near=.9    # s: time to the outside edge (room / outward drift rate) at or below which no throttle is allowed at full lock ...
     lock_tte_far=1.7    # s: ... rising linearly through lock_throttle at this time to the edge ...
     lock_throttle_max=.5   # ... up to this much once the drift has stopped or the edge is far (hairpin exit, the flick's right arc).
-    lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
+    lift_pct=3.5        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking (v0.93: 1.0 -> 3.5, and the band is no longer taken off the brake pedal; 4.5 leaves the track at the flick 1 of 30).
     lift_v0=86          # km/h: no lift band below this speed (slow corners brake at once) ...
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
@@ -884,11 +884,20 @@ def drive_example(c):
     # the stored throttle is kept (the -0.01 above is undone). Beyond the band
     # it brakes for the excess over the band. Faded in from lift_v0 over
     # lift_vw km/h: the slow corners (hairpin, Corkscrew) brake at once.
+    # Full Pedal Beyond The Band (v0.93): until v0.92 the band was also taken
+    # off the brake pedal (pedal for the excess over the band), so every big
+    # braking zone ran the band's width above the plan (1 % = 2.2 km/h at 220
+    # km/h = 0.11 of pedal less all the way down), and a wider band spent the
+    # flick and hairpin margin (band 2.5-3.5 %: 1-2 of 40 off on the shifted
+    # bases). Now the pedal is for the whole excess over the allowed speed
+    # once the car is beyond the band: braking zones follow the plan itself
+    # (suite max |trackPos| 0.851 -> 0.802), and the band can be 3.5 %, so the
+    # car riding the plan in a bend lifts instead of touching the brake.
     lift_band= lift_pct/100*S['speedX']*clip((S['speedX']-lift_v0)/lift_vw, 0, 1)
     lift= False
     R['brake']= 0
     if ahead >= 0 and S['speedX'] > allowed_speed + lift_band:
-        R['brake']= min(1, (S['speedX']-allowed_speed-lift_band)*brake_gain)
+        R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
         # Brake Touch (v0.64): in medium corners the car rides the plan and a
         # 1-3 km/h excess gives a 0.05-0.15 brake touch, which zeroed the stored
         # throttle; it then climbed back at +0.05 per step (~0.3 s at part
