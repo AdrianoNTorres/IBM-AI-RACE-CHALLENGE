@@ -616,6 +616,10 @@ def drive_example(c):
     dab_keep=.7         # ... (1.0 and .5 gain half as much) ...
     dab_steer=.15       # ... only while the smoothed |steer| is below this (a dab in a bend still restarts the throttle from its floor; with no steer and no speed gate and dab_keep 1: 1 of 30 off at the flick) ...
     dab_v=230           # km/h: ... and only below this speed (start kink 219-229 km/h; 240 measures the same, 250 reaches the flick approach, where the brake touches at 245-275 km/h set the arc entry speed: shifted max 0.98).
+    drop_n=4            # v1.02 (rejected, kept in the tag only): bend-drop debounce: an established bend is not dropped for up to this many steps when the bearing collapses in one step (0 = off, reproduces v1.01) ...
+    drop_held=30        # steps: ... only a bend held at least this long (false-start detections last 3-7 steps and are left alone) ...
+    drop_jump=.5        # deg: ... only when |bearing| fell by more than this in one step (the -12 deg beam grazing the inside edge: 69 -> 18 m for 2-3 steps at 2,714-2,751 m) ...
+    drop_v=140          # km/h: ... and only above this speed (ungated it delays the side switch in the flick and at the hairpin exit: +0.08 / +0.02 s).
     thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
@@ -662,7 +666,22 @@ def drive_example(c):
     if abs(aim) > 2:
         side= 1 if aim > 0 else -1
     elif abs(aim) < line_aim_off:
-        side= 0
+        # Bend-drop debounce (v1.02): in a long bend the -12 deg beam can graze
+        # the inside edge for 2-3 steps (69 -> 18 m), the distance-squared
+        # bearing collapses (-1.65 -> 0.04 deg) and the bend was dropped; the
+        # bearing then came back between line_aim_off and 2 deg, too small to
+        # detect the bend again, so the line target was gone for the rest of it.
+        dk= getattr(c, 'drop_k', 0)
+        if (side != 0 and dk < drop_n and getattr(c, 'side_n', 0) >= drop_held and S['speedX'] > drop_v
+                and (dk > 0 or abs(getattr(c, 'aim_prev', 0))-abs(aim) > drop_jump)):
+            c.drop_k= dk + 1   # held: not dropped yet
+        else:
+            side= 0; c.drop_k= 0
+    else:
+        c.drop_k= 0
+    if abs(aim) > 2: c.drop_k= 0
+    c.side_n= getattr(c, 'side_n', 0) + 1 if (side != 0 and side == getattr(c, 'line_side', 0)) else 0   # steps this bend has been held
+    c.aim_prev= aim
     line_target= 0
     road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
     # Corner set-up: the bend is only detected (bearing over 2 deg) some 35 m
