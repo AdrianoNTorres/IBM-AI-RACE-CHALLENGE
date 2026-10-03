@@ -594,6 +594,8 @@ def drive_example(c):
     touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
     abs_ratio=.85       # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: was 0.8) ...
     abs_cut=.5          # ... to this share of the pedal.
+    launch_v=130        # km/h: standing start (v0.69): until the car first reaches this speed ...
+    launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts.
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -857,6 +859,13 @@ def drive_example(c):
     w= S['wheelSpinVel']
     rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
     slip_target= tc_slip + tc_slip_straight*clip(1-abs(R['steer'])/tc_slip_steer, 0, 1)*clip(1-abs(S['speedY'])/tc_slip_slide, 0, 1)
+    # Launch (v0.69): the lap is timed from a standing start, where the engine
+    # sits far below its 16-18k torque peak in 1st-3rd gear; wheelspin lets it
+    # rev into that peak like a slipping clutch. With traction control on, the
+    # throttle cycled 1.0 -> 0.2 every ~7 steps (rear over-speed 1 <-> 10 m/s).
+    # Without the cut the car reached 100 m 0.18 s sooner (v0.68: 4.36 s).
+    c.launch= getattr(c, 'launch', True) and S['speedX'] < launch_v
+    if c.launch: slip_target+= launch_slip
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
