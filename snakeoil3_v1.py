@@ -558,8 +558,6 @@ def drive_example(c):
     setup_offset=.85    # trackPos aimed for on the outside during the set-up ...
     setup_road=95       # m: ... while more road than this is visible along the track direction.
     setup_steer=.045    # no set-up while |steer| is above this (the car is still in a bend: kink, flick approach).
-    sharp_det=30        # m: a bend first detected with less road than this along the track (the hairpin: ~29 m) ...
-    sharp_k=.5          # ... has its inside phase scaled by this (centre 60 -> 30 m, width 20 -> 10 m: a later inside point).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     rel_start=7         # m: exit release (v0.61): once the road along the track has grown this much past the bend's shortest ...
     rel_width=2         # m: ... the inside target is released over this much more road ...
@@ -653,13 +651,7 @@ def drive_example(c):
         line_target= setup_offset*setup
         R['steer']+= (line_target - S['trackPos'])*line_gain
     if side != 0:
-        # Sharp bend (v0.66): a bend first seen with under sharp_det m of road
-        # (the hairpin) is already at phase -1 when detected, so the car moved
-        # inside under braking and turned in from there; its phase is scaled.
-        if getattr(c, 'line_side', 0) != side:
-            c.road_det= road
-        k= sharp_k if c.road_det < sharp_det else 1
-        phase= clip((road-60*k)/(20*k), -1, 1)   # +1 approaching or exiting, -1 near the apex
+        phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         # Apex: in medium bends (moderate steering) the car can hold a tighter
         # inside line, which opens the radius of the whole bend (v0.52 trials:
         # inside offset 0.7-0.8 alone was 0.3-0.5 s faster over 30 perturbed
