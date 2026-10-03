@@ -572,7 +572,7 @@ def drive_example(c):
     upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
-    turn_grip=7.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only).
+    turn_grip=8.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only); 7.0 -> 8.0 with slip_ref .3 (the beams are now seen at wider angles while the car slides).
     turn_steer_max=.78  # curving onto beams is not planned above this |steer| (near full lock).
     turn_steer_fade=.17 # its credit fades out linearly over this much |steer| below turn_steer_max (full credit up to 0.61).
     fade_lp=.9          # that |steer| is smoothed: share of the previous smoothed value kept per step (v0.57; 0 = raw steer).
@@ -580,6 +580,7 @@ def drive_example(c):
     grip_boost=.3       # v0.60: turn_grip is raised by this share while the smoothed |steer| is below boost_steer ...
     boost_steer=.2      # ... (light steering = grip to spare: steady medium bends ride the plan at |steer| 0.15-0.3) ...
     boost_fade=.1       # ... fading out over this much more |steer| (none from 0.3).
+    slip_ref=.3         # sharpness plan: the beam angles are measured from the nose turned by this share of the slip angle (atan(speedY/speedX)) toward the direction of travel (0 = from the nose, 1 = from the direction of travel).
     tc_slip=4.5         # m/s the rear wheels may outrun the fronts before traction control cuts (v0.63: 2.5 -> 4.5; 2.5 was the v0.28 peak, the car now exits on the line with grip to spare).
     tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
@@ -804,11 +805,22 @@ def drive_example(c):
     # (hairpin, flick, 448 m at |steer| 0.5-0.7) nothing changes, and as the
     # extra speed asks for more steering the extra fades: self-limiting.
     tg= turn_grip*(1 + grip_boost*clip((boost_steer+boost_fade-c.steer_f)/boost_fade, 0, 1))
+    # Slip Reference: the curve onto a beam starts along the direction the
+    # car travels, not along its nose. In a bend the nose points inside the
+    # direction of travel by the slip angle (medium bends: 6-16 km/h of
+    # sideways speed at 120-150 km/h = 2.5-7 deg, against a binding beam at
+    # 7 deg), so the arc to an inside beam is tighter than its nose angle
+    # says. The beam angles are shifted by slip_ref of the slip angle: a
+    # sliding car is allowed less speed, a car that grips more (turn_grip
+    # 7 -> 8). Beams within 0.25 deg of the shifted zero are skipped.
+    from math import atan2
+    drift= -atan2(S['speedY'], max(S['speedX'], 10))*180/PI*slip_ref   # bearing of the direction of travel, deg (+ = right)
+    angles= [a - drift for a in TRACK_ANGLES]
     if c.steer_f <= turn_steer_max:
-        for d, a in zip(S['track'], TRACK_ANGLES):
-            if d <= 0 or a == 0: continue
+        for d, a in zip(S['track'], angles):
+            if d <= 0 or abs(a) < .25: continue
             radius= d / (2*sin(abs(a)*PI/180))
-            if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], TRACK_ANGLES)
+            if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], angles)
                    if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
             v_brake= brake_speed(d)
             v_grip= (tg*radius/max(1 - tg*turn_grip_aero*radius, .1))**.5
