@@ -617,6 +617,7 @@ def drive_example(c):
     clutch_slip=.667    # most clutch pedal while accelerating (v0.78: .7; v0.79: 2/3, the most at which TORCS still passes the full engine torque: min(3*(1 - pedal), 1)) ...
     clutch_top=17000    # ... v0.79: slipped in every gear while the rpm of the driven wheels (rear wheel speed * gear ratio * final drive) is below this ...
     clutch_k=60         # ... easing off toward it: pedal = 1 - (clutch_k/(clutch_top - wheel rpm + clutch_k))^(1/4) (rpm; larger = closed sooner).
+    shift_steps=3       # v0.92: for this many steps from an upshift (the 0.05 s shift time = 2.5 steps) the clutch pedal is held at clutch_slip while accelerating (0 = off: TORCS then opens the clutch itself and caps the throttle at 0.1).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -1067,6 +1068,18 @@ def drive_example(c):
         elif gear == 1 and abs(R['steer']) < lock_gear_off: gear= 2
     c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
     R['gear']= gear
+    # Upshift Clutch (v0.92): for the shift time (0.05 s, car1-ow1.xml) after a
+    # gear change the simulator (simuv2 transmission.cpp) opens the clutch
+    # itself and caps the throttle at 0.1 whenever the clutch pedal is below
+    # 0.01. On the upshift step the pedal above was worked out from the old
+    # gear's wheel rpm (0 at the top of the gear), so every upshift lost a step
+    # of drive (3rd -> 4th: +0.1 km/h in that step instead of +0.7), and on the
+    # next steps the closing clutch pulled the engine from ~18,500 down to the
+    # new gear's ~15,000 rpm at once. Holding the pedal at clutch_slip (full
+    # engine torque still passed) for the shift time keeps the drive on and
+    # the engine up; the slip law above then eases the clutch shut as before.
+    if c.up_t < shift_steps and R['brake'] == 0 and c.throttle > 0:
+        R['clutch']= clutch_slip
     return
 
 def beam_at(track, bearing):
