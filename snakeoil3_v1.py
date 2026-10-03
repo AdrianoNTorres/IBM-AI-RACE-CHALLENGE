@@ -602,8 +602,6 @@ def drive_example(c):
     touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
     touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
     thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
-    ride_band=3         # km/h: plan-riding throttle (v0.89): within this much below the allowed speed the +0.05 throttle ramp is scaled by the headroom / ride_band (0 = off: full ramp up to the plan) ...
-    ride_min=.2         # ... never below this share of the ramp.
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
     launch_v=130        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ...
@@ -840,15 +838,8 @@ def drive_example(c):
     c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
 
     # Throttle Control
-    # Plan-Riding Throttle (v0.89): in the medium bends the car rides the plan
-    # and the full +0.05 ramp carries the throttle through the plan every
-    # 0.2-0.4 s (v0.88, 450 m bend: stored throttle 0.1 -> 0.6-0.9, speed over
-    # the plan, lift or brake touch, again). Within ride_band km/h of the plan
-    # the ramp is scaled by the headroom, so the throttle levels off as the
-    # car closes on the allowed speed.
-    v_aim= min(target_speed - (abs(R['steer'])*50), allowed_speed)
-    if S['speedX'] < v_aim:
-        R['accel']+= .05*(clip((v_aim-S['speedX'])/ride_band, ride_min, 1) if ride_band > 0 else 1)
+    if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
+        R['accel']+= .05
         # Throttle Floor: the simulator's engine (simuv2 engine.cpp) gives
         # Tmax*(throttle*(1 + k) - k), k = 0.33*(rpm - 5,000 tickover)/(20,000
         # - 5,000): below throttle k/(1 + k) it brakes the rear wheels (0.13 at
