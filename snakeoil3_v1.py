@@ -537,7 +537,7 @@ def drive_example(c):
     corner_speed=78   # km/h the car must be able to slow to by the end of the visible road (v0.68: 76 -> 79; v0.70: 78, enabling change: hairpin/flick margin for the launch, 79 + launch leaves the track 1 of 30, 78 + launch 0).
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
     brake_aero=.0065  # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce; v0.77: .006 -> .0065, with abs_ratio .8).
-    brake_max=28      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+).
+    brake_max=30      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+; 28 -> 30 on the clutch car: 0.14 s over 30 perturbed laps, 26 is 0.23 s slower).
     brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share.
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
