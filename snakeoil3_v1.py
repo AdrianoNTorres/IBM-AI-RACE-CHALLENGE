@@ -563,6 +563,9 @@ def drive_example(c):
     rel_start=7         # m: exit release (v0.61): once the road along the track has grown this much past the bend's shortest ...
     rel_width=2         # m: ... the inside target is released over this much more road ...
     rel_share=.8        # ... by this share (the car runs out toward the exit; the inside integral is kept).
+    run_head=10         # km/h: exit run-out (v0.81): once the plan allows this much more than the car's speed on the inside half of a bend ...
+    run_width=15        # km/h: ... the inside target is let go over this much more headroom (all of it from run_head + run_width) ...
+    run_lp=.8           # ... smoothed: share of the previous step's value kept (the allowed speed jumps step to step; unsmoothed it was slower).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
@@ -696,6 +699,21 @@ def drive_example(c):
         c.road_min= min(getattr(c, 'road_min', road), road)
         if phase < 0:
             phase*= 1 - rel_share*clip((road - c.road_min - rel_start)/rel_width, 0, 1)
+            # Exit run-out (v0.81): the release above waits for the road along
+            # the track to grow, which comes late while the car is still yawed
+            # into the bend. Out of the medium bends (v0.80: 1,544-1,591 m,
+            # 3,000-3,015 m, 1,063 m) the car was already 6-40 km/h below the
+            # plan, yet the inside target and its integral still held 0.3-0.4
+            # of steering: 12-17 km/h of slide, traction control cutting, and
+            # the outer half of the road unused. The plan's headroom (allowed
+            # speed of the previous step minus the speed) says the bend no
+            # longer limits the car: from run_head the inside target is let
+            # go, fully at run_head + run_width, smoothed by run_lp.
+            run= clip((getattr(c, 'allowed_speed', 0) - S['speedX'] - run_head)/run_width, 0, 1)
+            c.run= run_lp*getattr(c, 'run', 0) + (1-run_lp)*run
+            phase*= 1 - c.run
+        else:
+            c.run= 0
         line_target= offset*phase*side
         R['steer']+= (line_target - S['trackPos'])*line_gain
     # Inside line integral: in a steady bend the heading term (angle*15/PI)
