@@ -542,7 +542,6 @@ def drive_example(c):
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
-    aim_lp=.8           # v0.74: that bearing is low-passed for the steering: share of the previous smoothed value kept per step (0 = raw).
     line_offset=.47     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
@@ -612,11 +611,7 @@ def drive_example(c):
     aim= 0
     if sum(weights) > 0:
         aim= sum(w*a for w, a in zip(weights, TRACK_ANGLES)) / sum(weights)  # degrees, + = right
-        # v0.74: the bearing jumps when a wide beam opens or closes across an apex
-        # (2-3 deg in one step), so the steering term uses a low-passed copy
-        # (c.aim_f); the bend detection below and the telemetry keep the raw value.
-        c.aim_f= aim_lp*getattr(c, 'aim_f', aim) + (1-aim_lp)*aim
-        R['steer']-= c.aim_f*PI/180 * lookahead_gain
+        R['steer']-= aim*PI/180 * lookahead_gain
     # Racing Line (out-in-out): in a bend (bearing over 2 deg) move the centre
     # target to the outside while plenty of road is visible, and to the inside
     # once the road ahead shortens near the apex. trackPos +1 = left, so the
