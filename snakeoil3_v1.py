@@ -596,7 +596,7 @@ def drive_example(c):
     boost_fade=.1       # ... fading out over this much more |steer| (none from 0.3).
     slip_ref=.3         # sharpness plan: the beam angles are measured from the nose turned by this share of the slip angle (atan(speedY/speedX)) toward the direction of travel (0 = from the nose, 1 = from the direction of travel).
     tc_slip=4.5         # m/s the rear wheels may outrun the fronts before traction control cuts (v0.63: 2.5 -> 4.5; 2.5 was the v0.28 peak, the car now exits on the line with grip to spare).
-    tc_gain=.5          # throttle cut per m/s of rear over-speed beyond tc_slip.
+    tc_gain=.3          # throttle cut per m/s of rear over-speed beyond tc_slip (v0.96: .5 -> .3: the tyre force still rises with slip past its peak, so a softer cut keeps more drive; .2 is as fast with less margin, .1 runs to 0.98 of the edge, 0 leaves the track).
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
     tc_slip_straight=5.0  # m/s of extra over-speed allowed when the car goes straight (the rears carry no sideways load).
     tc_slip_steer=.7    # |steer| at which that extra is gone (it falls linearly from steer 0 to here).
