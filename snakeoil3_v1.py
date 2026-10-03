@@ -538,7 +538,10 @@ def drive_example(c):
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
     brake_aero=.0065  # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce; v0.77: .006 -> .0065, with abs_ratio .8).
     brake_max=30      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+; 28 -> 30 on the clutch car: 0.14 s over 30 perturbed laps, 26 is 0.23 s slower).
-    brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share.
+    brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share at low speed ...
+    brake_load_fast=.8  # v0.91: ... and never below this share at speed (a crest is short against a long braking distance; .5 at speed braked for crests that were over before the corner, 1.0 leaves the track at the flick) ...
+    brake_load_v0=150   # km/h: ... the floor is brake_load_min up to this speed ...
+    brake_load_vw=50    # km/h: ... rising linearly to brake_load_fast over this much more speed (full from 200).
     brake_margin=15   # m of visible road kept in reserve.
     brake_gain=.05    # brake pedal per km/h over the allowed speed (20 km/h over = full brake).
     lookahead_gain=2.0  # steer per radian of bearing toward the open road ahead.
@@ -766,12 +769,25 @@ def drive_example(c):
     # the cap and d_cap = ln(brake_max/(a + c*v0^2))/(2c) the distance below it.
     # Crests (the flick approach, ~2,364-2,433 m) unload the tyres: the
     # mechanical part brake_decel is scaled by the load 1 + a_z/g, from the
-    # change of speedZ (km/h per ~21 ms step, smoothed), between brake_load_min and 1.
+    # change of speedZ (km/h per ~21 ms step, smoothed), between a floor and 1.
+    # Load Floor By Speed (v0.91): the load read on a crest is applied to the
+    # whole braking distance, but the crest lasts 20-50 m. At speed, with
+    # 45-100 m of road in view, a floor of 0.5 took ~10 km/h off the plan for
+    # a moment (v0.90: full brake 275 -> 253 km/h at 2,287-2,297 m with the
+    # load at 0.63-0.68, now pedal 0.35-0.67 to 259; a 0.3 brake at 191 km/h
+    # at 2,600 m after the Corkscrew with the load at 0.28, now a two-step
+    # lift). Close to a slow corner the unloaded stretch is most
+    # of what is left (flick turn-in, 2,431-2,438 m at 110 km/h: load 0.36-
+    # 0.69), and a higher floor there is paid at the flick's left arc
+    # (brake_load_min 0.7 everywhere: arc entry 82 -> 89 km/h). So the floor
+    # is brake_load_min up to brake_load_v0 and rises to brake_load_fast over
+    # brake_load_vw.
     from math import exp, log
     v_corner= corner_speed/3.6
     vz= S['speedZ']; az= (vz - getattr(c, 'vz_prev', vz))/3.6/.021; c.vz_prev= vz
     c.az= .7*getattr(c, 'az', 0) + .3*az   # m/s^2, smoothed
-    a_mech= brake_decel*clip(1 + c.az/9.81, brake_load_min, 1)
+    load_floor= brake_load_min + (brake_load_fast-brake_load_min)*clip((S['speedX']-brake_load_v0)/brake_load_vw, 0, 1)
+    a_mech= brake_decel*clip(1 + c.az/9.81, load_floor, 1)
     def brake_speed(d):   # m/s from which the car can slow to v_corner in d metres
         d= max(0, d-brake_margin)
         a0= a_mech + brake_aero*v_corner**2   # planned deceleration at v_corner
