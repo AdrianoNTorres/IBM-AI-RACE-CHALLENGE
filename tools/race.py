@@ -21,7 +21,7 @@ How it works
 
 Library use:  from race import run_batch, Job;  run_batch([Job('a', {'tc_slip': 3})])
 '''
-import argparse, os, re, shutil, subprocess, sys, tempfile, threading, time, queue, uuid
+import argparse, os, re, shutil, subprocess, sys, tempfile, threading, time, uuid
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -125,22 +125,58 @@ def run_one(src, slot, csv_path, timeout=TIMEOUT):
     ok = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
     return (csv_path if ok else None), log.count('Timeout for client answer'), log
 
+# Slots are claimed machine-wide (a lock file per slot in WORK), so several harness processes
+# (parallel agents) share slots 1..n instead of colliding on the same ports: at the default n
+# there are never more than 4 TORCS at once in total.
+SLOT_STALE = TIMEOUT + 60     # s; a lock older than any race can last was left by a killed process
+
+def slot_lock(slot):
+    return os.path.join(WORK, 'slot_%d.lock' % slot)
+
+def claim_slot(slots):
+    '''Block until one of slots is free on this machine; return it.'''
+    os.makedirs(WORK, exist_ok=True)
+    while True:
+        for s in slots:
+            p = slot_lock(s)
+            try:
+                if time.time() - os.path.getmtime(p) > SLOT_STALE: os.remove(p)
+            except OSError:
+                pass
+            try:
+                os.close(os.open(p, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+                return s
+            except OSError:
+                pass
+        time.sleep(0.1)
+
+def release_slot(slot):
+    try: os.remove(slot_lock(slot))
+    except OSError: pass
+
+def slots_in_use():
+    '''True if another harness process holds a slot right now.'''
+    for s in SLOTS:
+        try:
+            if time.time() - os.path.getmtime(slot_lock(s)) <= SLOT_STALE: return True
+        except OSError:
+            pass
+    return False
+
 def run_batch(jobs, n=DEFAULT_N, verbose=False):
     '''Run Jobs on up to n slots at once. Returns [(job, metrics dict or None)] in job order.
     CSVs go to WORK and are deleted unless job.keep names a path to keep it at.'''
     os.makedirs(WORK, exist_ok=True)
     n = max(1, min(n, len(SLOTS)))
-    free = queue.Queue()
-    for s in SLOTS[:n]: free.put(s)
     lock = threading.Lock()
     def work(job):
         src = job.source()            # raises early on a bad knob name
-        slot = free.get()
+        slot = claim_slot(SLOTS[:n])
         try:
             csv_path = os.path.join(WORK, 'r_%d_%s.csv' % (slot, uuid.uuid4().hex[:8]))
             out, timeouts, _ = run_one(src, slot, csv_path)
         finally:
-            free.put(slot)
+            release_slot(slot)
         m = metrics(out) if out else None
         if m is not None: m['timeouts'] = timeouts   # server steps that skipped the client (should be 0)
         # A run the driver ended early (damage stop: the damaged step is not logged, so it shows as
@@ -166,9 +202,13 @@ def parse_sets(sets):
     return out
 
 def check_no_torcs():
-    out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq wtorcs.exe'], capture_output=True, text=True).stdout
-    if 'wtorcs.exe' in out:
-        sys.exit('A TORCS (wtorcs.exe) is already running; close it first (it may hold a slot port).')
+    '''Exit if a TORCS is running that is not another harness process's race.'''
+    for _ in range(5):
+        if slots_in_use(): return
+        out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq wtorcs.exe'], capture_output=True, text=True).stdout
+        if 'wtorcs.exe' not in out: return
+        time.sleep(1)             # a harness race may have just ended; look again
+    sys.exit('A TORCS (wtorcs.exe) is already running; close it first (it may hold a slot port).')
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='Run one race (or several identical ones) and print metrics.')
