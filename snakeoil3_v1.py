@@ -569,6 +569,8 @@ def drive_example(c):
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
     upshift_rpm=18600   # shift up when the driven wheels' rpm (axle_rpm, since v0.79; not the engine rpm) passes this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
+    brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
+    brake_ds_over=20    # km/h: ... the car is behind the braking plan by more than this (pedal demand at its 1.0 limit: flick approach 20-50 km/h over; the other braking zones run 10-16 over and keep downshift_rpm).
     upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
@@ -993,6 +995,19 @@ def drive_example(c):
     # shift down only when the lower gear would land the engine rpm below downshift_rpm, and
     # never below lowest_running_gear: 1st gear's engine braking makes the rear
     # step out in slow corners, so 1st is used only to start (below 10 km/h).
+    # Braking Downshift (v0.86): the brake pedal saturates at 20 km/h over the
+    # allowed speed and ABS halves it whenever one wheel is slow, so on the
+    # flick approach (2,366-2,436 m: crest, right kink at |steer| 0.7-0.9) the
+    # car sat at pedal 0.5 for 70 m, 20-50 km/h over the plan, with nothing
+    # left to ask for; it reached the left arc at 100-104 km/h and full lock.
+    # The engine brakes the rear wheels by k/(1 + k) of its torque off the
+    # throttle, k = 0.33*(rpm - 5,000)/15,000 (simuv2 engine.cpp), times the
+    # gear ratio: a gear lower at 17,000 rpm instead of 13,000 is ~1.5-2 m/s^2
+    # more deceleration that the ABS cut does not touch. So while the car is
+    # more than brake_ds_over above the plan under braking, the downshift
+    # comes as soon as the lower gear lands below brake_ds_rpm. Ungated (any
+    # braking) it costs 0.16 s over 30 perturbed laps: every braking zone and
+    # brake touch then ends a gear too low.
     gear_ratios= [3.9, 2.9, 2.3, 1.87, 1.68, 1.54]   # gears 1-6, from car1-ow1.xml
     gear= int(S['gear'])
     if gear < 1 or S['speedX'] < 10:
@@ -1000,7 +1015,7 @@ def drive_example(c):
     elif gear < 6 and axle_rpm > upshift_rpm:
         gear+= 1
     elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
-          and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < downshift_rpm):
+          and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < (brake_ds_rpm if R['brake'] > 0 and S['speedX']-allowed_speed > brake_ds_over else downshift_rpm)):
         gear-= 1
     c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
     R['gear']= gear
