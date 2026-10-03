@@ -565,15 +565,6 @@ def drive_example(c):
     setup_road=85       # m: ... while more road than this is visible along the track direction (v0.80: 95 -> 80 with the held set-up; v0.82: 85, 0.035 s over 30 perturbed laps; a set-up held closer to the bend, 30-70 m, is 0.03-0.55 s slower: the outward yaw brings the bend detection and the turn-in forward).
     setup_steer=.045    # no set-up starts while |steer| is above this (the car is still in a bend: kink, flick approach); v0.80: once started it is held.
     setup_pull=.15      # v0.80: most steer the set-up pull may add (uncapped it reached ~0.28 and the held set-up left the track at the flick).
-    lc_on=1             # v1.00: set-up as a planned lane change (0 = off: the v0.96 set-up with setup_offset / setup_road / setup_pull) ...
-    lc_out=.6           # ... outward phase: trackPos aimed for on the outside while the set-up is held ...
-    lc_gain=1.0         # ... steer per unit of trackPos away from it ...
-    lc_cap=.3           # ... at most this much steer (v0.96: setup_pull .15) ...
-    lc_road=70          # m: ... until the road along the track direction falls to this (v0.96: setup_road 85); below it the trail-in:
-    lc_in=.5            # ... trackPos aimed for on the inside of the coming bend until the bend is detected ...
-    lc_tgain=1.0        # ... steer per unit of trackPos away from it ...
-    lc_tcap=.15         # ... at most this much steer ...
-    lc_n=80             # ... for at most this many steps (~1.7 s).
     line_idecay=.85     # ... and outside the inside half of a bend it fades by this share per step.
     rel_start=7         # m: exit release (v0.61): once the road along the track has grown this much past the bend's shortest ...
     rel_width=2         # m: ... the inside target is released over this much more road ...
@@ -692,33 +683,14 @@ def drive_example(c):
     # toward the outside (the uncapped held pull left the track at the flick).
     setup= 0
     held= getattr(c, 'setup_side', 0)
-    if side == 0 and (lc_road if lc_on else setup_road) < road < setup_dist:
+    if side == 0 and setup_road < road < setup_dist:
         asym= beam_at(S['track'], track_dir+setup_beam) - beam_at(S['track'], track_dir-setup_beam)
         if held != 0 and asym*held > -setup_min:
             setup= held
         elif abs(prev_steer) < setup_steer and abs(asym) > setup_min:
             setup= 1 if asym > 0 else -1   # longer road to the right: right-hand bend
     c.setup_side= setup   # kept between steps
-    # Planned Lane Change (v1.00): the set-up's side signal is used twice. While
-    # the set-up is held the car is moved to lc_out on the outside with a
-    # stronger pull (lc_gain, capped at lc_cap); once the road falls to lc_road
-    # the side is remembered (c.trail_side) and, until the bend is detected,
-    # the car is pulled toward lc_in on the inside with a small capped pull
-    # (an early, soft turn-in ahead of the step at bend detection).
-    if lc_on:
-        if setup != 0:
-            c.trail_side, c.trail_n= setup, 0
-            line_target= lc_out*setup
-            R['steer']+= clip((line_target - S['trackPos'])*lc_gain, -lc_cap, lc_cap)
-        else:
-            ts= getattr(c, 'trail_side', 0)
-            c.trail_n= getattr(c, 'trail_n', 0) + 1
-            if side != 0 or road >= setup_dist or road > lc_road or c.trail_n > lc_n:
-                c.trail_side= ts= 0
-            if ts != 0:
-                line_target= -lc_in*ts
-                R['steer']+= clip((line_target - S['trackPos'])*lc_tgain, -lc_tcap, lc_tcap)
-    elif setup != 0:
+    if setup != 0:
         line_target= setup_offset*setup
         R['steer']+= clip((line_target - S['trackPos'])*line_gain, -setup_pull, setup_pull)
     c.apex_sf= apex_lp*getattr(c, 'apex_sf', abs(prev_steer)) + (1-apex_lp)*abs(prev_steer)
