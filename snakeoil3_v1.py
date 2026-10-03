@@ -584,7 +584,7 @@ def drive_example(c):
     tc_slip_slide=20    # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
-    lock_throttle_edge=.1  # most throttle at full lock once the outside edge is lock_room_near or closer.
+    lock_throttle_edge=0   # most throttle at full lock once the outside edge is lock_room_near or closer (v0.67: 0.1 -> 0, no drive near the edge at the flick: suite max 0.947 -> 0.845).
     lock_room_near=.3   # trackPos units to the outside edge where the full-lock limit reaches lock_throttle_edge.
     lock_room_far=.8    # ... and from which it is lock_throttle (linear between).
     lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
