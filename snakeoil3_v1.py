@@ -600,6 +600,7 @@ def drive_example(c):
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
     touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
+    thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
     launch_v=130        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ...
@@ -833,6 +834,16 @@ def drive_example(c):
     # Throttle Control
     if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
         R['accel']+= .05
+        # Throttle Floor: the simulator's engine (simuv2 engine.cpp) gives
+        # Tmax*(throttle*(1 + k) - k), k = 0.33*(rpm - 5,000 tickover)/(20,000
+        # - 5,000): below throttle k/(1 + k) it brakes the rear wheels (0.13 at
+        # 12,000 rpm, 0.21 at 17,000). After every brake application the stored
+        # throttle restarted from 0 at +0.05 per step, so the first 3-5 steps
+        # (~0.1 s) of each of the lap's ~36 restarts were still engine braking
+        # with the plan already asking for speed. So the ramp starts from the
+        # zero-torque throttle instead (S['rpm'] as read, ~4.7 % high).
+        eng_brk= .33*max(S['rpm']-5000, 0)/15000
+        R['accel']= max(R['accel'], thr_zero*eng_brk/(1+eng_brk))
     else:
         R['accel']-= .01
     if S['speedX']<10:
