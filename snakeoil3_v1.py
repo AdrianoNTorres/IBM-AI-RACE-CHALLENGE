@@ -583,10 +583,10 @@ def drive_example(c):
     tc_slip_steer=.7    # |steer| at which that extra is gone (it falls linearly from steer 0 to here).
     tc_slip_slide=20    # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
-    lock_throttle=.2    # most throttle allowed at full lock (the car cannot turn tighter, more speed runs it wide).
-    lock_throttle_edge=0   # most throttle at full lock once the outside edge is lock_room_near or closer (v0.67: 0.1 -> 0, no drive near the edge at the flick: suite max 0.947 -> 0.845).
-    lock_room_near=.3   # trackPos units to the outside edge where the full-lock limit reaches lock_throttle_edge.
-    lock_room_far=.8    # ... and from which it is lock_throttle (linear between).
+    lock_throttle=.2    # throttle allowed at full lock when the car would reach the outside edge in lock_tte_far seconds at its present drift (v0.76; until v0.75 the most allowed, set by the room to the edge).
+    lock_tte_near=.9    # s: time to the outside edge (room / outward drift rate) at or below which no throttle is allowed at full lock ...
+    lock_tte_far=1.7    # s: ... rising linearly through lock_throttle at this time to the edge ...
+    lock_throttle_max=.5   # ... up to this much once the drift has stopped or the edge is far (hairpin exit, the flick's right arc).
     lift_pct=1.0        # % of speed over the allowed speed where the car only lifts (throttle 0, stored throttle kept), before braking.
     lift_v0=86          # km/h: no lift band below this speed (slow corners brake at once) ...
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
@@ -829,11 +829,25 @@ def drive_example(c):
     # snap open as the wheel straightens; it climbs back at +0.05 per step.
     lock= clip((abs(R['steer'])-lock_steer)/(1-lock_steer), 0, 1)   # 0 below lock_steer, 1 at full lock
     # The full-lock arc drifts outward (hairpin: trackPos +0.1 -> -0.78 at full
-    # lock), so the limit also falls as the outside edge comes closer: from
-    # lock_throttle with lock_room_far or more of room to lock_throttle_edge at
-    # lock_room_near. Outside = right in a left turn (steer +), left in a right turn.
-    room= 1 + (1 if R['steer'] > 0 else -1)*S['trackPos']   # trackPos units to the outside edge
-    lt= lock_throttle_edge + (lock_throttle-lock_throttle_edge)*clip((room-lock_room_near)/(lock_room_far-lock_room_near), 0, 1)
+    # lock). Until v0.75 the limit fell with the room to the outside edge alone
+    # (0.2 with 0.8 of room, 0 at 0.3), whatever the car was doing: 0.2 of drive
+    # while it drifted out at 1 trackPos unit per second (flick left arc and
+    # hairpin, widening the drift that sets the lap's margin), still 0.2 on the
+    # flick's right arc with 1.8-1.0 of room, and nothing at the hairpin exit
+    # for the ~5 steps after the drift had stopped at -0.77.
+    # Time To The Edge (v0.76): the limit is set by how soon the car would
+    # reach the outside edge at its present drift, room / outward rate of
+    # trackPos (smoothed): none at lock_tte_near seconds or less, lock_throttle
+    # at lock_tte_far, on the same line up to lock_throttle_max once the drift
+    # stops or the edge is far. Outside = right in a left turn (steer +), left
+    # in a right turn.
+    out_side= 1 if R['steer'] > 0 else -1
+    room= 1 + out_side*S['trackPos']   # trackPos units to the outside edge
+    out_rate= -out_side*(S['trackPos'] - getattr(c, 'tp_prev', S['trackPos']))/.021   # units per second toward that edge
+    c.tp_prev= S['trackPos']
+    c.out_rate= .7*getattr(c, 'out_rate', 0) + .3*out_rate   # smoothed
+    tte= room/max(c.out_rate, .05)   # s to the outside edge
+    lt= clip(lock_throttle*(tte-lock_tte_near)/(lock_tte_far-lock_tte_near), 0, lock_throttle_max)
     R['accel']= min(R['accel'], 1 - lock*(1-lt))
 
     # Traction Control: how much faster the rear (driven) wheels' surface moves
