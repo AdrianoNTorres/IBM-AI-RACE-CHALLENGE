@@ -585,6 +585,7 @@ def drive_example(c):
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
     tc_slip_straight=5.0  # m/s of extra over-speed allowed when the car goes straight (the rears carry no sideways load).
     tc_slip_steer=.7    # |steer| at which that extra is gone (it falls linearly from steer 0 to here).
+    tc_vref=110         # km/h: slip ratio: the over-speed limit above (tc_slip + the straight extra) holds at this speed and scales with speed/tc_vref (the tyre force depends on over-speed / speed, not on m/s); launch_slip is added after.
     tc_slip_slide=20    # km/h of sideways speed at which that extra is gone too (no extra while the car slides).
     lock_steer=.6       # above this |steer| the throttle is limited, falling to lock_throttle at full lock.
     lock_throttle=.2    # throttle allowed at full lock when the car would reach the outside edge in lock_tte_far seconds at its present drift (v0.76; until v0.75 the most allowed, set by the room to the edge).
@@ -915,6 +916,14 @@ def drive_example(c):
     w= S['wheelSpinVel']
     rear_over= (w[2]+w[3])/2*.315 - (w[0]+w[1])/2*.302
     slip_target= tc_slip + tc_slip_straight*clip(1-abs(R['steer'])/tc_slip_steer, 0, 1)*clip(1-abs(S['speedY'])/tc_slip_slide, 0, 1)
+    # Slip Ratio: the simulator's tyre force (simuv2 wheel.cpp) depends on the
+    # slip ratio, over-speed / car speed, combined with the sideways slip:
+    # s = sqrt(sx^2 + sy^2), force flat from s ~0.15 (peak 0.2), shared between
+    # drive and cornering as sx/s and sy/s. A limit in m/s was 0.27 of the speed
+    # at 60 km/h (hairpin and Corkscrew exits: all the rear grip spent on drive,
+    # exit slides 12 km/h) and 0.11 at 150 km/h. So the limit is scaled with
+    # the speed, equal to the old one at tc_vref.
+    slip_target*= S['speedX']/tc_vref
     # Launch (v0.71): the lap is timed from a standing start, where the engine
     # sits far below its 16-18k torque peak in 1st-3rd gear; wheelspin lets it
     # rev into that peak like a slipping clutch. With traction control on, the
