@@ -545,9 +545,10 @@ def drive_example(c):
     line_offset=.47     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
-    line_apex=.34       # extra trackPos aimed for on the inside near the apex (on top of line_offset) ...
-    apex_steer=.3       # ... in full while |steer| is below this ...
-    apex_steer_fade=.25 # ... and fading out over this much more |steer| (none from 0.55: hairpin, flick).
+    line_apex=.45       # extra trackPos aimed for on the inside near the apex (on top of line_offset) ...
+    apex_steer=.5       # ... in full while the smoothed |steer| is below this ...
+    apex_steer_fade=.25 # ... and fading out over this much more |steer| (none from 0.75: hairpin, flick).
+    apex_lp=.9          # ... |steer| low-passed per step for that fade (v0.88: on the raw value the target and the steering chased each other).
     line_ki=1.5         # inside line integral: steer added per second per unit of trackPos short of the inside target ...
     line_imax=.4        # ... at most this much steer ...
     line_isteer=.4      # ... in full while |steer| is below this ...
@@ -680,6 +681,7 @@ def drive_example(c):
     if setup != 0:
         line_target= setup_offset*setup
         R['steer']+= clip((line_target - S['trackPos'])*line_gain, -setup_pull, setup_pull)
+    c.apex_sf= apex_lp*getattr(c, 'apex_sf', abs(prev_steer)) + (1-apex_lp)*abs(prev_steer)
     if side != 0:
         phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
         # Apex: in medium bends (moderate steering) the car can hold a tighter
@@ -688,9 +690,13 @@ def drive_example(c):
         # laps, a wider outside 0.6 was not). Near full lock (hairpin, flick)
         # it cannot: a target further inside only asks for more lock, so the
         # extra fades out with |steer| between apex_steer and +apex_steer_fade.
+        # v0.88: the fade reads the low-passed |steer| (c.apex_sf). On the raw
+        # previous steer the fade was a loop of one step (more steer -> less
+        # target -> less steer): in the 450 m bend, which runs at |steer| ~0.5,
+        # the target and the steering swapped every step.
         offset= line_offset
         if phase < 0:
-            offset+= line_apex*clip((apex_steer+apex_steer_fade-abs(prev_steer))/apex_steer_fade, 0, 1)
+            offset+= line_apex*clip((apex_steer+apex_steer_fade-c.apex_sf)/apex_steer_fade, 0, 1)
         # Exit release (v0.61): the road along the track direction stays short
         # through a bend and only grows once the car is past the apex, but the
         # phase stays at -1 (inside) until it is back over 60 m, so the line
