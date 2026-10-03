@@ -1266,4 +1266,22 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ---
 
-*Last updated after v0.70 run.*
+## v0.71 — Launch traction on corner_speed 78: v0.70's follow-up
+
+| Field | Detail |
+|---|---|
+| **Version** | v0.71 |
+| **What changed** | `snakeoil3_v1.py` (Git tag `v0.71`). New knobs `launch_v` **130** km/h and `launch_slip` **25** m/s (lines 597–598): from the standing start until the car first reaches `launch_v`, the traction-control over-speed limit is raised by `launch_slip` (in practice no cut); lines 862–869 (`c.launch`, latched off for the rest of the run). Same code as the rejected v0.69, now on v0.70's `corner_speed` 78. One mechanism (launch traction). No other line or knob changed. |
+| **Why** | **Own analysis of v0.70 first** (`runs/run_20261002_213037.csv`, start to 160 m): the engine sits at 5,236 rpm (clutch) to ~18 km/h, then traction control chops the sent throttle 1.0 → 0.02–0.6 every few steps through 1st and 2nd (rear spin 6 ↔ 66 rad/s); 1st is held to 87 km/h (rpm read 19,642 under spin), 2nd to 128 km/h; 100 m at 4.36 s. **Candidates** (variant file with switches, `tools/suite.py` all 30; base v0.70 76.059, 0 off, max 0.967). (1) **Follow-up: launch traction** 25 m/s until 130 km/h: **75.882** (0 off, max 0.959; p0 75.650) — chosen. Re-tuned: `launch_slip` 15/25/35 × `launch_v` 110/150 → 75.922/75.911, 75.973/75.863, 75.936/75.932 (all 0 off, max 0.954–0.999); 150 gives the same p0 lap as 130 (the cut never matters between 130 and 150), 75.863 vs 75.882 is chaos, so the measured 25/130 stays. (2) **Own, new: faded launch** (extra limit `launch_slip`·(1 − v/`launch_v`), latched): 25/130 **75.847** (0 off, max 0.957, p0 75.498 but flick 0.929), 25/150 75.921, 25/180 75.987 (max 1.000), 40/150–180 75.932; on shifted bases (suites 1–2 at `brake_margin` 14 / `line_offset` 0.5, 40 runs) **2 of 40 off** (plain launch 1 of 40, 130 and 150 alike: the known `brake_margin` −2 edge run): −0.035 s is noise, less margin. (3) **Own, new: 2nd-gear start** (gear 2 below 10 km/h, with the launch): 76.306 (0 off): the engine bogs at the clutch, +0.42 s. (4) **Own, new: launch upshift on ground speed** (during the launch the upshift rpm is scaled by front/rear wheel speed, so spin does not trigger early shifts): 75.952 (0 off, max 0.945), p0 75.806: slower. **Inherited conclusion challenged:** v0.69 read the spin-induced early upshifts (1→2 at 32 km/h, 2→3 at 47 km/h) as a side effect to watch; measured, they are part of the gain (shifting on ground rpm costs +0.07 s all-30, +0.16 s p0): with the spin the engine stays in its torque band in the higher gear. v0.70's "78 + launch = 75.882, 0 of 30" reproduces exactly. |
+| **Prediction** | Measured directly (`tools/suite.py`, `tools/finalize.py --suite`): all-30 75.882 (−0.088 s vs v0.68, −0.177 vs v0.70), 0 of 30 off, max 0.932/0.959/0.911. |
+| **Lap time** | 1:15.65 |
+| **Damage** | 0 |
+| **Top speed** | 275 km/h |
+| **Min speed** | 57 km/h |
+| **Observed** | Run automatically (`runs/run_20261002_213831.csv`, `tools/finalize.py --suite`); TORCS time **75.650 s** → on screen 1:15:65, **new best** (v0.68 75.710, v0.70 76.070): vs v0.70 −0.420 s, sections 0 m −0.156, 2,500 m −0.100, 200 m −0.088, 2,400 m −0.060, 800 m −0.044, 3,000 m +0.044. Suites **75.921/75.876/75.849** (v0.70 76.026/76.092/76.059; all-30 76.059 → **75.882**; v0.68 75.970), **0 of 30 off, max \|trackPos\| 0.932/0.959/0.911**. Zero damage, on track (max `\|trackPos\|` **0.843** at ~2,475 m, the flick). **Watch points:** flick 0.790 → 0.843, slide 6.2 → 16.8 km/h, exit slide 5.4 → 8.4 km/h; kink 9.0 km/h; hairpin minimum 57.2 km/h, \|tp\| 0.76; largest slide elsewhere 17.1 km/h (~508 m). Top speed 275.2 km/h. Slowest corner 57 km/h (~3,283 m, the hairpin). Shifted bases (40 runs): 1 of 40 off (`brake_margin` 14 with −2, 1.276). |
+| **Decision** | ✅ Kept — new best lap (75.650) and all-30 75.882 beats v0.68's 75.970 with 0 of 30 off: v0.70's enabling change is recovered (rule 8). |
+| **Learned** | The standing start was worth ~0.09 s all-30 / 0.16 s to 100 m: no traction-control cut until 130 km/h. The spin-triggered early upshifts belong to the gain (ground-rpm shifting is slower), a 2nd-gear start bogs, and a faded launch limit is noise with less margin. The flick slide at p0 is larger again (16.8 km/h, as at v0.68/v0.69), a chaos draw: the suite maximum stays 0.959. The 40-run shifted-base check still has the `brake_margin` −2 edge run off at the flick: margin at the flick/hairpin exit is still the limit for `corner_speed`. |
+
+---
+
+*Last updated after v0.71 run.*
