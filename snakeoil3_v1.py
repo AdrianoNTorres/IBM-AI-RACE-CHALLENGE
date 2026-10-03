@@ -550,6 +550,11 @@ def drive_example(c):
     line_offset=.47     # racing line: trackPos aimed for, outside before/after a bend, inside near the apex (0 = centre).
     line_gain=.50       # steer per unit of trackPos away from the racing line (only in bends).
     line_aim_off=1      # deg: a bend starts when the bearing passes 2 deg and lasts until it falls below this.
+    hold_n=15           # v0.98: held bend: a bend that has lasted at least this many steps (a false start at turn-in lasts 3-5 and is left alone) ...
+    hold_v0=125         # km/h: ... between this speed ...
+    hold_v1=175         # km/h: ... and this one (the medium bends; not the flick's kink at 180-230 km/h, its arcs or the hairpin) ...
+    hold_road=50        # m: ... with less road than this visible along the track direction (the car is still in the bend) ...
+    hold_aim=.5         # deg: ... is not dropped while the bearing still points more than this toward the bend's side.
     line_apex=.45       # extra trackPos aimed for on the inside near the apex (on top of line_offset) ...
     apex_steer=.5       # ... in full while the smoothed |steer| is below this ...
     apex_steer_fade=.25 # ... and fading out over this much more |steer| (none from 0.75: hairpin, flick).
@@ -655,12 +660,19 @@ def drive_example(c):
     # the bearing while it is over 2 deg), and the bend's progress is the road
     # visible along the track direction, which does not swing with the nose.
     side= getattr(c, 'line_side', 0)
+    road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
+    # Held Bend (v0.98): in a steady medium bend the bearing sits just above
+    # line_aim_off (1,500-1,560 m: 1.14-1.16 deg at 144 km/h). On some laps it
+    # touches 1.00 mid-bend (a little further inside), the bend is dropped,
+    # the line term and the inside integral go, the steering steps 0.20 ->
+    # -0.15, the nose swings out, the plan falls 144 -> 128 km/h, the car
+    # brakes (0.4-0.6) and shifts down to 2nd in the middle of the bend.
     if abs(aim) > 2:
         side= 1 if aim > 0 else -1
-    elif abs(aim) < line_aim_off:
+    elif abs(aim) < line_aim_off and not (getattr(c, 'bend_n', 0) >= hold_n and hold_v0 < S['speedX'] < hold_v1
+                                          and road < hold_road and aim*side > hold_aim):
         side= 0
     line_target= 0
-    road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
     # Corner set-up: the bend is only detected (bearing over 2 deg) some 35 m
     # before it, when the road ahead is already under 60 m, so the line went
     # straight to the inside and entries used +-0.15 of the width (v0.57).
@@ -755,6 +767,7 @@ def drive_example(c):
     c.line_i= clip(getattr(c, 'line_i', 0)*(line_idecay + (1-line_idecay)*fi)
                    + (line_target - S['trackPos'])*.021*line_ki*fi, -line_imax, line_imax)
     R['steer']+= c.line_i
+    c.bend_n= getattr(c, 'bend_n', 0) + 1 if side != 0 else 0   # steps the bend has been held (v0.98)
     c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Cap At Speed (v0.94): above ~100 km/h the front tyres are past
