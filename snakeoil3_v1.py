@@ -567,7 +567,7 @@ def drive_example(c):
     run_width=15        # km/h: ... the inside target is let go over this much more headroom (all of it from run_head + run_width) ...
     run_lp=.8           # ... smoothed: share of the previous step's value kept (the allowed speed jumps step to step; unsmoothed it was slower).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
-    upshift_rpm=18600   # shift up above this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
+    upshift_rpm=18600   # shift up when the driven wheels' rpm (axle_rpm, since v0.79; not the engine rpm) passes this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
     upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
     lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
@@ -813,7 +813,7 @@ def drive_example(c):
             v_grip= (tg*radius/max(1 - tg*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
         allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-c.steer_f)/turn_steer_fade, 0, 1)
-    c.allowed_speed= allowed_speed   # kept for telemetry only
+    c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
 
     # Throttle Control
     if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
@@ -968,8 +968,8 @@ def drive_example(c):
     if R['brake'] == 0 and c.throttle > 0 and axle_rpm < clutch_top:
         R['clutch']= min(clutch_slip, 1 - (clutch_k/(clutch_top-axle_rpm+clutch_k))**.25)
 
-    # Automatic Transmission: shift on engine RPM. Shift up above upshift_rpm;
-    # shift down only when the lower gear would land below downshift_rpm, and
+    # Automatic Transmission: shift up when the driven wheels' rpm (axle_rpm) passes upshift_rpm;
+    # shift down only when the lower gear would land the engine rpm below downshift_rpm, and
     # never below lowest_running_gear: 1st gear's engine braking makes the rear
     # step out in slow corners, so 1st is used only to start (below 10 km/h).
     gear_ratios= [3.9, 2.9, 2.3, 1.87, 1.68, 1.54]   # gears 1-6, from car1-ow1.xml

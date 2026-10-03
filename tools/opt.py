@@ -15,7 +15,7 @@ in one parallel batch (--batch, default ~30 races per batch). The study is store
 %TEMP%/torcs_tools/optuna/<study>.db, so re-running the same command resumes it
 (--fresh starts over). Requires optuna (tools/requirements.txt).
 '''
-import argparse, math, os, sys, time
+import argparse, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import optuna
 from race import knobs, parse_sets, check_no_torcs, DRIVER, DEFAULT_N, WORK

@@ -7,6 +7,7 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 | One race, current driver (or with overrides) | `python tools/race.py [--set knob=value ...] [--keep out.csv]` |
 | Metrics of a CSV (watch points, `--sections` for 100 m times) | `python tools/metrics.py runs/<file>.csv [--sections]` |
 | **Pattern check** of a CSV: steering reversals and oscillation episodes, line-target flips, allowed-speed jumps, brake touches, gear hunting, TC cut time (`--episodes` lists where the steering oscillates) | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |
+| **Track-width use** per corner: position at −80 m / slowest point / +80 m (+ = outside of the bend, 1 = edge), entry and exit speed | `python tools/width.py [runs/<file>.csv]` |
 | **Safety standard**: 3×10 perturbation suites on a config | `python tools/suite.py --set brake_aero=0.0065 --set tc_slip=3` |
 | Compare configs in one batch | `python tools/suite.py --cfg base: --cfg hi:brake_aero=0.0065,brake_max=30` |
 | Code change (new mechanism) | copy `snakeoil3_v1.py` to `%TEMP%\x\v.py`, edit it, then `python tools/suite.py --variant %TEMP%\x\v.py` (`--set`/`--cfg` still apply on top) |
@@ -16,7 +17,7 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 | Record the chosen version (writes `runs/` CSV via `run_race.py`, prints changelog fields) | `python tools/finalize.py [--suite]` |
 | Orchestrator check: rerun must be byte-identical | `python tools/finalize.py --verify runs/<committed>.csv` |
 
-**Reading the output.** Per run: `t` lap (s), `|tp|` max |trackPos| @ m, `OFF` (|tp| > 1, damage, or DNF = damage stop), flick (2,430–2,530 m) max |tp| / slide km/h / exit slide (2,484–2,520), kink slide (2,350–2,420), hairpin min speed / |tp| / exit slide (3,281–3,340), largest slide elsewhere. Suite table: per suite `n`, `off`, `mean` (on-track runs only), `max|tp|`, `score` = mean + 5 s per off run + 10 s per unit |tp| over 0.95 (`opt.py --off-pen/--soft-pen/--soft-tp`). v0.49 reference: **79.471 / 79.505 / 79.450, max 0.915 / 0.952 / 0.925, 0 of 30 off**.
+**Reading the output.** Per run: `t` lap (s), `|tp|` max |trackPos| @ m, `OFF` (|tp| > 1, damage, or DNF = damage stop), flick (2,430–2,530 m) max |tp| / slide km/h / exit slide (2,484–2,520), kink slide (2,350–2,420), hairpin min speed / |tp| / exit slide (3,281–3,340), largest slide elsewhere. Suite table: per suite `n`, `off`, `mean` (on-track runs only), `max|tp|`, `score` = mean + 5 s per off run + 10 s per unit |tp| over 0.95 (`opt.py --off-pen/--soft-pen/--soft-tp`). v0.82 reference: **74.643 / 74.621 / 74.592 (all-30 74.619), max 0.776 / 0.855 / 0.778, 0 of 30 off**.
 
 **Suites** (`suite.py` `SUITES`): each run moves one knob by a *delta from the config's own value* (suite 1 includes p0 = unperturbed). Suite 1: turn_grip_aero +0.5e-4/−0.25e-4, turn_grip +0.5, line_offset +0.1, tc_slip_straight +1, corner_speed +2, brake_decel +0.5, lookahead_gain −0.4, brake_aero +0.0005. Suite 2: brake_gain +0.01, tc_gain +0.1, line_gain +0.1, max_steer_step +0.05, upshift_rpm −200, corner_speed −2, brake_margin ±2, line_offset −0.1, lock_throttle +0.05. Suite 3: turn_steer_fade ±0.05, turn_steer_max −0.05, line_aim_off ±0.2, tc_slip ±0.2, downshift_rpm ±500, tc_hold +0.05.
 

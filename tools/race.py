@@ -14,8 +14,8 @@ How it works
 - TORCS slot N (scr_server N, port 3001+N, all slots car1-ow1 with identical
   setups) is raced from config/raceman/scr_p<N>.xml in the TORCS install, a
   copy of practice.xml with driver idx N, generated on demand.
-- Slots 1..9 are used by default (slot 0 stays free for run_race.py); -n 10
-  adds slot 0. scr_server has 10 slots, so 10 races at once is the hard cap.
+- Slots 1..4 are used by default (-n up to 9: slots 1..9; slot 0 stays free
+  for run_race.py); -n 10 adds slot 0. scr_server has 10 slots: the hard cap.
   Parallel runs were measured byte-identical to serial ones at every n
   (with wtorcs -t, see UDP_TIMEOUT_US).
 

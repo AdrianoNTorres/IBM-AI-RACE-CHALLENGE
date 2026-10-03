@@ -6,8 +6,8 @@
     python tools/suite.py --variant my_driver.py --suites 1 -v
 
 Each perturbation nudges one knob by a DELTA from the config's own value (the
-v0.49 suites in %TEMP%/t49/pert.py, written as deltas so they still apply when
-a config changes that knob; on the v0.49 values they give exactly those runs).
+v0.49 suites, written as deltas so they still apply when a config changes that
+knob; on the v0.49 values they give exactly the v0.49 runs).
 Suite 1 includes the unperturbed run p0. A run counts as OFF if |trackPos| > 1,
 any damage, or it did not finish. Means are over on-track runs only.
 Score (used by opt.py) = mean lap + off_pen * offs + soft_pen * sum(max(0, |tp| - soft_tp)).
