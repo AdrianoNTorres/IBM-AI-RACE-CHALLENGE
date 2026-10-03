@@ -612,6 +612,10 @@ def drive_example(c):
     lift_vw=57          # km/h: ... full band from lift_v0 + lift_vw (linear between).
     touch_brake=.15     # v0.64: a brake touch lighter than this pedal keeps touch_keep of the stored throttle ...
     touch_keep=.7       # ... (instead of zeroing it), so the throttle resumes there after the touch.
+    dab_n=2             # v1.01: brake dab: for the first this many steps of a brake application, whatever the pedal, dab_keep of the stored throttle is kept per step (0 = off; 1-3 measure the same: the dabs that matter last one step) ...
+    dab_keep=.7         # ... (1.0 and .5 gain half as much) ...
+    dab_steer=.15       # ... only while the smoothed |steer| is below this (a dab in a bend still restarts the throttle from its floor; with no steer and no speed gate and dab_keep 1: 1 of 30 off at the flick) ...
+    dab_v=230           # km/h: ... and only below this speed (start kink 219-229 km/h; 240 measures the same, 250 reaches the flick approach, where the brake touches at 245-275 km/h set the arc entry speed: shifted max 0.98).
     thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
@@ -925,6 +929,7 @@ def drive_example(c):
     # car riding the plan in a bend lifts instead of touching the brake.
     lift_band= lift_pct/100*S['speedX']*clip((S['speedX']-lift_v0)/lift_vw, 0, 1)
     lift= False
+    dab= False
     R['brake']= 0
     if ahead >= 0 and S['speedX'] > allowed_speed + lift_band:
         R['brake']= min(1, (S['speedX']-allowed_speed)*brake_gain)
@@ -933,9 +938,23 @@ def drive_example(c):
         # throttle; it then climbed back at +0.05 per step (~0.3 s at part
         # throttle: v0.63, 448 m bend, 100-112 km/h sawtooth). A touch lighter
         # than touch_brake keeps touch_keep of it; nothing is sent while braking.
-        touch_thr= R['accel']*touch_keep*(R['brake'] < touch_brake)
+        # Brake Dab (v1.01): at the flat-out left kink after the start (160-190 m,
+        # 219-229 km/h) the plan is the braking distance on one beam and dips
+        # under the car's speed for one step when the -12 deg beam closes on
+        # the inside edge again (allowed 233 -> 214 -> 220 km/h). The one-step
+        # brake (pedal 0.4-0.5, above touch_brake) took ~1 km/h, but it zeroed
+        # the stored throttle, which then climbed back from its floor at +0.05
+        # per step: 8-9 km/h lost by 175 m and carried to the 450 m braking
+        # (18 of 70 perturbed runs, 0.16 s each). A brake application is not
+        # known to be a braking zone until it lasts: for its first dab_n steps
+        # the stored throttle is kept (dab_keep per step), with the wheel near
+        # straight and below dab_v.
+        c.brk_n= getattr(c, 'brk_n', 0) + 1   # steps of this brake application
+        dab= c.brk_n <= dab_n and c.steer_f < dab_steer and S['speedX'] < dab_v
+        touch_thr= R['accel']*(dab_keep if dab else touch_keep*(R['brake'] < touch_brake))
         R['accel']= 0
     elif ahead >= 0 and S['speedX'] > allowed_speed:
+        c.brk_n= 0
         lift= True
         R['accel']= max(R['accel']+.01, 0)   # stored throttle kept; the throttle sent is 0 (end of drive_example)
 
@@ -1034,7 +1053,8 @@ def drive_example(c):
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)
     R['accel']= c.throttle - c.tc_cut
-    if 0 < R['brake'] < touch_brake:   # brake touch: stored throttle kept, nothing sent
+    if R['brake'] == 0 and not lift: c.brk_n= 0
+    if 0 < R['brake'] < touch_brake or (dab and R['brake'] > 0):   # brake touch or dab: stored throttle kept, nothing sent
         c.throttle= min(c.throttle + touch_thr, 1); R['accel']= 0
     if lift: R['accel']= 0   # lift band: nothing sent, c.throttle stays for the next step
 
