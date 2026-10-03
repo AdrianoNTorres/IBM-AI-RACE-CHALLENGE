@@ -90,7 +90,8 @@ if __name__ == '__main__':
     ap.add_argument('-v', action='store_true', help='print every run')
     a = ap.parse_args()
     check_no_torcs()
-    cfgs = [(nm, ov, a.variant) for nm, ov in map(parse_cfg, a.cfg)] if a.cfg else [('cfg', parse_sets(a.set), a.variant)]
+    base = parse_sets(a.set)   # --set applies under every --cfg (it was silently dropped when --cfg was given until v0.82)
+    cfgs = [(nm, dict(base, **ov), a.variant) for nm, ov in map(parse_cfg, a.cfg)] if a.cfg else [('cfg', base, a.variant)]
     t0 = time.time()
     out = run_suites(cfgs, a.suites, a.n, a.v)
     print_summary(out, a.suites)
