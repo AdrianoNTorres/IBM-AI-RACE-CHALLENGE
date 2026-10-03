@@ -6,6 +6,7 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 |---|---|
 | One race, current driver (or with overrides) | `python tools/race.py [--set knob=value ...] [--keep out.csv]` |
 | Metrics of a CSV (watch points, `--sections` for 100 m times) | `python tools/metrics.py runs/<file>.csv [--sections]` |
+| **Pattern check** of a CSV: steering reversals and oscillation episodes, line-target flips, allowed-speed jumps, brake touches, gear hunting, TC cut time (`--episodes` lists where the steering oscillates) | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |
 | **Safety standard**: 3×10 perturbation suites on a config | `python tools/suite.py --set brake_aero=0.0065 --set tc_slip=3` |
 | Compare configs in one batch | `python tools/suite.py --cfg base: --cfg hi:brake_aero=0.0065,brake_max=30` |
 | Code change (new mechanism) | copy `snakeoil3_v1.py` to `%TEMP%\x\v.py`, edit it, then `python tools/suite.py --variant %TEMP%\x\v.py` (`--set`/`--cfg` still apply on top) |
