@@ -573,7 +573,10 @@ def drive_example(c):
     brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
     brake_ds_over=20    # km/h: ... the car is behind the braking plan by more than this (pedal demand at its 1.0 limit: flick approach 20-50 km/h over; the other braking zones run 10-16 over and keep downshift_rpm).
     upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
-    lowest_running_gear=2  # never shift down below this while moving (1st is only for the start).
+    lowest_running_gear=2  # never shift down below this while moving (1st is only for the start and, since v0.90, for full lock).
+    lock_gear_on=.96    # v0.90: first gear at full lock: in 2nd, above this |steer| and below lock_gear_v the car shifts down to 1st (engine braking on the rear wheels turns the car in; the fronts are saturated) ...
+    lock_gear_v=105     # km/h: ... only below this speed (1st reaches the 18,700 limiter at 127 km/h) ...
+    lock_gear_off=.72   # ... and back up to 2nd once |steer| falls below this (the exit is driven in 2nd: 1st on a straight exit was slower, v0.23 / batch 6).
     ahead_angle_max=3   # deg: also measure the road ahead along the track direction when the car points within this of it.
     turn_grip=8.0       # m/s^2 of sideways acceleration assumed when curving onto a beam (0 = plan from the road ahead only); 7.0 -> 8.0 with slip_ref .3 (the beams are now seen at wider angles while the car slides).
     turn_steer_max=.78  # curving onto beams is not planned above this |steer| (near full lock).
@@ -1034,6 +1037,18 @@ def drive_example(c):
     elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
           and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < (brake_ds_rpm if R['brake'] > 0 and S['speedX']-allowed_speed > brake_ds_over else downshift_rpm)):
         gear-= 1
+    # First Gear At Full Lock (v0.90): at full lock (hairpin, the flick's left
+    # arc) the front tyres are saturated and the car drifts to the outside edge
+    # off the throttle; how far is set by the speed it arrives with (hairpin
+    # exit |trackPos| 0.66 / 0.76 / 0.91 / 1.29 at brake_margin 15 / 14 / 13 /
+    # 12). More brake pedal there is worse (it loads the fronts further), less
+    # is worse too (more speed). First gear brakes the rear wheels only
+    # (off-throttle engine torque * 3.9 instead of 2.9, at ~11,000 rpm instead
+    # of ~8,000: ~2 m/s^2 more), which slows the car and turns it in. The
+    # exit is still driven in 2nd: back up once the wheel unwinds.
+    if S['speedX'] > 10 and not c.launch:
+        if gear == 2 and abs(R['steer']) > lock_gear_on and S['speedX'] < lock_gear_v: gear= 1
+        elif gear == 1 and abs(R['steer']) < lock_gear_off: gear= 2
     c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
     R['gear']= gear
     return
