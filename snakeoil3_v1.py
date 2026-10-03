@@ -534,7 +534,7 @@ def drive_example(c):
     correct thing to do is write your own `drive()` function.'''
     S,R= c.S.d,c.R.d
     target_speed=300  # km/h throttle aim on straights; above the car's ~270 top speed, so it no longer caps (the braking plan sets corner speeds).
-    corner_speed=76   # km/h the car must be able to slow to by the end of the visible road (v0.62: 75 -> 76; 77 leaves the track at the flick in 1 of 30).
+    corner_speed=79   # km/h the car must be able to slow to by the end of the visible road (v0.68: 76 -> 79, made safe by v0.67's lock_throttle_edge 0; 80 leaves the track in 5 of 30).
     brake_decel=14.0  # m/s^2 of deceleration assumed when planning (measured ~13.9 at pedal 0.2-0.3, 18-30 above 0.3 at speed).
     brake_aero=.006   # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce).
     brake_max=28      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+).
