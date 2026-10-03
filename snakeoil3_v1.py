@@ -571,6 +571,9 @@ def drive_example(c):
     run_width=15        # km/h: ... the inside target is let go over this much more headroom (all of it from run_head + run_width) ...
     run_lp=.8           # ... smoothed: share of the previous step's value kept (the allowed speed jumps step to step; unsmoothed it was slower).
     max_steer_step=.2   # most the steering may change in one step (~21 ms).
+    steer_cap=.62       # v0.94: most |steer| at speed (above it the front tyres are past their grip: the turn-in spikes to 0.63-0.78 and the 0.64-0.68 held in the 450 m bend turned the car no more; .45 costs only 0.06 s) ...
+    steer_cap_v0=95     # km/h: ... no cap up to this speed (hairpin and the flick's arcs need full lock) ...
+    steer_cap_vw=10     # km/h: ... full cap from steer_cap_v0 + steer_cap_vw (linear between).
     upshift_rpm=18600   # shift up when the driven wheels' rpm (axle_rpm, since v0.79; not the engine rpm) passes this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
     downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
     brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
@@ -752,6 +755,17 @@ def drive_example(c):
     R['steer']+= c.line_i
     c.line_side= side   # kept between steps
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
+    # Steering Cap At Speed (v0.94): above ~100 km/h the front tyres are past
+    # their grip well before full lock. At bend detection under braking the
+    # line term stepped the wheel to 0.63-0.78 (392 m at 156 km/h, 721 m at
+    # 170, 987 m at 194), and the 450 m bend was held at 0.64-0.68 for 80 m
+    # with the car still drifting to the outside half: more lock there only
+    # scrubs, fades the sharpness plan's credit (turn_steer_fade from 0.61)
+    # and limits the throttle (lock_steer 0.6). So |steer| is capped at
+    # steer_cap from steer_cap_v0 + steer_cap_vw; below steer_cap_v0 full lock
+    # stays (hairpin 56 km/h, the flick's arcs 62-85).
+    cap= 1 - (1-steer_cap)*clip((S['speedX']-steer_cap_v0)/steer_cap_vw, 0, 1)
+    R['steer']= clip(R['steer'], -cap, cap)
     # Steering Rate Limit: a sudden jump in the beams (e.g. at a direction change)
     # cannot snap the wheel; it moves at most max_steer_step per step.
     R['steer']= clip(R['steer'], prev_steer-max_steer_step, prev_steer+max_steer_step)
