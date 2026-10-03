@@ -595,6 +595,7 @@ def drive_example(c):
     boost_steer=.2      # ... (light steering = grip to spare: steady medium bends ride the plan at |steer| 0.15-0.3) ...
     boost_fade=.1       # ... fading out over this much more |steer| (none from 0.3).
     slip_ref=.3         # sharpness plan: the beam angles are measured from the nose turned by this share of the slip angle (atan(speedY/speedX)) toward the direction of travel (0 = from the nose, 1 = from the direction of travel).
+    arc_tight_v=232     # km/h: v0.99: below this speed a curve onto a beam that would leave the track at an inner beam is tightened to the tightest inner-beam radius (shorter chord) instead of being discarded (start kink, 184-190 m: the long -12 deg beam was dropped for a 0-5 m shortfall at the -7 deg beam, allowed 265 -> 206 km/h for one step); not at or above it (flick approach; 240: suite max 0.900).
     tc_slip=4.5         # m/s the rear wheels may outrun the fronts before traction control cuts (v0.63: 2.5 -> 4.5; 2.5 was the v0.28 peak, the car now exits on the line with grip to spare).
     tc_gain=.3          # throttle cut per m/s of rear over-speed beyond tc_slip (v0.96: .5 -> .3: the tyre force still rises with slip past its peak, so a softer cut keeps more drive; .2 is as fast with less margin, .1 runs to 0.98 of the edge, 0 leaves the track).
     tc_hold=.8          # share of last step's traction-control cut still applied this step (fades the cut out).
@@ -879,8 +880,15 @@ def drive_example(c):
         for d, a in zip(S['track'], angles):
             if d <= 0 or abs(a) < .25: continue
             radius= d / (2*sin(abs(a)*PI/180))
-            if any(d2 < 2*radius*sin(abs(a2)*PI/180) for d2, a2 in zip(S['track'], angles)
-                   if a2*a > 0 and abs(a2) < abs(a)): continue   # curve would leave the track
+            # Tightened Arc (v0.99): radii at which the curve would just pass the end
+            # of each inner beam it crosses; below arc_tight_v the tightest one is
+            # taken (it reaches this beam's bearing at 2*radius*sin(a), short of the
+            # beam's end) instead of discarding the beam.
+            inner= [d2/(2*sin(abs(a2)*PI/180)) for d2, a2 in zip(S['track'], angles)
+                    if a2*a > 0 and 1e-6 < abs(a2) < abs(a) and d2 < 2*radius*sin(abs(a2)*PI/180)]
+            if inner:   # curve would leave the track
+                if not 0 < S['speedX'] < arc_tight_v: continue
+                radius= min(inner); d= 2*radius*sin(abs(a)*PI/180)
             v_brake= brake_speed(d)
             v_grip= (tg*radius/max(1 - tg*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
