@@ -598,6 +598,9 @@ def drive_example(c):
     launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts (in practice no cut).
     exit_steer=.3       # v0.72: below launch_v after the launch, launch_slip also applies while the car runs straight (out of the hairpin and the Corkscrew), full at steer 0, none from this |steer| ...
     exit_vy=6           # ... and none from this sideways speed (km/h; no extra while the car slides).
+    out_brake=2         # v0.75: share of the outside target taken away while braking in a bend (1 = centre, 2 = the inside instead) ...
+    out_v=180           # ... at or above this speed (km/h; below it the outside target stays: 448 m, flick, hairpin) ...
+    out_lp=.8           # ... the braking flag is smoothed (share of the previous value kept per step; half of full = braking).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -656,6 +659,15 @@ def drive_example(c):
         R['steer']+= (line_target - S['trackPos'])*line_gain
     if side != 0:
         phase= clip((road-60)/20, -1, 1)   # +1 approaching or exiting, -1 near the apex
+        # No Outside Pull While Braking (v0.75): on a fast approach the bend is
+        # detected with > 80 m of road still visible, so the target is the
+        # outside while the car is already braking (700, 960, 1,400, 2,320,
+        # 2,900 m; the kink before the flick, 2,364 m: pulled +0.47 to the
+        # left, the inside of the flick's left arc). While the smoothed
+        # braking flag is up, at speed, the outside target is taken away by
+        # out_brake (2 = the inside target instead).
+        if phase > 0 and S['speedX'] >= out_v:
+            phase*= 1 - out_brake*clip(2*getattr(c, 'brk_f', 0), 0, 1)
         # Apex: in medium bends (moderate steering) the car can hold a tighter
         # inside line, which opens the radius of the whole bend (v0.52 trials:
         # inside offset 0.7-0.8 alone was 0.3-0.5 s faster over 30 perturbed
@@ -820,6 +832,7 @@ def drive_example(c):
         slowest_wheel= min(S['wheelSpinVel'])*.3   # rad/s * ~0.3 m wheel radius = m/s
         if slowest_wheel < abs_ratio*S['speedX']/3.6:
             R['brake']*= abs_cut
+    c.brk_f= out_lp*getattr(c, 'brk_f', 0) + (1-out_lp)*(R['brake'] > 0)   # smoothed braking flag (v0.75, racing line)
 
     # Throttle Near Full Lock: at full lock the car is already turning as tight
     # as it can, so more speed only pushes it wide (v0.28: throttle 1.0 at full
