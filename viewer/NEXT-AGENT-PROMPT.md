@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 5
+**Last updated:** after Phase 6
 
 ---
 
@@ -40,6 +40,12 @@ Two vertical bars in `#pedBars` between the wheel and pedal history graph:
 2. **Step range input**: `<input id="teleRange">` + "Full lap" button above charts. Accepts `start–end`; bad input resets to full lap.
 3. **Configurable section gap**: `sectGap` (default 100 m). Segmented buttons (25/50/100/200/500 m) above the sections table. Tab reads "`N` m sections".
 
+### Phase 6 (COMPLETE) — tag: `phase-6`
+1. **Side panel toggle** (`index.html`, `css/app.css`, `map.js`): `#sideToggle` button between `#mapwrap` and `#side`. CSS class `side-closed` on `#pm` hides `#side` and flips arrow glyph (`‹`/`›`). `#sectorLive` and `#lapDeltaBar` live in `#overlay` (always visible regardless of side panel state).
+2. **Live sector table** (`map.js` `drawSectorLive`): `#sectorLive` div in `#overlay`. Columns: Sector | Time | Δ Ref. Live time shows for the current sector in italic/accent colour; locked once the sector completes. Delta cell background via `RV.deltaColor(delta, 2)` with `color:#fff` when visible. Reference: mean of loaded compared runs, or `bestBeforeId` sector times of the focused version.
+3. **Lap delta bar** (`map.js` `drawDeltaBar`): `#lapDeltaBar` div below `#sectorLive`. Centered white bar, green fills left when ahead, red fills right when behind, saturates at 5 s. Focused car row is visually larger. Extra cars sorted by delta. Single helper `refSectors()` shared by both features.
+4. Both new overlays registered in `OVER` array and controlled via the Layers > Panels panel like other overlays.
+
 ---
 
 ## Architecture
@@ -66,13 +72,6 @@ Global namespace: `globalThis.RV`. All modules attach to it.
 ---
 
 ## Remaining phases (do in order)
-
-### Phase 6: Track tab side panel close + sector timing table
-**Files to edit:** `viewer/index.html`, `viewer/js/map.js`, `viewer/css/app.css`
-
-1. **Close button for `#side`**: add a `<button id="sideToggle">` at the left edge of `#side` (a `<` arrow). Clicking it hides `#side` (`display:none` or a CSS class). Clicking again shows it. The sector table (item 2 below) must remain visible even when the panel is hidden; it lives outside `#side`.
-2. **Sector time table** rendered in a new `<div id="sectorLive">` positioned in `#overlay`, below `#mini`. Always visible while on the Track tab. Columns: Sector | Time | Delta. Live current time updates while the lap is in progress; when a sector completes its time locks in. Delta cell background uses `RV.deltaColor(delta, 2)`. Reference: `v.bestBefore` sector times, or the mean of `S.CM` sector times when comparing.
-3. **Lap delta bar** in a new `<div id="lapDeltaBar">` below `#sectorLive`. White at 0, green when ahead of reference, red when behind. Color uses `RV.deltaColor(delta, 5)` (the `maxDelta` of 5 s means the bar is full-saturated at a 5 s gap). Updates live. When multiple cars selected: one bar per car, focused car first and visually larger, rest sorted fastest→slowest. Animate reordering (CSS transition).
 
 ### Phase 7: Replay camera smoothing
 **File to edit:** `viewer/js/app.js`

@@ -14,7 +14,7 @@
   let near = { x: 0, y: 0, r2: 1e18 };                         /* the part of the track that can be on screen this frame */
   const buf = document.createElement('canvas'), bg = buf.getContext('2d'), miniBuf = document.createElement('canvas');
   let bufKey = '', miniKey = '', secNow = '', tourSaved = null;
-  let hudHtml = '';
+  let hudHtml = '', slvHtml = '', ldbHtml = '';
   let lastCam = null;                   /* base point, centre, angle and zoom of the last drawn frame */
   let cam = null;                       /* world-to-screen of the last drawn frame, for hit-testing clicks */
   let zoomInput = null, carCells = [];
@@ -255,6 +255,8 @@
     { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true },
     { id: 'leg', label: 'Colour keys', d: 'What the colours mean, bottom left.', on: true },
     { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, and its throttle and brake over the last seconds, bottom right.', on: true },
+    { id: 'sectorLive', label: 'Live sector table', d: 'Current sector times and deltas vs. the reference lap.', on: true },
+    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Live gap vs. the reference lap, shown as a coloured bar.', on: true },
   ];
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
@@ -436,7 +438,18 @@
     secNow = '';
     message();
   }
-  function panels() { for (const L of OVER) $(L.id).style.display = (L.on && onMap()) ? '' : 'none'; }
+  function panels() {
+    for (const L of OVER) {
+      const show = L.on && onMap();
+      if (L.id === 'sectorLive' || L.id === 'lapDeltaBar') {
+        /* these are shown/hidden by their draw functions to account for missing data;
+           panels() only hides them when the layer is turned off or no run is loaded */
+        if (!show) $(L.id).hidden = true;
+      } else {
+        $(L.id).style.display = show ? '' : 'none';
+      }
+    }
+  }
 
   /* what the map says when it cannot draw the run */
   function message() {
@@ -561,6 +574,8 @@
     if (OVER[3].on) RV.inputs.draw(R, i);
     if (OVER[1].on) drawMini();
     if (OVER[0].on) drawHud(sm, gapTxt);
+    if (OVER[4].on) drawSectorLive();
+    if (OVER[5].on) drawDeltaBar();
   }
   function drawMini() {
     const R = S.R, B = trk().box, P = RV.pal, r = window.devicePixelRatio || 1, cw = mini.clientWidth, chh = mini.clientHeight;
@@ -603,6 +618,97 @@
     const html = '<div class="big num">' + R.v[i].toFixed(0) + '<small>km/h</small></div><div class="who"><i class="sw" style="background:' + RV.col(S.sel[0]) + '"></i>' + esc(R.name) + '</div><div class="hud-doing">' + doing + '</div><dl class="kv">' + kv.join('') + '</dl>';
     if (html !== hudHtml) { $('hud').innerHTML = html; hudHtml = html; }
   }
+  /* ---------- sector live table ---------- */
+  /* Returns reference sector times [s1, s2, s3] or null.
+     Priority: mean of loaded compared runs > bestBefore of the focused version. */
+  function refSectors() {
+    if (!S.ds || !trk() || !trk().sectors) return null;
+    if (S.CM.length > 0) {
+      const loaded = S.CM.filter(m => m.r && m.r.sec);
+      if (loaded.length > 0) {
+        const mean = [0, 0, 0];
+        for (const m of loaded) { mean[0] += m.r.sec[0] || 0; mean[1] += m.r.sec[1] || 0; mean[2] += m.r.sec[2] || 0; }
+        return mean.map(v => v / loaded.length);
+      }
+    }
+    const v = S.ds.versions && S.ds.versions.find(vv => vv.id === S.sel[0]);
+    if (v && v.bestBeforeId && S.ds.byId && S.ds.byId[v.bestBeforeId] && S.ds.byId[v.bestBeforeId].sec)
+      return S.ds.byId[v.bestBeforeId].sec;
+    return null;
+  }
+
+  function drawSectorLive() {
+    const R = S.R, T = trk();
+    if (!R || !R.sec || !T || !T.sectors) { slvHtml = ''; $('sectorLive').hidden = true; return; }
+    const cu = T.sectors.cuts, d = R.d[S.i], t = R.t[S.i];
+    const ref = refSectors();
+    const curSec = d < cu[0] ? 0 : d < cu[1] ? 1 : 2;
+    /* cumulative start times for each sector */
+    const secStart = [0, R.sec[0], (R.sec[0] != null && R.sec[1] != null) ? R.sec[0] + R.sec[1] : null];
+    let html = '<table><thead><tr><th class="l">Sector</th><th>Time</th><th>\u0394 Ref</th></tr></thead><tbody>';
+    for (let k = 0; k < 3; k++) {
+      const done = R.sec[k] != null;
+      const live = !done && k === curSec;
+      let secTime = done ? R.sec[k] : (live && secStart[k] != null ? Math.max(0, t - secStart[k]) : null);
+      const refT = ref ? ref[k] : null;
+      const delta = (secTime != null && refT != null) ? (secTime - refT) : null;
+      const timeTxt = secTime != null ? secTime.toFixed(2) + ' s' : '\u2014';
+      const deltaTxt = delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(2) + ' s' : '\u2014';
+      const deltaBg = delta != null && Math.abs(delta) > 0.01 ? 'background:' + RV.deltaColor(delta, 2) + ';color:#fff' : (delta != null ? 'background:' + RV.deltaColor(delta, 2) : '');
+      const timeCls = 'slv-time' + (live ? ' slv-live' : '');
+      html += '<tr><td class="l num">S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
+        + '<td class="slv-delta" style="' + deltaBg + '">' + deltaTxt + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    if (html !== slvHtml) { $('sectorLive').innerHTML = html; slvHtml = html; }
+  }
+
+  /* ---------- lap delta bar ---------- */
+  function lapDeltaForCar(r) {
+    const R = S.R;
+    const ref = refSectors();
+    if (ref) {
+      /* compare this car's current running time vs. reference total */
+      const refTotal = ref[0] + ref[1] + ref[2];
+      return r.t[S.i] - refTotal;
+    }
+    /* no external ref: compare each car against the focused car at the same track distance */
+    if (r === R) return 0;
+    return r.t[RV.idxAtD(r, R.d[S.i])] - R.t[S.i];
+  }
+
+  function drawDeltaBar() {
+    const R = S.R;
+    if (!R) { ldbHtml = ''; $('lapDeltaBar').hidden = true; return; }
+    const MAX_D = 5;
+    const cars = [{ id: S.sel[0], r: R, foc: true }].concat(S.CM.filter(m => m.r && m.r.t).map(m => ({ id: m.id, r: m.r, foc: false })));
+    const rows = cars.map(c => ({ id: c.id, r: c.r, foc: c.foc, delta: lapDeltaForCar(c.r) }));
+    const focRow = rows[0];
+    const rest = rows.slice(1).sort((a, b) => a.delta - b.delta);
+    const sorted = [focRow, ...rest];
+    let html = '';
+    for (const row of sorted) {
+      const delta = row.delta;
+      const col = RV.deltaColor(delta, MAX_D);
+      let fillStyle;
+      if (delta <= 0) {
+        const pct = Math.min(50, Math.abs(delta) / MAX_D * 50);
+        fillStyle = 'left:' + (50 - pct).toFixed(1) + '%;right:50%;background:' + col;
+      } else {
+        const pct = Math.min(50, delta / MAX_D * 50);
+        fillStyle = 'left:50%;right:' + (50 - pct).toFixed(1) + '%;background:' + col;
+      }
+      const deltaTxt = (delta > 0 ? '+' : '') + delta.toFixed(2) + ' s';
+      html += '<div class="ldb-row' + (row.foc ? ' focused' : '') + '">'
+        + '<div class="ldb-label"><i class="sw" style="background:' + RV.col(row.id) + ';width:8px;height:8px;border-radius:2px;margin-right:4px"></i>'
+        + esc(row.id) + ' <span style="font-variant-numeric:tabular-nums">' + esc(deltaTxt) + '</span></div>'
+        + '<div class="ldb-track"><div class="ldb-fill" style="' + fillStyle + '"></div>'
+        + '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--line)"></div></div>'
+        + '</div>';
+    }
+    if (html !== ldbHtml) { $('lapDeltaBar').innerHTML = html; ldbHtml = html; }
+  }
+
   function legend() {
     const R = S.R, sm = RV.simple();
     if (!R) { $('leg').innerHTML = ''; return; }
@@ -646,6 +752,19 @@
     else if (e.key === 'f' || e.key === 'F') { setFollow(!view.follow); buildSide(); }
   }
   if (window.ResizeObserver) new ResizeObserver(size).observe(c);
+
+  /* ---------- side panel toggle ---------- */
+  (function () {
+    const btn = $('sideToggle'), pm = $('pm');
+    function updateToggle() {
+      const closed = pm.classList.contains('side-closed');
+      btn.textContent = closed ? '\u203a' : '\u2039';
+      btn.setAttribute('aria-label', closed ? 'Show side panel' : 'Hide side panel');
+      btn.title = closed ? 'Show side panel' : 'Hide side panel';
+    }
+    btn.onclick = () => { pm.classList.toggle('side-closed'); updateToggle(); RV.map.size(); };
+    updateToggle();
+  }());
 
   RV.map = {
     draw: draw, size: size, legend: legend, buildSide: buildSide, key: key,

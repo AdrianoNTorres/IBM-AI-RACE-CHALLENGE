@@ -262,7 +262,8 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #vside details p { overflow-wrap: anywhere; }
 
 /* ---------- track ---------- */
-#pm.on { display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+#pm.on { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
+#pm.side-closed { grid-template-columns: minmax(0, 1fr) auto 0px; }
 #mapwrap { position: relative; min-width: 0; overflow: hidden; background: var(--map-bg); }
 #c { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #c.drag { cursor: grabbing; }
@@ -292,7 +293,35 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #pedkey i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; } #pedkey b { color: var(--ink); } #pedkey .none { color: var(--mute); }
 #mapmsg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; }
 #mapmsg .card { max-width: 520px; } #mapmsg h3 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin-bottom: 8px; }
-#side { background: var(--surface); border-left: 1px solid var(--line); overflow: auto; padding: 16px 18px 30px; }
+
+/* side toggle button between #mapwrap and #side */
+#sideToggle {
+  width: 18px; border: 0; background: var(--surface); border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  cursor: pointer; color: var(--mute); font-size: 16px; display: flex; align-items: center; justify-content: center;
+  padding: 0; transition: background .12s, color .12s; flex: none; z-index: 1;
+}
+#sideToggle:hover { background: var(--surface-2); color: var(--ink); }
+#pm.side-closed #sideToggle { border-right: 0; }
+
+#side { background: var(--surface); border-left: 1px solid var(--line); overflow: auto; padding: 16px 18px 30px; width: 360px; }
+#pm.side-closed #side { display: none; }
+
+/* sector live table + lap delta bar: inside #overlay, below #mini, pointer-events on */
+#sectorLive, #lapDeltaBar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); pointer-events: auto; min-width: 190px; }
+#sectorLive { padding: 0; overflow: hidden; }
+#sectorLive table { width: 100%; margin: 0; }
+#sectorLive th { padding: 5px 8px; font-size: 11px; }
+#sectorLive td { padding: 5px 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+#sectorLive td.slv-delta { font-weight: 700; transition: background-color .25s; }
+#sectorLive td.slv-time { font-variant-numeric: tabular-nums; }
+#sectorLive td.slv-live { color: var(--accent); font-style: italic; }
+
+#lapDeltaBar { padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+.ldb-label { font-size: 11px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+.ldb-track { height: 10px; border-radius: 5px; background: var(--surface-2); position: relative; overflow: hidden; }
+.ldb-fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; transition: left .1s, right .1s, background-color .1s; }
+.ldb-row { display: flex; flex-direction: column; gap: 2px; transition: order .3s; }
+.ldb-row.focused .ldb-track { height: 14px; }
 .subtabs { margin-bottom: 12px; }
 .cars { margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .cars th { padding: 4px 8px; font-size: 11px; } .cars td { padding: 8px; }
@@ -417,7 +446,7 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
   #brand span { display: none; }
   .tab { padding: 0 11px; }
   #pv.on { grid-template-columns: minmax(0, 1fr) 340px; }
-  #pm.on { grid-template-columns: minmax(0, 1fr) 320px; }
+  #side { width: 300px; }
   .tiles, .tiles.five { grid-template-columns: 1fr 1fr; }
   #chips .chip:not(.foc) span.num { display: none; }
 }
