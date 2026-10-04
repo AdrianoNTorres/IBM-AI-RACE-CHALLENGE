@@ -11,6 +11,7 @@
     applied: [],                     /* the selection whose runs are loaded and shown */
     R: null, CM: [],                 /* the run in focus and the compared runs [{r, id}] */
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
+    camFrac: 0,                      /* fractional progress 0..1 between step i and i+1 (smoothing at ≤1×) */
     hold: { dir: 0, start: 0, rate: 0 },
     tab: 'pv', listMode: 'all', keptOnly: true, detailId: null,
     sideTab: 'view', layerGroup: 'Track', teleTab: 'charts', guideTab: 'layout', setTab: 'prefs',
@@ -154,14 +155,14 @@
   }
 
   /* ---------- replay clock ---------- */
-  function go(k) { S.i = RV.clamp(k, 0, S.R.n - 1); S.t = S.R.t[S.i]; }
+  function go(k) { S.i = RV.clamp(k, 0, S.R.n - 1); S.t = S.R.t[S.i]; S.camFrac = 0; }
   function seekT(tt) {
     const R = S.R, n = R.n;
     if (tt >= S.t) { while (S.i < n - 1 && R.t[S.i + 1] <= tt) S.i++; } else { while (S.i > 0 && R.t[S.i] > tt) S.i--; }
     S.t = tt;
   }
-  function setPlaying(p) { S.playing = p; $('play').textContent = p ? 'Pause' : 'Play'; }
-  function hold(dir) { if (!S.R) return; setPlaying(false); go(S.i + dir); S.hold.dir = dir; S.hold.start = performance.now(); }
+  function setPlaying(p) { S.playing = p; $('play').textContent = p ? 'Pause' : 'Play'; if (!p) S.camFrac = 0; }
+  function hold(dir) { if (!S.R) return; setPlaying(false); go(S.i + dir); S.camFrac = 0; S.hold.dir = dir; S.hold.start = performance.now(); }
   function release() { S.hold.dir = 0; S.hold.rate = 0; }
   /* Loops the replay over a section of the lap (null: no loop). */
   function setLoop(range) {
@@ -187,12 +188,27 @@
     if (H.dir) {                                        /* a held arrow: one step, then slow motion that speeds up */
       const h = (now - H.start) / 1000;
       H.rate = h < 0.45 ? 0 : h < 1.6 ? 0.1 : h < 3.2 ? 0.25 : 0.5;
-      if (H.rate) seekT(RV.clamp(S.t + H.dir * dt * H.rate, R.t[0], R.t[n - 1]));
+      if (H.rate) { seekT(RV.clamp(S.t + H.dir * dt * H.rate, R.t[0], R.t[n - 1])); S.camFrac = 0; }
     } else if (S.playing) {
-      const tt = S.t + dt * +$('spd').value;
+      const spd = +$('spd').value;
+      const tt = S.t + dt * spd;
       const end = S.loop ? R.t[RV.idxAtD(R, S.loop[1])] : null;
-      if (end != null && S.t <= end && tt > end) go(RV.idxAtD(R, S.loop[0]));      /* the end of the looped section: back to its start */
-      else if (tt >= R.t[n - 1]) { S.i = 0; S.t = R.t[0]; } else seekT(tt);
+      if (end != null && S.t <= end && tt > end) {
+        go(RV.idxAtD(R, S.loop[0]));                   /* loop boundary: snap */
+      } else if (tt >= R.t[n - 1]) {
+        S.i = 0; S.t = R.t[0]; S.camFrac = 0;
+      } else {
+        seekT(tt);
+        /* camera smoothing: at ≤1× speed compute fractional progress within the current step interval */
+        if (spd <= 1 && S.i < n - 1) {
+          const t0 = R.t[S.i], t1 = R.t[S.i + 1];
+          S.camFrac = t1 > t0 ? RV.clamp((S.t - t0) / (t1 - t0), 0, 1) : 0;
+        } else {
+          S.camFrac = 0;
+        }
+      }
+    } else {
+      S.camFrac = 0;
     }
     $('rate').textContent = H.dir ? (H.rate ? (H.dir < 0 ? 'back ' : '') + H.rate + '×, held' : 'one step') : (S.playing ? '' : 'paused');
     $('scrub').value = S.i;
@@ -323,7 +339,7 @@
     $('clr').onclick = () => RV.sel.only(S.sel[0]);
     $('loopChip').onclick = () => setLoop(null);
     $('play').onclick = () => setPlaying(!S.playing);
-    $('scrub').oninput = e => go(+e.target.value);
+    $('scrub').oninput = e => { go(+e.target.value); S.camFrac = 0; };
     $('spd').value = String(RV.prefs.speed);
     for (const [id, dir] of [['back', -1], ['fwd', 1]]) {
       const b = $(id);

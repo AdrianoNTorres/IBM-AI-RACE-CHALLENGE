@@ -512,6 +512,21 @@
   function fitView() { view.follow = false; view.rot = false; view.all = false; view.fit = true; buildSide(); }
 
   /* ---------- the frame ---------- */
+  /* Linearly interpolate a world position using camFrac (smoothed camera at ≤1× speed).
+     Returns the interpolated [x, y, yaw] for the camera centre and rotation. */
+  function smoothCar(R, i, frac) {
+    if (frac <= 0 || i >= R.n - 1) return [R.x[i], R.y[i], R.yaw[i]];
+    const i1 = i + 1;
+    const x = R.x[i] + (R.x[i1] - R.x[i]) * frac;
+    const y = R.y[i] + (R.y[i1] - R.y[i]) * frac;
+    /* shortest-path yaw lerp */
+    let da = R.yaw[i1] - R.yaw[i];
+    if (da > Math.PI) da -= 2 * Math.PI;
+    else if (da < -Math.PI) da += 2 * Math.PI;
+    const yaw = R.yaw[i] + da * frac;
+    return [x, y, yaw];
+  }
+
   function draw() {
     const P = RV.pal, r = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight, R = S.R, i = S.i;
     if (!W) return;
@@ -527,8 +542,11 @@
     }
     if (!onMap()) return;
     if (view.fit && !view.follow) applyFit(W, H);
-    const many = others().length > 0, a = view.rot ? Math.PI / 2 - R.yaw[i] : view.ang;
-    let b = base(), ce = view.follow ? [R.x[i], R.y[i]] : [view.cx, view.cy];
+    const many = others().length > 0;
+    /* smooth camera: interpolate position and yaw between steps at ≤1× playback speed */
+    const sc = smoothCar(R, i, S.camFrac);
+    const a = view.rot ? Math.PI / 2 - sc[2] : view.ang;
+    let b = base(), ce = view.follow ? [sc[0], sc[1]] : [view.cx, view.cy];
     if (view.follow && view.all && many) { const f = frameAll(a, W, H); ce = f[0]; view.z = f[1]; b = [W / 2, H / 2]; }
     const z = view.z;
     lastCam = { b: b, ce: ce, a: a, z: z };

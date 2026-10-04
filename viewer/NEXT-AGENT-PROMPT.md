@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 6
+**Last updated:** after Phase 7
 
 ---
 
@@ -46,6 +46,9 @@ Two vertical bars in `#pedBars` between the wheel and pedal history graph:
 3. **Lap delta bar** (`map.js` `drawDeltaBar`): `#lapDeltaBar` div below `#sectorLive`. Centered white bar, green fills left when ahead, red fills right when behind, saturates at 5 s. Focused car row is visually larger. Extra cars sorted by delta. Single helper `refSectors()` shared by both features.
 4. Both new overlays registered in `OVER` array and controlled via the Layers > Panels panel like other overlays.
 
+### Phase 7 (COMPLETE) — tag: `phase-7`
+1. **Camera smoothing** (`app.js`, `map.js`): `S.camFrac` (0–1) is set each tick to the fractional progress within the current step interval when `spd ≤ 1`. `map.js` `smoothCar()` linearly interpolates `R.x/y/yaw` by `camFrac`; the interpolated position and yaw feed the camera centre and rotation angle in `draw()`. `S.camFrac` is reset to 0 on `go()`, `setPlaying(false)`, `hold()`, scrub drag, loop boundary, and when `spd > 1`.
+
 ---
 
 ## Architecture
@@ -72,14 +75,6 @@ Global namespace: `globalThis.RV`. All modules attach to it.
 ---
 
 ## Remaining phases (do in order)
-
-### Phase 7: Replay camera smoothing
-**File to edit:** `viewer/js/app.js`
-
-- In `tick()`: when `+$('spd').value <= 1` and `S.playing`, linearly interpolate the camera's world-to-screen position between the current step `S.i` and the next step `S.i + 1` using fractional `dt`.
-- Snap immediately (no interpolation) on: `go()`, `setPlaying(false)`, speed change to > 1×, loop boundary hit, or any `hold` direction.
-- The camera must **never** rest at a fractional position — all non-playing states must be at exact step positions.
-- Note: the camera lives in `map.js` (`view` object). The smoothing fraction needs to be stored in `S` (e.g. `S.camFrac`) and read by `map.draw()`. Add a `RV.map.setCamFrac(f)` method.
 
 ### Phase 8: Versions tab bulk actions
 **File to edit:** `viewer/js/versions.js`
