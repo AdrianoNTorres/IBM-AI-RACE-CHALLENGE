@@ -11,6 +11,7 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 | **Safety standard**: 3×10 perturbation suites on a config | `python tools/suite.py --set brake_aero=0.0065 --set tc_slip=3` |
 | Compare configs in one batch | `python tools/suite.py --cfg base: --cfg hi:brake_aero=0.0065,brake_max=30` |
 | Code change (new mechanism) | copy `snakeoil3_v1.py` to `%TEMP%\x\v.py`, edit it, then `python tools/suite.py --variant %TEMP%\x\v.py` (`--set`/`--cfg` still apply on top) |
+| **Tail analysis + paired comparison** over the 70 standard runs (30 suite + 40 shifted-base runs; CSVs kept in `--dir`, outside the repo): suite table with where each max is, per-100 m section mean / min / median / tail runs / tail loss / correlation with the lap, and with `--pair <base dir>` the paired per-run lap difference over the 30, the 40 and all 70 (mean, SE, faster / slower / identical) plus per-section mean differences. `--reuse` reads the kept CSVs without racing | `python tools/tails.py --dir %TEMP%\x\cand [--set k=v] [--variant v.py] [--pair %TEMP%\x\base] [--reuse]` |
 | Only suite 1 (10 runs), print every run | `python tools/suite.py --suites 1 -v ...` |
 | Optimise knobs (full suite objective) | `python tools/opt.py --knob brake_aero=0.005:0.008 --knob brake_max=24:34 --trials 40 --study ba` |
 | Optimise cheaply, then confirm top 5 on all 30 | `python tools/opt.py --knob tc_slip=2:3.5 --screen 1 --confirm 5 --trials 60 --study tc` |
