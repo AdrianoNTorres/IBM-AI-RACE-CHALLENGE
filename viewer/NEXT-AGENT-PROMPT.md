@@ -9,105 +9,116 @@
 
 ### Phase 1 (COMPLETE) — tag: `phase-1`
 All trivial UI and label fixes.
-
-Changes made:
-1. **Telemetry label** (`telemetry.js`, `versions.js`): "Part of the lap at full throttle" and "Full throttle" both renamed to "% of the lap at full throttle" in both Basic and Detailed views.
-2. **Clutch removed from HUD** (`inputs.js`, `index.html`): The "Clutch: not recorded" span is gone from the pedals key display. Clutch still renders on the canvas graph if the data has it, but the text key no longer mentions it. `aria-label` updated to match.
-3. **"Doing" status in both views** (`map.js`, `css/app.css`): The "Doing" status (Braking / Full throttle / Part throttle / Coasting) now appears in both Basic and Detailed views. It is shown as a small `.hud-doing` div directly under the version name in the HUD, not in the key-value list. CSS added: `#hud .hud-doing`.
-4. **Enabling change badge** (`data.js`, `versions.js`, `core.js`, `css/app.css`): Versions whose Decision field contains "enabling change" (case-insensitive) are tagged with `v.enableChange = true`. In the Versions tab:
-   - Kept enabling changes: **yellow/warning badge** ("Enabling change"), yellow dot on the chart.
-   - Rejected enabling changes: **grey badge** ("Enabling change"), grey dot on the chart (same as other rejected).
-   - New `ke` and `re` chart classes added to `CLS`. `c-warn` CSS class added to the key legend. `P['warn']` added to palette (reads `--warn-ink`).
+1. **Telemetry label** (`telemetry.js`, `versions.js`): "% of the lap at full throttle" in both Basic and Detailed views.
+2. **Clutch removed from HUD** (`inputs.js`, `index.html`): "Clutch: not recorded" span removed; `aria-label` updated.
+3. **"Doing" status in both views** (`map.js`, `css/app.css`): Braking / Full throttle / Part throttle / Coasting shown as `.hud-doing` div directly under the version name in the HUD in both views.
+4. **Enabling change badge** (`data.js`, `versions.js`, `core.js`, `css/app.css`): `v.enableChange = true` when Decision contains "enabling change". Kept = yellow `.warn-badge`; rejected = grey `.dim-badge`. New `ke`/`re` chart classes; `P['warn']` reads `--warn-ink`.
 
 ### Phase 2 (COMPLETE) — tag: `phase-2`
-Shared red/green color-scale utility added to `core.js`:
+Shared red/green color-scale utilities added to `core.js`:
+- `RV.colorScale(value, min, max, direction)` → CSS rgb. direction=1: high=green, -1: low=green.
+- `RV.deltaColor(delta, maxDelta)` → diverging white-centred scale (white=0, green=faster, red=slower). Ready for Phase 6 lap delta bar.
+- `RV.gearColor(gear)` → sequential palette for gears −1 through 6.
 
-- `RV.colorScale(value, min, max, direction)` → CSS rgb string. direction=1: high=green; direction=-1: low=green.
-- `RV.deltaColor(delta, maxDelta)` → diverging white-centered scale (white at 0, green faster, red slower). Used by Phase 6 lap delta bar.
-- `RV.gearColor(gear)` → sequential palette for gears -1 through 6.
-
-Applied in `telemetry.js`:
-- Speed chart line: now uses `RV.colorScale` (red→green by speed).
-- Throttle chart: colored line using `RV.colorScale` (green=full throttle, red=none).
-- Brake chart: colored line (green=no brake, red=full brake).
-- Steering and Track position: colored by `|value|` (green=near 0, red=near ±1).
-- Gear chart: filled area per gear, each gear has its own color via `RV.gearColor`. Gear range extended to include -1 (reverse).
-
----
-
-## Architecture overview
-
-The viewer is a static multi-file page under `viewer/`. It has no build step and runs directly in a browser.
-
-- `viewer/index.html` — the page shell, tab/overlay structure
-- `viewer/js/core.js` — palette, clamp, bsearch, color scales
-- `viewer/js/data.js` — fetches and parses changelogs and run CSVs from GitHub or local folder
-- `viewer/js/app.js` — page state (`RV.S`), selection, replay clock, tabs, view switch
-- `viewer/js/versions.js` — Versions tab: lap-time chart, table, rankings, detail panel
-- `viewer/js/map.js` — Track tab: canvas replay, camera, side panel, layers, HUD
-- `viewer/js/inputs.js` — steering wheel and throttle/brake graph (bottom right of map)
-- `viewer/js/telemetry.js` — Telemetry tab: charts along the lap, 100 m sections
-- `viewer/js/sectors.js` — sector time helpers shared by Versions and Telemetry tabs
-- `viewer/js/settings.js` — Settings/Help page
-- `viewer/js/tutorial.js` — guided tutorial overlay
-- `viewer/css/app.css` — all CSS, fully token-based (light/dark themes)
-
-Global namespace is `globalThis.RV`. All modules attach to it.
-
----
-
-## Remaining phases (ordered, easiest first)
+Applied in `telemetry.js`: speed (red→green), throttle (green=full), brake (green=none), steering/trackPos (green=near 0), gear (filled area per gear, own color).
 
 ### Phase 3 (COMPLETE) — tag: `phase-3`
-Two vertical bars added between the steering wheel and the pedals history graph in `#inputs`:
-- `#barBrake` (fills red via `--in-brake`) and `#barThrottle` (fills green via `--in-throttle`).
-- CSS `--bar-h` custom property drives the `::after` height; updated each frame in `drawBars(R, i)` in `inputs.js`.
-- The `#pedBars` container sits between `#wheel` and `.ped` in `#inputs`.
+Two vertical bars in `#pedBars` between the wheel and pedal history graph:
+- `#barBrake` (red, `--in-brake`) and `#barThrottle` (green, `--in-throttle`).
+- `--bar-h` CSS custom property drives `::after` height; set each frame in `drawBars(R, i)` in `inputs.js`.
 
 ### Phase 4 (COMPLETE) — tag: `phase-4`
-1. **Start / finish line** (`map.js`): new `finish` path in `trackPaths()`. A `finish` layer in the Track group draws a chequered line across the road at distance 0. A "Start / Finish" label appears at zoom ≥ 1.
-2. **Mini-map** (`drawMini`): finish line and sector boundaries (detailed view only) are now painted into the mini-map's static background buffer.
-3. **Slowest corner pin** (`map.js`): new `slowcorner` layer in the "Car and path" group. Shows a purple dot and a speed label at the run's slowest corner. `data.js` now stores `sum.slow_at` (frame index) alongside `sum.slow`.
-4. **Default whole-track view on comparison** (`map.js` `resetAuto`): when `S.CM.length > 0`, `fitView()` is called so the whole track is shown by default.
-5. **Per-car size** (`app.js`, `map.js`): `S.carScale = {}` stores a scale multiplier per car. `drawCar` accepts a `userScale` argument. Sliders in the Camera section of the side panel (detailed view) let the user adjust each car's size from 0.3× to 4×, with Reset buttons per car and a "Reset all" button.
-6. **Loop focus dimming** (`map.js` `drawSpeedLine`): `LOOP_DIM = 0.18` constant. When `S.loop` is active, the driven line is drawn in two passes: outside the loop at `LOOP_DIM` opacity, inside at full opacity.
+1. **Start/finish line** (`map.js`): `finish` path in `trackPaths()`; chequered line layer in Track group; "Start / Finish" screen label at zoom ≥ 1.
+2. **Mini-map** (`drawMini`): finish line + sector boundaries (detailed view only) in static buffer.
+3. **Slowest corner pin** (`map.js`): `slowcorner` layer (purple dot + speed label). `data.js` stores `sum.slow_at` index.
+4. **Default whole-track on compare** (`map.js` `resetAuto`): `fitView()` called when `S.CM.length > 0`.
+5. **Per-car size** (`app.js`, `map.js`): `S.carScale = {}`. `drawCar` takes `userScale`. Sliders + Reset per car + "Reset all" in Camera section (detailed view).
+6. **Loop focus dimming** (`map.js` `drawSpeedLine`): `LOOP_DIM = 0.18`. Two-pass draw: outside loop at dim opacity, inside at full.
 
 ### Phase 5 (COMPLETE) — tag: `phase-5`
-1. **Auto-fit** (`telemetry.js`): on first build for a new run, `xr` is set to `[0, R.total]` (whole lap) rather than starting at -12. Wheel/drag zoom still works.
-2. **Step range input** (`telemetry.js`): a text `<input id="teleRange">` and "Full lap" reset button above the charts. Accepts `start–end` format; invalid input resets to full lap.
-3. **Configurable section gap** (`telemetry.js`): `sectGap` variable (default 100 m). A segmented button group above the sections table lets the user pick 25/50/100/200/500 m. Always includes 0 and the end of the track. The subtabs button now reads "`N` m sections" for the current gap.
+1. **Auto-fit** (`telemetry.js`): `xr = [0, R.total]` on new run load. Zoom/pan still work.
+2. **Step range input**: `<input id="teleRange">` + "Full lap" button above charts. Accepts `start–end`; bad input resets to full lap.
+3. **Configurable section gap**: `sectGap` (default 100 m). Segmented buttons (25/50/100/200/500 m) above the sections table. Tab reads "`N` m sections".
 
-### Phase 6: Track tab side panel and sector timing table
-1. **Close button for the side panel**: add a toggle to hide `#side` entirely (a thin arrow button at its edge). Sector table remains visible even when the panel is closed.
-2. **Sector time table under the overview map**: always visible below `#mini`. Shows live current time and fills in each sector time as it completes. Delta column per sector, background colored green/red using `RV.deltaColor` (Phase 2). Reference is the previous best or the comparison mean when comparing.
-3. **Lap delta bar** below the sector table: white at 0, green when ahead, red when behind. Uses the diverging `RV.colorScale` variant. Configurable "full color" delta (default 5 s). When multiple cars: show one bar per car, focused car always at top and larger.
+---
+
+## Architecture
+
+Static multi-file page under `viewer/`. No build step; loads directly in a browser (and from GitHub raw URLs).
+
+| File | Purpose |
+|---|---|
+| `viewer/index.html` | Page shell, tab/overlay structure |
+| `viewer/js/core.js` | Palette, clamp, bsearch, color scales (`colorScale`, `deltaColor`, `gearColor`) |
+| `viewer/js/data.js` | Fetches/parses changelogs and run CSVs from GitHub or local folder |
+| `viewer/js/app.js` | Page state (`RV.S`), selection, replay clock, tabs, view switch |
+| `viewer/js/versions.js` | Versions tab: lap-time chart, table, rankings, detail panel |
+| `viewer/js/map.js` | Track tab: canvas replay, camera, side panel, layers, HUD |
+| `viewer/js/inputs.js` | Steering wheel and throttle/brake graph + vertical bars |
+| `viewer/js/telemetry.js` | Telemetry tab: charts, section table, range input |
+| `viewer/js/sectors.js` | Sector time helpers shared by Versions and Telemetry |
+| `viewer/js/settings.js` | Settings / Help page |
+| `viewer/js/tutorial.js` | Guided tutorial overlay |
+| `viewer/css/app.css` | All CSS, fully token-based (light/dark themes) |
+
+Global namespace: `globalThis.RV`. All modules attach to it.
+
+---
+
+## Remaining phases (do in order)
+
+### Phase 6: Track tab side panel close + sector timing table
+**Files to edit:** `viewer/index.html`, `viewer/js/map.js`, `viewer/css/app.css`
+
+1. **Close button for `#side`**: add a `<button id="sideToggle">` at the left edge of `#side` (a `<` arrow). Clicking it hides `#side` (`display:none` or a CSS class). Clicking again shows it. The sector table (item 2 below) must remain visible even when the panel is hidden; it lives outside `#side`.
+2. **Sector time table** rendered in a new `<div id="sectorLive">` positioned in `#overlay`, below `#mini`. Always visible while on the Track tab. Columns: Sector | Time | Delta. Live current time updates while the lap is in progress; when a sector completes its time locks in. Delta cell background uses `RV.deltaColor(delta, 2)`. Reference: `v.bestBefore` sector times, or the mean of `S.CM` sector times when comparing.
+3. **Lap delta bar** in a new `<div id="lapDeltaBar">` below `#sectorLive`. White at 0, green when ahead of reference, red when behind. Color uses `RV.deltaColor(delta, 5)` (the `maxDelta` of 5 s means the bar is full-saturated at a 5 s gap). Updates live. When multiple cars selected: one bar per car, focused car first and visually larger, rest sorted fastest→slowest. Animate reordering (CSS transition).
 
 ### Phase 7: Replay camera smoothing
-- In `app.js` `tick()`: when speed ≤ 1× and playing, interpolate the camera position between the previous and next step using the elapsed `dt`.
-- Snap immediately on pause, `go()`, speed change > 1×, or any interruption.
-- The camera must never stop at a mid-interpolation position between two steps.
+**File to edit:** `viewer/js/app.js`
+
+- In `tick()`: when `+$('spd').value <= 1` and `S.playing`, linearly interpolate the camera's world-to-screen position between the current step `S.i` and the next step `S.i + 1` using fractional `dt`.
+- Snap immediately (no interpolation) on: `go()`, `setPlaying(false)`, speed change to > 1×, loop boundary hit, or any `hold` direction.
+- The camera must **never** rest at a fractional position — all non-playing states must be at exact step positions.
+- Note: the camera lives in `map.js` (`view` object). The smoothing fraction needs to be stored in `S` (e.g. `S.camFrac`) and read by `map.draw()`. Add a `RV.map.setCamFrac(f)` method.
 
 ### Phase 8: Versions tab bulk actions
-- Add **"Load all versions"** button: iterates all versions with files and calls `ds.loadRun(id)` for each, showing progress.
-- Add **"Unload"** button: clears `sum`, `sec`, and run data from all non-selected versions to free memory.
-- Both buttons live above the version table.
+**File to edit:** `viewer/js/versions.js`
+
+- Add a `<div id="bulkBar">` with two buttons above the version table: **"Load all versions"** and **"Unload non-selected"**.
+- "Load all": loops `S.ds.versions.filter(v => v.file && !v.sum)` and calls `S.ds.loadRun(id)` for each, showing a progress counter in `bulkBar`. Do not re-load already-loaded runs.
+- "Unload": for every `v` where `!S.applied.includes(v.id)`, delete `v.sum`, `v.sec`, and clear from `S.ds.byId[v.id]` any heavy fields; call `RV.versions.render()` after. Show a toast with the count unloaded.
 
 ---
 
-## Phase 9 (hosting) checkpoint list
+## Phase 9 (hosting) checkpoint — verify all of these before starting Phase 9
 
-Before Phase 9, verify locally:
-- [ ] Camera smoothing at 0.5× and 1× speed
-- [ ] Keybinds: Space, arrows, Home, Escape loop, F follow
-- [ ] Live sector table updates as the lap progresses
-- [ ] Bulk load/unload of versions
-- [ ] Loop focus dimming on the map
-- [ ] Enabling change badges visible on versions with "enabling change" in their decision
+- [ ] Camera smoothing works at 0.5× and 1× (smooth), fails gracefully above 1× (no smoothing, snaps)
+- [ ] Keybinds: Space play/pause, arrows step/hold, Home reset, Escape clears loop, F toggles follow
+- [ ] Sector live table: times fill in as each sector completes; delta colors correct
+- [ ] Lap delta bar: updates live, white at zero, colors shift correctly, multiple-car order works
+- [ ] Bulk load shows progress; unload removes summary data; re-opening a run reloads it
+- [ ] Loop focus dimming: driven line fades outside loop, clears on Escape
+- [ ] Enabling change badges visible on applicable versions
+- [ ] Throttle/brake bars animate in real-time during replay
+- [ ] Per-car scale sliders work; reset restores true scale
+- [ ] Configurable section gap: all 5 options produce correct section boundaries
 
 ---
 
-## Phases 9–18
+## Phases 9–18 (summary)
 
-See the original implementation plan (the Race Runner ordered list) for full details of Phase 9 (hosting), Phase 10 (persistence), Phase 11 (overlay framework), Phase 12 (themes), Phase 13 (navigation), Phase 14 (analysis features), Phase 15 (manual entry), Phase 16 (draggable windows), Phase 17 (tutorials), and Phase 18 (3D).
+Full spec in the original Race Runner ordered implementation list. Key notes:
 
-**Key constraint for all phases:** no user-specific paid API keys embedded in the repo. Third-party services must have a free tier accessible to all users.
+- **Phase 9:** Convert/host on GitHub Pages (static is preferred; evaluate Streamlit only if something genuinely requires a backend). Parity check all Phase 1–8 features after conversion.
+- **Phase 10:** User ID (`crypto.randomUUID()`), `localStorage` persistence for settings and defaults, Controls tab with key rebinding, Help > Data Format tab.
+- **Phase 11:** Overlay framework (enable/disable, opacity, width) — build once, reused by Phases 14 and 16.
+- **Phase 12:** Customization/themes tab in Settings. Basic (group shortcuts) + Advanced (per-element). Saved per user.
+- **Phase 13:** Navigation cleanup, split crowded panels, reorganise Help.
+- **Phase 14:** Comparison deltas, racing-line accuracy, sector health pins, problem corners in telemetry.
+- **Phase 15:** Manual run/version entry window + CSV import with per-row validation.
+- **Phase 16:** Draggable multi-track windows + resizable/minimizable HUD elements (same window component).
+- **Phase 17:** General, Beginner, and Advanced tutorials (written last).
+- **Phase 18:** 3D visualisation behind a feature flag (lowest priority).
+
+**Constraint for all phases:** no private API keys in the repo; third-party services must have a free tier reachable by any user without the owner paying per use.
