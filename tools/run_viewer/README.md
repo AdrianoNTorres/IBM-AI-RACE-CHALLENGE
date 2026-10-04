@@ -1,76 +1,73 @@
 # Run viewer
 
-A browser page for looking at the driver's recorded laps: every version's lap replayed on a 2D map of the Corkscrew track, with the car's sensor beams, the line it drove, rankings of the versions and telemetry charts.
+A website for looking at a rule-based TORCS driver's recorded laps: every version's lap replayed on a 2D map of the track, with the car's sensor beams, the line it drove, rankings of the versions and telemetry charts.
 
-It only reads files. It does not start TORCS and does not change the driver.
+It is a static site: plain files, no server code and no build step. It loads its data itself, from a GitHub repository or from a folder on your computer. It only reads; it writes nothing to the source.
 
-## Quick start
+## Running it
 
-From the repository root:
+**Hosted.** Publish this folder (`tools/run_viewer/`) on GitHub Pages or any static host and open it. Nothing else is needed.
+
+**On your computer.** Serve the folder and open it in a browser:
 
 ```
-python tools/run_viewer/build.py
+cd tools/run_viewer
+python -m http.server 8000
 ```
 
-Then open `tools/run_viewer/index.html` in a browser (double-click it). Run `build.py` again whenever a new version has been recorded.
+Then open `http://localhost:8000`.
 
-The build takes about a minute and needs only the Python standard library. It needs the TORCS track file at `C:\torcs\torcs\tracks\road\corkscrew\corkscrew.xml`; pass `--track <path>` if TORCS is installed elsewhere.
-
-## What the page shows
-
-The page has three tabs and a Simple / Advanced switch in the top right corner.
-
-**Versions.** A lap-time chart across all versions and a table of them. The buttons above the table switch between all versions, the 10 fastest laps, the 10 biggest gains, the 10 biggest losses and the 10 highest top speeds.
-
-- **Selecting runs:** click a version to select it. To compare several (up to six), drag across the rows, or hold Shift and click to select everything between two rows, or hold Ctrl and click to add or remove a single one. Each selected run gets its own colour, shown as a bar at the left of its row, in the bar at the top and everywhere else. The run clicked first is the car in focus (the reference): the map follows it and time gaps are measured against it.
-- **Details:** the panel on the right shows what the last clicked version changed, why, and what was decided. The buttons there replay it on the track, add or remove it from the comparison, make it the reference, or open its telemetry.
-- **Chart colours:** green dot = kept and a new best lap; amber dot = kept but not a new best; green ring = rejected although its single lap was faster; grey ring = rejected. The grey step line is the best kept lap so far. Selected runs are ringed in their colour. Pointing at a dot shows the difference to the best lap before it.
-
-**Track.** The replay. The car's path is coloured by speed (red slowest, green fastest) and each sensor beam is coloured by its length (red close, green far), with a dot where it meets the edge of the road.
-
-- Drag to pan, mouse wheel to zoom, double-click to return to the car. Dragging takes over the camera: "Follow car", "Keep all cars in view" and "Car points up" switch off and the view stays exactly where it was. Zooming does not switch anything off: while following, it zooms around the car. While "Keep all cars in view" is on, zoom is automatic and the wheel and zoom keys do nothing. A "Closest zoom" slider appears in that mode: it sets how far the view may zoom in when the cars are close together (1 to 40 pixels per metre, 10 by default). "Back to the car" switches them on again.
-- Space plays and pauses. The left and right arrow keys move one step; holding one plays at 0.1x, then 0.25x, then 0.5x.
-- Simple mode has switches for the beams, the path, the distance marks, "Follow car" and "Car points up".
-- In Advanced mode the panel on the right is grouped into Camera, Track, Car and path, Sensors, Compared runs and Panels. Every layer has a switch, a one-line description and an opacity slider; "Restore the default layers" undoes all changes.
-- Compared runs appear as cars and thin lines in their own colours.
-- The cars are drawn as car1-ow1, the open-wheel car the driver runs, to scale from its TORCS file; the front wheels turn with the recorded steering.
-- **Focus:** when several runs are selected, a Cars table at the top of the side panel lists them with lap time, gap and speed, and highlights the one in focus. Click a row there, a car on the map, or a name in the top bar to put that car in focus. The camera, the beams, the readout and the speed-coloured line then belong to it, at the same lap time.
-- **Keep all cars in view:** with two or more runs selected, this camera option moves and zooms the map so every car stays on screen. It works with "Car points up" on (the view turns with the car in focus) or off (fixed map).
-
-**Telemetry.** A summary of the selected run (and the compared one), charts along the lap, and in Advanced mode a table of 100 m sections. Wheel zooms the distance axis, drag pans, click moves the car to that point.
-
-**Simple and Advanced.** Simple uses plain-language descriptions from `CHANGELOG-simple.md`, fewer numbers and short explanations. Advanced shows the technical titles from `CHANGELOG.md`, all channels and all controls. The choice is remembered by the browser.
+Opening `index.html` by double-click also works, with one limit: a browser does not let a page opened from disk read the files next to it, so the bundled track file cannot be loaded and the Track tab says so. Versions and Telemetry work. Use the local server to get the map.
 
 ## Where the data comes from
 
-| Shown | Source |
-|---|---|
-| Version list, lap times, top speed, slowest corner, kept / rejected | `CHANGELOG.md` |
-| Plain-language titles and texts | `CHANGELOG-simple.md` |
-| Replays and charts | the run CSV each changelog entry names, in `runs/` |
-| Track outline | the TORCS track file, built with the same arithmetic TORCS uses |
+By default the page reads `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE`, branch `main`. Another source is chosen in **Settings**.
 
-"Gain" and "loss" compare a version's lap time with the last kept version before it. "Against the best before it" compares it with the fastest kept lap up to that point.
+| Shown | Source file | When it is read |
+|---|---|---|
+| Version list, lap times, top speed, slowest corner, kept / rejected, the technical record | `CHANGELOG.md` (required) | when the page opens |
+| Plain-language titles and texts (the basic view) | `CHANGELOG-simple.md` (optional) | when the page opens |
+| Replays and charts | `runs/run_<date>_<time>.csv`, the first one each changelog entry names | when that run is opened or compared; kept for the session |
+| Track outline | `track.xml` in the source (optional), otherwise the bundled `tracks/corkscrew.xml` | when the page opens |
 
-Versions v0.1 to v0.6 have no recording. Versions v0.7 to v0.23 recorded the car's path but not its sensors, so they replay without beams. From v0.24 on the beams are shown; the focus rays appear from v1.04.
+Files come from `raw.githubusercontent.com`, which allows requests from other sites and has no hourly limit of 60 requests. The GitHub API is called only in two cases: to find out why `CHANGELOG.md` could not be read (repository missing or private, branch missing, file missing), and once when a source is applied in Settings, to check which run CSVs exist.
 
-## Files
+The full description of the data format is on the Settings page ("Data format"). In short:
 
-| File | Role |
-|---|---|
-| `build.py` | Reads the changelogs, the run CSVs and the track file; writes `data/`. |
-| `index.html`, `viewer.css`, `viewer.js` | The page. Static; they do not need rebuilding. |
-| `data/` | Generated: `index.js` (track and version list) and one `.js` file per run, loaded only when that run is opened. About 60 MB. **Not in Git** (`.gitignore`); rebuild it with `build.py`. |
+- `CHANGELOG.md`: one entry per version, a heading `## vX.Y — Title` and a two-column table with rows `| **Field** | text |`. Fields read: Lap time, Top speed, Min speed, Damage, Decision (a ✅ means kept), and the texts.
+- `runs/*.csv`: one row per simulation step. Required columns: `curLapTime`, `lastLapTime`, `distFromStart`, `speedX`, `gear`, `accel`, `brake`, `steer`, `trackPos`, `angle`, `damage`. Optional: `allowed`, `track0`–`track18`, `focA`, `foc0`–`foc4`.
+- `track.xml`: the TORCS track file of the track the runs were driven on. Supplying it is the job of whoever owns the data. If a run does not fit the track in use (its longest `distFromStart` differs from the track length by more than 5 m), the Track tab says so and does not draw the run on a wrong map.
 
-## Adding a run that is not a version
+## What the page shows
 
-Pass CSV files to the build, optionally with a name:
+Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 
-```
-python tools/run_viewer/build.py "manual lap=runs/run_20261003_221413.csv"
-```
+**Versions.** Headline numbers, a lap-time chart across all versions and a table of them. The buttons above the table switch between all versions, the fastest laps, the biggest gains, the biggest losses and the highest top speeds. With a local folder, "Other recordings" lists CSVs that no changelog entry names (manual laps).
 
-They appear at the top of the "All versions" list as extra runs.
+- **Selecting runs:** click a version to select it. To compare several (up to six), drag across the rows, or hold Shift and click to select everything between two rows, or hold Ctrl and click to add or remove one. Each selected run gets its own colour. The run clicked first is the car in focus: the map follows it and time gaps are measured against it.
+- **Keyboard:** Tab to the table, arrow keys move between rows, Enter selects the row, Space adds it to or removes it from the comparison. On the chart, the left and right arrows step through the versions, `+` and `-` zoom, `0` resets.
+- **Details:** the panel on the right shows what the last clicked version changed, why, and what was decided. Its buttons replay it on the track, open its telemetry, add or remove it from the comparison, or put it in focus. In the detailed view the technical record from `CHANGELOG.md` is folded underneath.
+- **Chart:** filled purple dot = kept and a new best lap; filled green dot = kept but not a new best; purple ring = rejected although its single lap was faster; grey ring = rejected. The step line is the best kept lap so far. Selected runs are ringed in their colour.
+
+**Track.** The replay. The car's path is coloured by speed (blue slowest, yellow fastest) and each sensor beam by its length (pink close, cyan far), with a dot where it meets the edge of the road.
+
+- Drag to pan, mouse wheel to zoom, double-click to return to the car. Dragging takes over the camera: "Follow car", "Keep all cars in view" and "Car points up" switch off and the view stays where it was. While "Keep all cars in view" is on, zoom is automatic.
+- Space plays and pauses. The left and right arrow keys move one step; holding one plays at 0.1x, then 0.25x, then 0.5x. `+` and `-` zoom, `F` toggles following, Home returns to the start.
+- The side panel has the same three sections in both views: **Camera**, **Layers** and **Help**. The basic view shows the main switches. The detailed view adds the zoom slider and, under Layers, the groups Track, Car and path, Sensors, Compared runs and Panels on the map, one open at a time; every layer has a switch, a description and an opacity slider.
+- Compared runs appear as cars and thin lines in their own colours. A Cars table at the top of the side panel lists them with lap time, gap and speed. Click a row there, a car on the map, or a name in the top bar to put that car in focus.
+- The cars are drawn as car1-ow1, to scale; the front wheels turn with the recorded steering.
+
+**Telemetry.** A summary of the selected runs and charts along the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. The detailed view adds more channels and a second section, "100 m sections".
+
+**Settings.** Theme (Light, Dark, System), the view, the data source, replay preferences, a reset, and the guide to the data format.
+
+- **GitHub repository:** `https://github.com/owner/repo`, the same with `/tree/<branch>` or `/tree/<branch>/<folder>`, or `owner/repo`.
+- **Local folder:** chosen with the browser's folder picker, or dropped on the Settings page. The folder is read in the browser and nothing is uploaded. Browsers do not keep folder access, so after a reload the page returns to the GitHub repository.
+- A source is checked before the page switches to it. Without a `CHANGELOG.md` that has at least one version entry it is refused and the current source stays. The result says how many versions and run CSVs were found and whether a simplified changelog and a track file are present.
+
+**Basic view and Detailed view.** The basic view uses the plain-language texts from `CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
+
+Settings are saved in the browser (`localStorage`, key `rv_prefs`).
 
 ## Opening the page in a particular state
 
@@ -78,22 +75,47 @@ Options can be added to the address after `#`, joined with `&`:
 
 | Option | Effect |
 |---|---|
-| `tab=pv`, `tab=pm`, `tab=pt` | open the Versions, Track or Telemetry tab |
+| `tab=pv`, `tab=pm`, `tab=pt`, `tab=ps` | open the Versions, Track, Telemetry or Settings page |
 | `run=v1.05` | select that run |
 | `cmp=v1.01,v0.96` | compare with those runs (comma-separated) |
 | `frame=1539` | pause on that frame |
-| `mode=simple`, `mode=adv` | choose the mode |
+| `mode=basic`, `mode=detailed` | choose the view (`simple` and `adv` still work) |
 | `all` | keep all selected cars in view |
 | `fixed` | fixed map instead of "Car points up" |
 | `zoom=12` | start at that zoom, in pixels per metre |
-| `list=fast`, `gain`, `loss`, `top` | choose the ranking on the Versions tab |
+| `list=fast`, `gain`, `loss`, `top` | choose the ranking on the Versions page |
+| `pause` | start paused |
 
-Example: `index.html#tab=pm&run=v1.05&cmp=v0.96&frame=2440&mode=adv`
+Example: `index.html#tab=pm&run=v1.05&cmp=v0.96&frame=2440&mode=detailed`
+
+## Files
+
+| File | Role |
+|---|---|
+| `index.html` | The page's markup. |
+| `css/app.css` | All styles. Colours are tokens (CSS custom properties) defined once per theme at the top. |
+| `js/core.js` | Shared helpers, saved settings, theme, colour scales, messages. |
+| `js/track.js` | TORCS track file to 2D outline, with the same arithmetic as TORCS. |
+| `js/data.js` | Changelogs to the version list, a run CSV to a run object, the GitHub and local-folder sources, validation. No page code. |
+| `js/app.js` | The page's state: open data set, selection, replay clock, tabs, view switch, start-up. |
+| `js/versions.js`, `js/map.js`, `js/telemetry.js`, `js/settings.js` | One file per page. |
+| `tracks/corkscrew.xml` | The Corkscrew track file from TORCS (GPL), the default map. |
+| `legacy/` | The previous viewer (a page opened from disk plus `build.py`, which pre-built its data). Kept only as the reference the new code was checked against; not used by the site and safe to delete. `build.py` no longer runs from this location. |
+
+The scripts are classic scripts sharing one global, `RV`, not ES modules, so that the page also opens from disk.
 
 ## Adding a map feature
 
-Map features are entries in the `LAYERS` list in `viewer.js`. Each entry has an id, a group (`g`, the heading it appears under), a label, a one-line description (`d`), a default on/off state, a default opacity and a `draw(ctx, zoom)` function that draws in track coordinates (metres). A new entry gets its switch and opacity slider in the Advanced panel automatically. If the feature needs a new telemetry column, add it to `load_run` in `build.py`.
+Map features are entries in the `LAYERS` list in `js/map.js`. Each entry has an id, a group (`g`), a label, a one-line description (`d`), a default on/off state, a default opacity and a `draw(ctx, zoom)` function that draws in track coordinates (metres). A new entry gets its switch and opacity slider in the Layers section automatically. If the feature needs a new telemetry column, add it to `parseCsv` and `buildRun` in `js/data.js`.
 
 ## Accuracy
 
-The rebuilt track is 3,608.5 m long and closes on itself to within 0.01 m. The ends of the recorded beams land on the drawn track edge to within about half a metre (the edge is drawn every 2 m). The car's position comes from the recorded distance along the track, its sideways position and its angle to the track.
+The rebuilt Corkscrew is 3,608.45 m long and closes on itself to within 0.013 m (the old `build.py` printed the same values rounded: 3608.5 m and 0.01 m). The ends of the recorded beams land on the drawn track edge to within about half a metre. The car's position comes from the recorded distance along the track, its sideways position and its angle to the track.
+
+The browser code was checked against the old Python build for all 99 recorded versions: lap time, top speed, slowest corner, maximum track position and where it occurs, damage, braking and full-throttle share are identical, and positions agree to the old files' rounding (0.005 m).
+
+## Status
+
+Done: loading from GitHub at page load, local folders, the track outline in the browser, validation and error messages, light / dark / system themes including the canvases, the Settings page with the data-format guide, the Basic / Detailed views, the redesign.
+
+Not covered by an automated browser test: the browser's own folder-picker dialog and dropping a folder (the code beneath them was tested with real `File` objects and real directory handles); a GitHub rate-limit response; Firefox and Safari (tested in Edge only).

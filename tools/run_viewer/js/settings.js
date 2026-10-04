@@ -63,6 +63,18 @@
     const files = Array.from(e.target.files || []);
     if (files.length) apply(async () => RV.data.fileListSource(files));
   });
+  /* a folder dropped on the Settings page works too */
+  addEventListener('dragover', e => { if (S.tab === 'ps') e.preventDefault(); });
+  addEventListener('drop', async e => {
+    if (S.tab !== 'ps') return;
+    e.preventDefault();
+    const it = e.dataTransfer && e.dataTransfer.items && e.dataTransfer.items[0];
+    if (!it || !it.getAsFileSystemHandle) { RV.toast('This browser cannot read a dropped folder. Use “Choose a folder”.'); return; }
+    const h = await it.getAsFileSystemHandle();
+    if (!h || h.kind !== 'directory') { RV.toast('Drop a folder, not a file.'); return; }
+    srcKind = 'local';
+    apply(async () => RV.data.handleSource(h));
+  });
 
   /* ---------- the data-format guide ---------- */
   const GUIDE = {
@@ -134,7 +146,7 @@
         ? '<label class="lbl" for="sLink">Repository link</label><div class="inrow"><input type="text" id="sLink" spellcheck="false" autocomplete="off" value="' + esc(draft) + '"><button class="btn prim" id="sApply"' + (working ? ' disabled' : '') + '>Load</button></div>' +
           '<p class="note">A public repository: <code>https://github.com/owner/repo</code>, the same with <code>/tree/&lt;branch&gt;</code>, or <code>owner/repo</code>. ' + (draft.trim() !== RV.DEFAULT_LINK ? '<button class="link" id="sDefault">Use the default repository</button>' : 'This is the default repository.') + '</p>'
         : '<div class="inrow"><button class="btn prim" id="sFolder"' + (working ? ' disabled' : '') + '>Choose a folder …</button></div>' +
-          '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains CHANGELOG.md. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
+          '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains CHANGELOG.md, or drop it on this page. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
       '<div id="srcResult" class="result"></div>' +
       '<p class="note"><b>The map:</b> to see your own track, the source must include its TORCS track file as <code>track.xml</code>. ' +
       (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p></div>' +
@@ -174,5 +186,5 @@
     if ($('sFolder')) $('sFolder').onclick = () => apply(pickFolder);
   }
 
-  RV.settings = { render: render };
+  RV.settings = { render: render, useSource(src) { srcKind = src.kind; return apply(async () => src); } };
 })();

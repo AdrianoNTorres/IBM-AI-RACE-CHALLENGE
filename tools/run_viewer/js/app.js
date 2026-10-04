@@ -20,7 +20,8 @@
   RV.simple = () => RV.prefs.view === 'basic' && !!S.ds && S.ds.hasSimple;
   RV.col = id => RV.pal.run[S.selCol[id]];
   RV.colMap = id => RV.pal.runMap[S.selCol[id]];
-  RV.lapOf = id => { const v = S.ds.byId[id]; return v.sum && v.sum.lap != null ? v.sum.lap : v.lap; };
+  /* a version's lap time is the changelog's; a recording without an entry has only its own */
+  RV.lapOf = id => { const v = S.ds.byId[id]; return v.lap != null ? v.lap : (v.sum ? v.sum.lap : null); };
   const idxAtT = RV.idxAtT = (r, t) => RV.bsearch(r.t, t);
   RV.idxAtD = (r, d) => RV.bsearch(r.d, d);
   /* where a compared car is drawn: at the same lap time as the car in focus, or at the same distance */
@@ -171,7 +172,10 @@
     document.querySelectorAll('#viewsw button').forEach(b => {
       const on = (b.dataset.m === 'basic') === basic;
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-      if (b.dataset.m === 'basic') { b.setAttribute('aria-disabled', !can); b.title = can ? 'Plain-language descriptions, fewer numbers' : NO_BASIC; }
+      if (b.dataset.m === 'basic') {
+        b.setAttribute('aria-disabled', !can); b.title = can ? 'Plain-language descriptions, fewer numbers' : NO_BASIC;
+        b.innerHTML = can ? 'Basic view' : '<s>Basic view</s><small>unavailable: no simplified changelog</small>';
+      }
       else b.title = 'Technical titles, every channel and every control';
     });
     document.body.classList.toggle('basic', basic);

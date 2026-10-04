@@ -167,7 +167,7 @@
       if (R.th[i] >= 0.99) nf++;
     }
     R.sum = {
-      lap: lap == null ? null : rnd(lap, 3), complete: complete, stoppedAt: complete ? null : Math.round(R.d[e]),
+      lap: lap == null ? null : rnd(lap, 3), complete: complete, stoppedAt: complete ? null : Math.max(0, Math.round(R.d[e])),
       top: top, slow: slow === 1e9 ? 0 : slow, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
       damage: C.damage[e], brake: rnd(100 * nb / n, 1), full: rnd(100 * nf / n, 1), frames: n,
     };

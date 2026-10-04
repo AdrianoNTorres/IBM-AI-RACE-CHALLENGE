@@ -98,9 +98,11 @@
         (sm || extra ? '' : '<td class="num xcol">' + (v.top ? v.top + ' km/h' : '') + '</td><td class="num xcol">' + (v.slow ? v.slow + ' km/h' : '') + '</td>') +
         (extra ? '' : '<td class="l">' + badge(v) + '</td>') + '<td class="l xcol note">' + recording(v) + '</td></tr>';
     });
-    const keep = box.scrollTop;
+    /* the table is rebuilt, so the scroll position and the row that has the keyboard focus are put back */
+    const keep = box.scrollTop, act = document.activeElement, focusRow = act && act.closest && act.closest('#vt tbody tr') ? act.closest('#vt tbody tr').dataset.id : null;
     box.innerHTML = h + '</tbody></table></div>';
     box.scrollTop = keep;
+    if (focusRow) { const tr = box.querySelector('#vt tbody tr[data-id="' + CSS.escape(focusRow) + '"]'); if (tr) tr.focus({ preventScroll: true }); }
     box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; render(); }; });
     if ($('ko')) $('ko').onchange = e => { S.keptOnly = e.target.checked; render(); };
     paintRows(); setupProg(); renderDetail();
@@ -161,8 +163,6 @@
         e.preventDefault();
         const id = tr.dataset.id;
         if (pick(id, e.shiftKey, e.key === ' ')) RV.sel.apply();
-        const again = document.querySelector('#vt tbody tr[data-id="' + CSS.escape(id) + '"]');
-        if (again) again.focus();
       }
     });
   }

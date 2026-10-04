@@ -116,7 +116,9 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); tex
 }
 .seg button:hover { color: var(--ink); }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .18); }
-.seg button[aria-disabled="true"] { color: var(--mute); text-decoration: line-through; cursor: not-allowed; opacity: .75; }
+.seg button[aria-disabled="true"] { color: var(--mute); cursor: not-allowed; }
+.seg button small { display: block; font-size: 11px; font-weight: 400; line-height: 1.15; }
+#viewsw button[aria-disabled="true"] { padding-top: 2px; padding-bottom: 2px; line-height: 1.2; text-align: left; }
 .tg { position: relative; width: 40px; height: 22px; display: inline-block; flex: none; }
 .tg input { opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; position: absolute; z-index: 1; }
 .tg span { position: absolute; inset: 0; background: var(--line); border-radius: 11px; transition: background .12s; }
