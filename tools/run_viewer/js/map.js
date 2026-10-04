@@ -120,6 +120,20 @@
       ctx.fillStyle = RV.pal['map-ink']; ctx.font = '12px ' + RV.pal.font;
       for (const m of trk().marks) { const p = w2s(m[1], m[2]); if (p[0] > -40 && p[0] < c.clientWidth + 40 && p[1] > -20 && p[1] < c.clientHeight + 20) ctx.fillText(m[0] + ' m', p[0] + 5, p[1] - 5); }
     } },
+    { id: 'sectors', g: 'Track', label: 'Sector lines', d: 'Where the timing sectors begin (detailed view only). On Corkscrew these are Laguna Seca\u2019s three sectors.', on: true, alpha: 1, draw(ctx, z) {
+      if (RV.simple()) return;
+      ctx.lineWidth = 2.5 / z; ctx.strokeStyle = RV.pal.best; ctx.beginPath();
+      for (const m of trk().sectors.lines) { ctx.moveTo(m[0], m[1]); ctx.lineTo(m[2], m[3]); }
+      ctx.stroke();
+    }, screen(ctx, w2s) {
+      if (RV.simple() || view.z < 0.5) return;
+      ctx.font = '600 12px ' + RV.pal.font;
+      trk().sectors.lines.forEach((m, k) => {
+        const p = w2s(m[2], m[3]), s = 'S' + (k + 2) + ' starts', w = ctx.measureText(s).width;
+        ctx.fillStyle = RV.pal.best; ctx.beginPath(); ctx.roundRect(p[0] + 6, p[1] - 10, w + 12, 20, 5); ctx.fill();
+        ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 12, p[1] + 4);
+      });
+    } },
     { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed: blue slowest, yellow fastest.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
     { id: 'car', g: 'Car and path', label: 'Car', d: 'The car in focus: car1-ow1, the open-wheel car the driver runs, drawn to scale. Its front wheels turn with the recorded steering.', on: true, alpha: 1,
       draw(ctx, z) { drawCar(ctx, S.R, S.i, RV.colMap(S.sel[0]), z); } },

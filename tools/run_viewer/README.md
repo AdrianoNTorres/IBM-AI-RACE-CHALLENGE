@@ -8,16 +8,11 @@ It is a static site: plain files, no server code and no build step. It loads its
 
 **Hosted.** Publish this folder (`tools/run_viewer/`) on GitHub Pages or any static host and open it. Nothing else is needed.
 
-**On your computer.** Serve the folder and open it in a browser:
+**On your computer.** Double-click `index.html`. No server is needed.
 
-```
-cd tools/run_viewer
-python -m http.server 8000
-```
+A browser does not let a page opened from disk read the files next to it, so in that case the page fetches the Corkscrew track file from this site's repository on GitHub instead (`RV.TRACK_URL` in `js/core.js`); it needs the network for the changelogs and runs anyway. If the site moves to another repository, change that address.
 
-Then open `http://localhost:8000`.
-
-Opening `index.html` by double-click also works, with one limit: a browser does not let a page opened from disk read the files next to it, so the bundled track file cannot be loaded and the Track tab says so. Versions and Telemetry work. Use the local server to get the map.
+Serving the folder also works and uses the local copy of the track file: `python -m http.server 8000` in this folder, then `http://localhost:8000`.
 
 ## Where the data comes from
 
@@ -28,7 +23,7 @@ By default the page reads `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLEN
 | Version list, lap times, top speed, slowest corner, kept / rejected, the technical record | `CHANGELOG.md` (required) | when the page opens |
 | Plain-language titles and texts (the basic view) | `CHANGELOG-simple.md` (optional) | when the page opens |
 | Replays and charts | `runs/run_<date>_<time>.csv`, the first one each changelog entry names | when that run is opened or compared; kept for the session |
-| Track outline | `track.xml` in the source (optional), otherwise the bundled `tracks/corkscrew.xml` | when the page opens |
+| Track outline | `track.xml` in the source (optional), otherwise the bundled `tracks/corkscrew.xml` (from GitHub when the page is opened from disk) | when the page opens |
 
 Files come from `raw.githubusercontent.com`, which allows requests from other sites and has no hourly limit of 60 requests. The GitHub API is called only in two cases: to find out why `CHANGELOG.md` could not be read (repository missing or private, branch missing, file missing), and once when a source is applied in Settings, to check which run CSVs exist.
 
@@ -58,6 +53,13 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 - The cars are drawn as car1-ow1, to scale; the front wheels turn with the recorded steering.
 
 **Telemetry.** A summary of the selected runs and charts along the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. The detailed view adds more channels and a second section, "100 m sections".
+
+**Sectors (detailed view only).** The lap is split into three sectors. Corkscrew is modelled on Laguna Seca, so it uses that circuit's official timing sectors, from IMSA's sector map: S1 4,514 ft 10 in, S2 4,793 ft 3 in, S3 2,508 ft 7 in (together the 2.238-mile lap). The TORCS start line is taken as the finish line and each boundary is placed at the same share of the lap: S2 starts at 1,379 m (on the straight before Turn 5) and S3 at 2,842 m (after Turn 9, Rainey Curve). A track without known sectors is split into thirds. The definition is `REAL_SECTORS` in `js/track.js`.
+
+- The Telemetry page shows a Sectors table: the run in focus, the previous best and the difference per sector, and for each compared run its sector times and its difference to the run in focus.
+- "Previous best" is the fastest kept version before the run in focus (for a recording that is not a version: the fastest kept version of all). Its recording is loaded in the background the first time it is needed.
+- The details panel on the Versions page shows the same three sector times and differences for a version whose recording is loaded.
+- The charts mark where S2 and S3 start, and the map has a "Sector lines" layer.
 
 **Settings.** Theme (Light, Dark, System), the view, the data source, replay preferences, a reset, and the guide to the data format.
 
@@ -116,6 +118,6 @@ The browser code was checked against the old Python build for all 99 recorded ve
 
 ## Status
 
-Done: loading from GitHub at page load, local folders, the track outline in the browser, validation and error messages, light / dark / system themes including the canvases, the Settings page with the data-format guide, the Basic / Detailed views, the redesign.
+Done: loading from GitHub at page load, local folders, the track outline in the browser, validation and error messages, light / dark / system themes including the canvases, the Settings page with the data-format guide, the Basic / Detailed views, the redesign, opening from disk without a server, sector times in the detailed view.
 
 Not covered by an automated browser test: the browser's own folder-picker dialog and dropping a folder (the code beneath them was tested with real `File` objects and real directory handles); a GitHub rate-limit response; Firefox and Safari (tested in Edge only).

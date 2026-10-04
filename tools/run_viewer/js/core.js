@@ -5,6 +5,8 @@
   const RV = (globalThis.RV = globalThis.RV || {});
 
   RV.DEFAULT_LINK = 'https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/tree/main';
+  /* the bundled track file, as published in the site's repository: used when the page is opened from disk */
+  RV.TRACK_URL = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/main/tools/run_viewer/tracks/corkscrew.xml';
   RV.MAX_RUNS = 6;                       /* runs that can be shown together: one colour each */
 
   /* ---------- small helpers ---------- */

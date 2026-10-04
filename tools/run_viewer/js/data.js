@@ -171,6 +171,17 @@
       top: top, slow: slow === 1e9 ? 0 : slow, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
       damage: C.damage[e], brake: rnd(100 * nb / n, 1), full: rnd(100 * nf / n, 1), frames: n,
     };
+    /* sector times: the lap clock at each sector boundary, read between the two rows around it */
+    if (fits) {
+      const at = function (d) {
+        const j = RV.bsearch(R.d, d);
+        if (j >= n - 1) return R.d[j] < d ? null : R.t[j];
+        const d0 = R.d[j], d1 = R.d[j + 1];
+        return d1 > d0 ? R.t[j] + (R.t[j + 1] - R.t[j]) * (d - d0) / (d1 - d0) : R.t[j];
+      };
+      const t1 = at(trk.sectors.cuts[0]), t2 = at(trk.sectors.cuts[1]);
+      R.sec = [t1, t1 != null && t2 != null ? t2 - t1 : null, t2 != null && R.sum.lap != null ? R.sum.lap - t2 : null];
+    }
     return R;
   }
 
@@ -315,17 +326,18 @@
   let bundled = null;
   function bundledTrack() {
     if (!bundled) bundled = (async function () {
-      let text;
-      try {
-        const r = await fetch('tracks/corkscrew.xml');
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        text = await r.text();
-      } catch (e) {
-        bundled = null;
-        throw new RVError('track', 'The bundled Corkscrew track file (tracks/corkscrew.xml) could not be read.',
-          location.protocol === 'file:' ? 'A browser does not let a page opened from disk read its neighbouring files. Serve the folder instead: run "python -m http.server" in it and open http://localhost:8000.' : 'Check that tracks/corkscrew.xml was published with the site.');
+      /* The copy next to the page first. A page opened from disk may not read its neighbouring files,
+         so there (and if the local copy is missing) the same file is fetched from the site's repository. */
+      const urls = (location.protocol === 'file:' ? [] : ['tracks/corkscrew.xml']).concat([RV.TRACK_URL]);
+      for (const u of urls) {
+        try {
+          const r = await fetch(u);
+          if (r.ok) return RV.track.parse(await r.text());
+        } catch (e) { /* try the next place */ }
       }
-      return RV.track.parse(text);
+      bundled = null;
+      throw new RVError('track', 'The Corkscrew track file could not be read, neither next to the page (tracks/corkscrew.xml) nor from GitHub.',
+        'Check the network connection, or put the file back in tracks/.');
     })();
     return bundled;
   }
@@ -405,7 +417,7 @@
           if (e.code === 'csv') { v.bad = e.message; throw new RVError('csv', id + ': ' + e.message.charAt(0).toLowerCase() + e.message.slice(1), e.hint); }
           throw e;
         }
-        v.sum = run.sum; v.beams = run.beams;
+        v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
         if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
         return run;
       })();

@@ -27,6 +27,37 @@
   /* where a compared car is drawn: at the same lap time as the car in focus, or at the same distance */
   RV.ghostIdx = r => RV.prefs.sync === 't' ? idxAtT(r, S.R.t[S.i]) : RV.idxAtD(r, S.R.d[S.i]);
 
+  /* ---------- sectors (detailed view) ----------
+     A run's sector times are compared with the previous best: the fastest kept version before it
+     (for a recording that is not a version: the fastest kept version of all). */
+  RV.refIdFor = function (id) {
+    const v = S.ds.byId[id];
+    if (!v) return null;
+    const ref = v.extra ? S.ds.bestId : v.bestBeforeId;
+    return ref && ref !== id ? ref : null;
+  };
+  /* The reference's recording is loaded in the background the first time it is needed. */
+  RV.needRef = function (id) {
+    const ref = RV.refIdFor(id), ds = S.ds, rv = ref && ds.byId[ref];
+    if (!rv || !rv.file || rv.sum || rv.refTried) return;
+    rv.refTried = true;
+    ds.loadRun(ref).then(() => { if (ds === S.ds) { RV.tele.build(); RV.versions.renderDetail(); } }, () => {});
+  };
+  const secDelta = d => '<span class="' + (d < -0.0005 ? 'faster' : d > 0.0005 ? 'slower' : '') + '">' + RV.sgn(d, 3) + '</span>';
+  RV.secDelta = secDelta;
+  /* the compact sector table of one version, for the details panel */
+  RV.sectorsBlock = function (id) {
+    const v = S.ds.byId[id], trk = S.ds.trk;
+    if (!v || !v.sec || !trk) return '';
+    const ref = RV.refIdFor(id), rv = ref && S.ds.byId[ref];
+    RV.needRef(id);
+    const rs = rv && rv.sec;
+    return '<h4>Sectors <span class="note">' + (rv ? 'against the previous best, ' + esc(ref) : 'no earlier best to compare with') + '</span></h4><table class="sect3"><tbody>' +
+      ['S1', 'S2', 'S3'].map((n, k) => '<tr title="' + esc(trk.sectors.where[k]) + '"><td class="l">' + n + '</td><td class="num">' + (v.sec[k] == null ? '\u2013' : v.sec[k].toFixed(3) + ' s') + '</td><td class="num">' +
+        (rs && rs[k] != null && v.sec[k] != null ? secDelta(v.sec[k] - rs[k]) + ' s' : (rv && rv.file && !rv.sum ? '\u2026' : '')) + '</td></tr>').join('') + '</tbody></table>' +
+      (rv && !rv.file ? '<p class="note">' + esc(ref) + ' has no recording, so there is nothing to compare the sectors with.</p>' : '');
+  };
+
   /* ---------- busy line under the top bar ---------- */
   function busy(text) { const b = $('busy'); b.className = text ? 'on' : ''; b.lastElementChild.textContent = text || ''; }
   RV.busy = busy;

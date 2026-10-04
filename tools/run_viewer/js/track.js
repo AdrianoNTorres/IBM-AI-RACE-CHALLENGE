@@ -73,6 +73,7 @@
     const end = pose(trk, tot - 1e-6);
     trk.gap = Math.hypot(end[0], end[1]);              /* how far the end of the lap is from its start */
     outline(trk);
+    sectors(trk);
     return trk;
   }
 
@@ -107,6 +108,29 @@
     let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     for (const p of left.concat(right)) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
     trk.left = left; trk.right = right; trk.centre = centre; trk.marks = marks; trk.box = [x0, x1, y0, y1];
+  }
+
+  /* Timing sectors. Corkscrew is modelled on Laguna Seca, so it gets that circuit's three official timing
+     sectors (IMSA timing sector map: S1 4514 ft 10 in, S2 4793 ft 3 in, S3 2508 ft 7 in, together the
+     2.238-mile lap). The TORCS start line is taken as the finish line and each boundary is placed at the
+     same share of the lap. A track without known sectors is split into thirds. */
+  const REAL_SECTORS = {
+    corkscrew: {
+      src: 'the timing sectors of WeatherTech Raceway Laguna Seca (IMSA sector map), placed at the same share of the lap',
+      len: [1376.12, 1460.98, 764.62],
+      where: ['Start line to the straight before Turn 5 (Turns 1 to 4)', 'Turn 5 to the exit of Turn 9 (Turns 5 and 6, the Corkscrew, Rainey Curve)', 'Turns 10 and 11, back to the line'],
+    },
+  };
+  function sectors(trk) {
+    const def = REAL_SECTORS[trk.name.toLowerCase()], T = trk.total;
+    if (def) {
+      const sum = def.len[0] + def.len[1] + def.len[2];
+      trk.sectors = { real: true, src: def.src, where: def.where, cuts: [def.len[0] / sum * T, (def.len[0] + def.len[1]) / sum * T] };
+    } else {
+      trk.sectors = { real: false, src: 'thirds of the lap (no timing sectors are known for this track)', where: ['First third', 'Second third', 'Last third'], cuts: [T / 3, 2 * T / 3] };
+    }
+    /* the line across the road at each boundary, for the map */
+    trk.sectors.lines = trk.sectors.cuts.map(d => { const p = pose(trk, d), sn = Math.sin(p[2]), cs = Math.cos(p[2]); return [p[0] - trk.hw * sn, p[1] + trk.hw * cs, p[0] + trk.hw * sn, p[1] - trk.hw * cs]; });
   }
 
   /* Name for display: "corkscrew" becomes "Corkscrew". */

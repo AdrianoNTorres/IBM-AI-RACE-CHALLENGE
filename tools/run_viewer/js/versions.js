@@ -18,14 +18,15 @@
   /* each version against the best kept lap before it */
   function prepare() {
     V = S.ds.versions; LV = V.filter(v => v.lap);
-    let best = null;
+    let best = null, bestId = null;
     for (const v of LV) {
       v.dbest = best == null ? null : +(v.lap - best).toFixed(2);
       v.cls = !v.kept ? (v.dbest != null && v.dbest < 0 ? 'rf' : 'rs') : (v.dbest == null || v.dbest < 0 ? 'kb' : 'ks');
-      v.bestBefore = best;
-      if (v.kept && (best == null || v.lap < best)) best = v.lap;
+      v.bestBefore = best; v.bestBeforeId = bestId;
+      if (v.kept && (best == null || v.lap < best)) { best = v.lap; bestId = v.id; }
       v.bestAfter = best;
     }
+    S.ds.bestId = bestId;
     pr = [-0.5, LV.length - 0.5];
   }
 
@@ -194,6 +195,7 @@
       add('Braking', sum.brake + ' % of the lap'); add('Full throttle', sum.full + ' % of the lap');
     }
     h += '<dl class="kv">' + kv.join('') + '</dl>';
+    if (!sm) h += RV.sectorsBlock(v.id);
     if (S.ds.hasSimple) {
       if (!sm && v.st) h += para('In plain words', v.st);
       h += para('What changed', v.what) + para('Why', v.why) + para('Decision', v.decision) + para('What was learned', v.learned);
@@ -310,6 +312,6 @@
   RV.versions = {
     prepare: prepare,
     render() { if (!wired) { wire(); wired = true; } render(); },
-    paintRows: paintRows, drawProg: drawProg,
+    paintRows: paintRows, drawProg: drawProg, renderDetail() { if (S.ds) renderDetail(); },
   };
 })();

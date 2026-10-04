@@ -306,6 +306,9 @@ dl.keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin:
 .chart h3 { color: var(--ink); } .unit { color: var(--mute); text-transform: none; letter-spacing: 0; font-family: var(--font-ui); font-weight: 400; margin-left: 6px; }
 .chart canvas { display: block; width: 100%; height: 150px; cursor: crosshair; touch-action: none; }
 .lg { margin-right: 12px; white-space: nowrap; color: var(--ink); font-weight: 600; }
+.sect th { vertical-align: bottom; } .sect td.dim { color: var(--ink-2); font-weight: 400; } .sect tr.total td { border-top: 2px solid var(--line); }
+.sect td.note { white-space: normal; min-width: 220px; font-weight: 400; }
+table.sect3 { width: 100%; margin: 2px 0 8px; } table.sect3 td { padding: 5px 0; } table.sect3 td.num { color: var(--ink); font-weight: 600; }
 #sect tbody tr { cursor: pointer; } #sect tbody tr:hover td { background: var(--surface-2); } #sect tbody tr.sel td { background: var(--sel); }
 #sect th { text-transform: none; }
 

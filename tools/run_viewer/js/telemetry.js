@@ -57,6 +57,8 @@
     }).join('') + '</tr>';
     h += '</tbody></table></div></div>';
 
+    if (!sm) h += sectorCard();
+
     /* detailed view: charts and the section table share the space, one at a time */
     if (sm) S.teleTab = 'charts';
     else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">100 m sections</button></div>';
@@ -94,6 +96,29 @@
     });
     box.querySelectorAll('canvas').forEach(wireChart);
     S.chartsDirty = true;
+  }
+
+  /* Sector times of the run in focus against the previous best, and of the compared runs against the run in focus. */
+  function sectorCard() {
+    const R = S.R, trk = S.ds.trk;
+    if (!R.sec || !trk) return '';
+    const sc = trk.sectors, id = S.sel[0], ref = RV.refIdFor(id), rv = ref && S.ds.byId[ref], rs = rv && rv.sec;
+    RV.needRef(id);
+    const tm = x => x == null ? '\u2013' : x.toFixed(3), cuts = [0].concat(sc.cuts, [trk.total]);
+    let h = '<div class="card sumcard"><div class="cardhead"><h3>Sectors</h3><span class="note">' + (sc.real ? 'Laguna Seca\u2019s timing sectors' : 'Thirds of the lap') + '; times in seconds</span></div><div class="tablewrap"><table class="sumt sect"><thead><tr><th class="l">Sector</th><th class="l">From, to</th><th>' + sw(id) + esc(id) + '</th>' +
+      (rv ? '<th>Previous best<br><span class="note">' + esc(ref) + '</span></th><th>Difference</th>' : '') +
+      S.CM.map(m => '<th>' + sw(m.id) + esc(m.id) + '</th><th><span class="note">to ' + esc(id) + '</span></th>').join('') + '</tr></thead><tbody>';
+    const row = (name, where, k) => {
+      const mine = k < 3 ? R.sec[k] : R.sum.lap, theirs = rs ? (k < 3 ? rs[k] : rv.sum.lap) : null;
+      return '<tr' + (k === 3 ? ' class="total"' : '') + '><td class="l"><b>' + name + '</b></td><td class="l note">' + where + '</td><td class="num">' + tm(mine) + '</td>' +
+        (rv ? '<td class="num dim">' + (rs ? tm(theirs) : (rv.file ? 'loading' : 'no recording')) + '</td><td class="num">' + (rs && mine != null && theirs != null ? RV.secDelta(mine - theirs) : '') + '</td>' : '') +
+        S.CM.map(m => { const x = m.r.sec ? (k < 3 ? m.r.sec[k] : m.r.sum.lap) : null; return '<td class="num">' + tm(x) + '</td><td class="num">' + (x != null && mine != null ? RV.secDelta(x - mine) : '') + '</td>'; }).join('') + '</tr>';
+    };
+    for (let k = 0; k < 3; k++) h += row('S' + (k + 1), esc(sc.where[k]) + ' <span class="num">(' + RV.fmtInt(cuts[k]) + ' to ' + RV.fmtInt(cuts[k + 1]) + ' m)</span>', k);
+    h += row('Lap', '', 3) + '</tbody></table></div><p class="note">' +
+      (rv ? 'Previous best: the fastest kept version before ' + esc(id) + '. A minus sign means faster. ' : 'There is no earlier kept version to compare ' + esc(id) + ' with. ') +
+      'Sector boundaries: ' + esc(sc.src) + '.</p></div>';
+    return h;
   }
 
   function wireChart(cv) {
@@ -163,6 +188,11 @@
       for (let d = Math.ceil(xr[0] / stp) * stp; d <= xr[1]; d += stp) { const xx = X(d); x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke(); x.fillText(RV.fmtInt(d + 0) + ' m', xx, T + ph + 6); }
       if (lo < 0 && hi > 0) { x.strokeStyle = P.mute; x.beginPath(); x.moveTo(PL, Y(0)); x.lineTo(W - PR, Y(0)); x.stroke(); }
       x.save(); x.beginPath(); x.rect(PL, T, pw, ph); x.clip();
+      if (!sm && R.sec) {                                /* sector boundaries */
+        x.strokeStyle = P.best; x.fillStyle = P.best; x.lineWidth = 1; x.setLineDash([5, 4]); x.textAlign = 'left'; x.textBaseline = 'top'; x.font = '600 11px ' + P.font;
+        S.ds.trk.sectors.cuts.forEach((d, k) => { const xx = X(d); x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke(); x.fillText('S' + (k + 2), xx + 4, T + 2); });
+        x.setLineDash([]);
+      }
       if (q.al && !sm) {                                 /* the planned speed of the run in focus */
         x.strokeStyle = P.mute; x.lineWidth = 1; x.beginPath();
         const k0 = RV.bsearch(R.d, xr[0]), k1 = Math.min(R.n - 1, RV.bsearch(R.d, xr[1]) + 1);
