@@ -282,6 +282,11 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 .ends { display: flex; justify-content: space-between; width: 190px; color: var(--mute); font-size: 12px; }
 #inputs { position: absolute; right: 14px; bottom: 14px; padding: 10px 14px 10px 10px; display: flex; align-items: center; gap: 12px; pointer-events: none; }
 #wheel { width: 104px; height: 104px; display: block; }
+#pedBars { display: flex; gap: 5px; align-items: flex-end; height: 88px; }
+.pedbar { width: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; height: 100%; position: relative; --bar-h: 0%; }
+.pedbar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: var(--bar-h, 0%); border-radius: 6px; transition: height 0.06s linear; }
+.bar-brake::after { background: var(--in-brake); }
+.bar-throttle::after { background: var(--in-throttle); }
 #pedals { width: 240px; height: 78px; display: block; }
 #pedkey { display: flex; gap: 12px; font-size: 12px; color: var(--ink-2); margin-top: 4px; white-space: nowrap; }
 #pedkey i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; } #pedkey b { color: var(--ink); } #pedkey .none { color: var(--mute); }

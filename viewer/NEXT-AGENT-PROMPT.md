@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 2
+**Last updated:** after Phase 3
 
 ---
 
@@ -58,12 +58,11 @@ Global namespace is `globalThis.RV`. All modules attach to it.
 
 ## Remaining phases (ordered, easiest first)
 
-### Phase 3: Throttle/brake vertical bars in the HUD
-Add two small vertical bars between the steering wheel and the pedals history graph:
-- One fills **red** for brake, one fills **green** for throttle.
-- Fill level = current step's value (0–1).
-- In `inputs.js`, add `drawBars(R, i)` and wire it into `draw()`. Add CSS in `app.css`.
-- The bars sit between `#wheel` and `.ped` in `#inputs`.
+### Phase 3 (COMPLETE) — tag: `phase-3`
+Two vertical bars added between the steering wheel and the pedals history graph in `#inputs`:
+- `#barBrake` (fills red via `--in-brake`) and `#barThrottle` (fills green via `--in-throttle`).
+- CSS `--bar-h` custom property drives the `::after` height; updated each frame in `drawBars(R, i)` in `inputs.js`.
+- The `#pedBars` container sits between `#wheel` and `.ped` in `#inputs`.
 
 ### Phase 4: Track map visual markers
 1. **Start/finish marker** on the track map at distance 0 (where the lap starts). Draw a chequered or solid line perpendicular to the track.

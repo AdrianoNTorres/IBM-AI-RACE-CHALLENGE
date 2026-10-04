@@ -61,5 +61,12 @@
     if (html !== keyHtml) { $('pedkey').innerHTML = html; keyHtml = html; }
   }
 
-  RV.inputs = { draw(R, i) { drawWheel(R, i); drawPedals(R, i); }, WINDOW: WINDOW };
+  function drawBars(R, i) {
+    const brake = $('barBrake'), throttle = $('barThrottle');
+    if (!brake || !throttle) return;
+    brake.style.setProperty('--bar-h', (RV.clamp(R.br[i], 0, 1) * 100).toFixed(1) + '%');
+    throttle.style.setProperty('--bar-h', (RV.clamp(R.th[i], 0, 1) * 100).toFixed(1) + '%');
+  }
+
+  RV.inputs = { draw(R, i) { drawWheel(R, i); drawPedals(R, i); drawBars(R, i); }, WINDOW: WINDOW };
 })();
