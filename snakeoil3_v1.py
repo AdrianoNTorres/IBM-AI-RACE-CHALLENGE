@@ -634,6 +634,20 @@ def drive_example(c):
     sb_fall=3           # m: the look shows a slow corner behind the kink when its ray nearest the nose is this much longer than the one at the beam (the far edge faces the car: the road turns back; flick approach 70 of 70 runs at 2,335-2,338 m, nowhere else in 534 looks) ...
     sb_x=25             # m: ... then the allowed speed is at most the braking distance to corner_speed over the look's longest ray less this, counted down by the distance driven (22: no gain, 28 / 32: gain with less margin or less gain) ...
     sb_hold=12          # ... for this many steps (0 = looks only, drives as v1.01; 25: |trackPos| 0.99).
+    # v1.06: corner table (track memory, hand-written from our telemetry): km/h added to the braking plan's allowed speed
+    # while distFromStart is inside a row. The sensors still make the plan; the table only says which corner this is.
+    # Rows start before the braking point and end where the plan stops binding on the exit (moving every row 20 m
+    # earlier is 0.36 s slower, 20 m later gives up 0.19 s of the gain; 0 off either way). Bends left at 0 because
+    # every offset measured slower: start kink 150-215 m (-6 / +15 / +40), 446 m (+-4, +8), 770 m (+-4), flick approach.
+    corner_table= (      # from m, to m, km/h
+        ( 950, 1065, 10),   # 1,042 m right-hander (+4 / +8 / +10: 0.014 / 0.045 / 0.042 s gained)
+        (1395, 1585, 10),   # 1,528 m left-hander (flat from +4 to +14: later braking gained, given back mid-bend)
+        (1835, 1945, 17),   # 1,931 m left-hander (+8 / +14 / +17 / +20: 0.07 / 0.09-0.13 / 0.11 / 0.10 s; +28 leaves the track at 1,959 m)
+        (2585, 2648, 12),   # 2,600 m, downhill out of the Corkscrew: the car lifted on the plan at 192-200 km/h
+        (2648, 2760, 17),   # 2,700 m left-hander
+        (2880, 3005, 17),   # 2,988 m right-hander (+8 / +14 / +20: 0.06 / 0.13 / 0.13 s)
+        (3175, 3275, -3),   # hairpin: slower in (+3: 0.95-0.96 of the edge at the exit, 1 of 70 off; -3: exit 0.90 -> 0.77, no time lost)
+    )
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -924,6 +938,15 @@ def drive_example(c):
     if getattr(c, 'sb_n', 999) < sb_hold:
         allowed_speed= min(allowed_speed, brake_speed(c.sb_d - c.sb_s - sb_x)*3.6)
         c.sb_s+= S['speedX']/3.6*.021; c.sb_n+= 1
+    # Corner Table (v1.06, track memory): in the medium bends the car rides this
+    # plan at |steer| 0.25-0.47 with 0.27-0.49 of the track's half-width used
+    # (70 perturbed runs), and what headroom a bend has cannot be sensed (v1.01:
+    # the bends that gain and the ones that lose overlap in steer and slip). The
+    # table says which bend this is; the offset is added to whatever the sensors
+    # plan, through the braking zone and the bend, so the brake point, the lift
+    # band, ABS and the steering still react to the live readings.
+    for z0, z1, zo in corner_table:
+        if z0 <= S['distFromStart'] < z1: allowed_speed+= zo
     c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
 
     # Throttle Control
