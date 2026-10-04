@@ -539,7 +539,8 @@ def drive_example(c):
     brake_aero=.0065  # extra planned deceleration per (m/s)^2 of speed: brake_decel*load + brake_aero*v^2 (drag and downforce; v0.77: .006 -> .0065, with abs_ratio .8).
     brake_max=30      # m/s^2: most deceleration ever planned (measured ~27-30 at 200-240 km/h; brake_aero*v^2 alone would claim 40+; 28 -> 30 on the clutch car: 0.14 s over 30 perturbed laps, 26 is 0.23 s slower).
     brake_max_hi=34   # v0.95: m/s^2: ... but up to this much where that only lifts the allowed speed up to brake_hi_v (at full pedal the car slows at 39-43 m/s^2 from 160 to 280 km/h; the 27-30 measured before was at pedal ~0.65, which is all the plan asked for) ...
-    brake_hi_v=235    # km/h: ... above this allowed speed the plan stays on brake_max (the flick approach, 245-275 km/h over a crest into the kink, is pedal-limited and ABS-cut and relies on the early dips of the brake_max plan; 245: 2 of 30 off).
+    brake_hi_v=235    # km/h: ... above this allowed speed the plan stays on brake_max (the flick approach, 245-275 km/h over a crest into the kink, is pedal-limited and ABS-cut and relies on the early dips of the brake_max plan; 245: 2 of 30 off) ...
+    brake_hi_car=245  # km/h: v1.05: ... but only while the car itself is below this speed: above it brake_max_hi counts everywhere (since v1.04 the S-bend look sets the flick's arrival speed, not the plan's early dips; with no gate at all the start kink, 219-236 km/h, brakes one step more on 32 of 70 runs; 240 / 250 measure the same; 999 = off, drives as v1.04).
     brake_load_min=.5 # brake_decel is scaled by the tyre load from the vertical acceleration (crests), never below this share at low speed ...
     brake_load_fast=.8  # v0.91: ... and never below this share at speed (a crest is short against a long braking distance; .5 at speed braked for crests that were over before the corner, 1.0 leaves the track at the flick) ...
     brake_load_v0=150   # km/h: ... the floor is brake_load_min up to this speed ...
@@ -835,6 +836,7 @@ def drive_example(c):
         if d <= d_cap: return ((a0*exp(2*brake_aero*d) - a_mech)/brake_aero)**.5
         return ((a_max - a_mech)/brake_aero + 2*a_max*(d - d_cap))**.5
     def brake_speed(d):
+        if S['speedX'] > brake_hi_car: return brake_dist_speed(d, brake_max_hi)   # v1.05: no gate at speed (braking for 1,528 m, 1,927 m and the flick approach)
         return min(brake_dist_speed(d, brake_max_hi), max(brake_dist_speed(d, brake_max), brake_hi_v/3.6))
     allowed_speed= brake_speed(ahead) * 3.6
     # Corner Speed From Sharpness: the car may also go as fast as it could
