@@ -627,6 +627,12 @@ def drive_example(c):
     clutch_top=17000    # ... v0.79: slipped in every gear while the rpm of the driven wheels (rear wheel speed * gear ratio * final drive) is below this ...
     clutch_k=60         # ... easing off toward it: pedal = 1 - (clutch_k/(clutch_top - wheel rpm + clutch_k))^(1/4) (rpm; larger = closed sooner).
     shift_steps=3       # v0.92: for this many steps from an upshift (the 0.05 s shift time = 2.5 steps) the clutch pedal is held at clutch_slip while accelerating (0 = off: TORCS then opens the clutch itself and caps the throttle at 0.1).
+    sb_a=12             # v1.04: S-bend look with the focus sensors (5 extra beams 1 deg apart, aimed by the client, one reading per second): asked for when the longest track beam is at least this many deg off the nose and its outer neighbour is under half of it (a kink ahead) ...
+    sb_v=200            # km/h: ... above this speed ...
+    sb_steer=.3         # ... while the smoothed |steer| is below this; the look covers the 4 deg on the nose side of that beam.
+    sb_fall=3           # m: the look shows a slow corner behind the kink when its ray nearest the nose is this much longer than the one at the beam (the far edge faces the car: the road turns back; flick approach 70 of 70 runs at 2,335-2,338 m, nowhere else in 534 looks) ...
+    sb_x=25             # m: ... then the allowed speed is at most the braking distance to corner_speed over the look's longest ray less this, counted down by the distance driven (22: no gain, 28 / 32: gain with less margin or less gain) ...
+    sb_hold=12          # ... for this many steps (0 = looks only, drives as v1.01; 25: |trackPos| 0.99).
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -889,6 +895,33 @@ def drive_example(c):
             v_grip= (tg*radius/max(1 - tg*turn_grip_aero*radius, .1))**.5
             sharp= max(sharp, min(v_brake, v_grip)*3.6)
         allowed_speed= road_plan + (sharp-road_plan)*clip((turn_steer_max-c.steer_f)/turn_steer_fade, 0, 1)
+    # S-Bend Look (v1.04): the 19 track beams cannot tell a flat-out kink with
+    # a straight behind it from a kink with a slow corner behind it: both show
+    # beams growing with the angle up to the kink's inside edge (start kink at
+    # 159 m: -4 deg 68 m, -7 deg 80 m, -12 deg 37 m; flick approach at 2,346 m:
+    # +4 deg 61 m, +7 deg 84 m, +12 deg 103 m, +19 deg 16 m). The five focus
+    # beams, 1 deg apart, do: at the start kink the rays keep growing toward
+    # the inside edge (-8 to -11 deg: 84, 90, 96, 103 m), on the flick approach
+    # they jump at the next corner's inside edge and then fall (+7 deg 84 m,
+    # +8 to +12 deg: 112, 110, 108, 106, 103 m): the far edge faces the car, so
+    # the road turns back behind the kink. The server answers a focus request
+    # once per second (-1 otherwise) and only when asked (an angle outside
+    # +-90 deg asks for nothing and uses up no reading), so the look is asked
+    # for at the end of this function when the longest beam sits at the edge
+    # of a kink. Until v1.03 the speed at 2,365 m was set by a chance plan dip
+    # at 2,345-2,349 m (228-246 km/h over the 70 standard runs; the runs that
+    # skipped the dip slid to 0.81-0.86 and lost 0.2 s). With the slow corner
+    # known at 2,336 m the plan is capped at the braking distance to it for
+    # sb_hold steps: 230-239 km/h at 2,365 m on every run.
+    fo= S.get('focus', [-1]*5)
+    fc= getattr(c, 'foc_next', 100)   # the angle asked for last step (100 = none)
+    if fc != 100 and type(fo) is list and min(fo) >= 0:
+        r= fo[::-1] if fc < 0 else fo      # by |angle| rising; r[4] is at the track beam's angle
+        if min(r) > .5*max(r) and r[0] > r[4] + sb_fall:
+            c.sb_d, c.sb_s, c.sb_n= max(r), 0, 0
+    if getattr(c, 'sb_n', 999) < sb_hold:
+        allowed_speed= min(allowed_speed, brake_speed(c.sb_d - c.sb_s - sb_x)*3.6)
+        c.sb_s+= S['speedX']/3.6*.021; c.sb_n+= 1
     c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
 
     # Throttle Control
@@ -1127,6 +1160,15 @@ def drive_example(c):
         elif gear == 1 and abs(R['steer']) < lock_gear_off: gear= 2
     c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
     R['gear']= gear
+    # Focus request (v1.04, see S-Bend Look): one integer angle, the centre of
+    # the five beams, taken by the server for its next reading.
+    c.foc_sent= getattr(c, 'foc_next', 100)   # for telemetry: the angle this step's reading was asked at
+    c.foc_next= 100
+    il= max(range(19), key=lambda i: S['track'][i])
+    if (1 <= il <= 17 and abs(TRACK_ANGLES[il]) >= sb_a and S['speedX'] > sb_v and c.steer_f < sb_steer
+            and S['track'][il + (1 if il > 9 else -1)] < .5*S['track'][il]):
+        c.foc_next= int(TRACK_ANGLES[il]) - (2 if il > 9 else -2)
+    R['focus']= [c.foc_next]
     # Upshift Clutch (v0.92): for the shift time (0.05 s, car1-ow1.xml) after a
     # gear change the simulator (simuv2 transmission.cpp) opens the clutch
     # itself and caps the throttle at 0.1 whenever the clutch pedal is below
@@ -1161,7 +1203,7 @@ if __name__ == "__main__":
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
     log.write('step,curLapTime,lastLapTime,distFromStart,speedX,speedY,gear,rpm,'
               'accel,brake,steer,trackPos,angle,ahead,rearSpin,damage,aim,lineTarget,aheadPlan,allowed,throttle,' +
-              ','.join('track%d' % i for i in range(19)) + '\n')  # track0-18: beams at TRACK_ANGLES
+              ','.join('track%d' % i for i in range(19)) + ',focA,foc0,foc1,foc2,foc3,foc4\n')  # track0-18: beams at TRACK_ANGLES; focA: focus angle asked for (100 = none), foc0-4: focus beams at focA-2..focA+2 (-1 = no reading)
     print("Logging telemetry to %s" % log_path)
     for step in range(C.maxSteps,0,-1):
         C.get_servers_input()
@@ -1175,11 +1217,11 @@ if __name__ == "__main__":
         C.respond_to_server()
         S,R= C.S.d,C.R.d
         w= S['wheelSpinVel']
-        log.write('%d,%.3f,%.3f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%.3f,%s\n' % (
+        log.write('%d,%.3f,%.3f,%.1f,%.1f,%.1f,%d,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.0f,%.2f,%.3f,%.1f,%.1f,%.3f,%s,%d,%s\n' % (
             C.maxSteps-step, S['curLapTime'], S['lastLapTime'], S['distFromStart'],
             S['speedX'], S['speedY'], S['gear'], S['rpm'], R['accel'], R['brake'],
             R['steer'], S['trackPos'], S['angle'], max(S['track'][8:11]),
             (w[2]+w[3])-(w[0]+w[1]), S['damage'], C.aim, C.line_target, C.ahead, C.allowed_speed, C.throttle,
-            ','.join('%.1f' % d for d in S['track'])))
+            ','.join('%.1f' % d for d in S['track']), C.foc_sent, ','.join('%.1f' % d for d in S['focus'])))
     log.close()
     C.shutdown()
