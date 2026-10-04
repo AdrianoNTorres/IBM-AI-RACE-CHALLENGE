@@ -1,0 +1,111 @@
+/* Run viewer: shared helpers, saved settings, theme and colours.
+   Every script adds to the one global, RV. Classic scripts (no ES modules) so the page also opens from disk. */
+(function () {
+  'use strict';
+  const RV = (globalThis.RV = globalThis.RV || {});
+
+  RV.DEFAULT_LINK = 'https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/tree/main';
+  RV.MAX_RUNS = 6;                       /* runs that can be shown together: one colour each */
+
+  /* ---------- small helpers ---------- */
+  RV.$ = id => document.getElementById(id);
+  RV.el = function (tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  };
+  RV.esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  RV.clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  RV.sgn = (x, d) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d);
+  /* lap time the way the project writes it: m:ss:cc */
+  RV.fmtLap = function (s) {
+    if (s == null) return 'no lap';
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return m + ':' + (r < 10 ? '0' : '') + r.toFixed(2).replace('.', ':');
+  };
+  RV.fmtInt = n => Math.round(n).toLocaleString('en-US');
+  /* last index whose value is <= v, in an ascending array */
+  RV.bsearch = function (arr, v) {
+    let lo = 0, hi = arr.length - 1;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (arr[m] <= v) lo = m; else hi = m - 1; }
+    return lo;
+  };
+
+  /* An error with a code the page can react to and a hint for the reader. */
+  RV.RVError = class RVError extends Error {
+    constructor(code, message, hint) { super(message); this.code = code; this.hint = hint || ''; }
+  };
+
+  /* ---------- saved settings ---------- */
+  const KEY = 'rv_prefs';
+  const DEFAULTS = () => ({
+    theme: 'system',                                   /* light | dark | system */
+    view: 'basic',                                     /* basic | detailed */
+    source: { kind: 'github', link: RV.DEFAULT_LINK }, /* a local folder cannot be saved: browsers do not keep folder access */
+    speed: 1,                                          /* replay speed */
+    autoplay: true,                                    /* start the replay when a run opens */
+    sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
+  });
+  RV.loadPrefs = function () {
+    const p = DEFAULTS();
+    try { Object.assign(p, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* storage blocked: defaults */ }
+    if (!p.source || p.source.kind !== 'github' || !p.source.link) p.source = DEFAULTS().source;
+    return p;
+  };
+  RV.savePrefs = function () { try { localStorage.setItem(KEY, JSON.stringify(RV.prefs)); } catch (e) { /* not saved */ } };
+  RV.resetPrefs = function () { RV.prefs = DEFAULTS(); try { localStorage.removeItem(KEY); } catch (e) { /* nothing stored */ } };
+  RV.prefs = RV.loadPrefs();
+
+  /* ---------- theme ---------- */
+  RV.pal = {};
+  RV.themeNow = function () {
+    if (RV.prefs.theme === 'light' || RV.prefs.theme === 'dark') return RV.prefs.theme;
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  };
+  /* The canvases cannot use CSS variables directly, so the tokens are read into RV.pal once per theme change. */
+  RV.applyTheme = function () {
+    document.documentElement.dataset.theme = RV.themeNow();
+    const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+    const P = RV.pal;
+    for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower',
+      'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line']) P[k] = v('--' + k);
+    P.run = []; P.runMap = [];
+    for (let k = 1; k <= RV.MAX_RUNS; k++) { P.run.push(v('--run-' + k)); P.runMap.push(v('--runmap-' + k)); }
+    P.font = v('--font-ui'); P.fontNum = v('--font-display');
+    if (RV.onTheme) RV.onTheme();
+  };
+
+  /* ---------- colour scales (the road is dark in both themes, so one scale serves both) ----------
+     Neither scale runs from red to green: speed goes blue, violet, pink, orange, yellow (slow to fast);
+     beam length goes pink, yellow, cyan (close to far). Both also get lighter along the way. */
+  function ramp(stops) {
+    return function (f) {
+      f = RV.clamp(f, 0, 1) * (stops.length - 1);
+      const k = Math.min(stops.length - 2, Math.floor(f)), u = f - k, a = stops[k], b = stops[k + 1];
+      return [0, 1, 2].map(n => Math.round(a[n] + (b[n] - a[n]) * u));
+    };
+  }
+  const SPEED = [[78, 110, 255], [178, 92, 255], [255, 92, 168], [255, 158, 44], [255, 232, 84]];
+  const BEAM = [[255, 70, 118], [255, 208, 66], [60, 226, 210]];
+  const speedRGB = ramp(SPEED), beamRGB = ramp(BEAM);
+  RV.speedCol = f => 'rgb(' + speedRGB(f).join(',') + ')';
+  RV.beamCol = (d, a) => 'rgba(' + beamRGB(d / 200).join(',') + ',' + a + ')';
+  const css = stops => 'linear-gradient(90deg,' + stops.map(s => 'rgb(' + s.join(',') + ')').join(',') + ')';
+  RV.speedGradient = css(SPEED);
+  RV.beamGradient = css(BEAM);
+
+  /* ---------- messages ---------- */
+  let toastTimer = null;
+  RV.toast = function (msg, kind) {
+    const t = RV.$('toast');
+    t.textContent = msg; t.className = 'show ' + (kind || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ''; }, kind === 'err' ? 7000 : 3200);
+  };
+  /* Message and hint of any error, for showing to the reader. */
+  RV.explain = function (e) {
+    if (e instanceof RV.RVError) return { msg: e.message, hint: e.hint };
+    return { msg: 'Something went wrong: ' + (e && e.message ? e.message : e), hint: '' };
+  };
+})();
