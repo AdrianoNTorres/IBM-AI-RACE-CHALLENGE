@@ -20,6 +20,8 @@
   const hasPlan = r => { if (r._plan == null) r._plan = r.al.some(x => x > 0); return r._plan; };
   const PL = 52, PR = 12;              /* left and right margins of a plot */
   let xr = [-12, 1], gapS = null, lastCur = -1, lastTotal = 0;
+  let sectGap = 100;                   /* configurable section gap (metres) */
+  const SECT_GAPS = [25, 50, 100, 200, 500];
 
   const runs = () => [{ r: S.R, id: S.sel[0] }].concat(S.CM);
   const sw = id => '<i class="sw" style="background:' + RV.col(id) + '"></i>';
@@ -42,7 +44,7 @@
     const box = $('pt'), R = S.R;
     if (!S.ds) { box.innerHTML = ''; return; }
     if (!R) { box.innerHTML = '<div class="card status"><h2>No run selected</h2><p class="lead">Choose a version with a recording on the Versions tab.</p></div>'; return; }
-    if (R.total !== lastTotal) { xr = [-12, R.total]; lastTotal = R.total; }
+    if (R.total !== lastTotal) { xr = [0, R.total]; lastTotal = R.total; }     /* auto-fit to whole lap */
     const sm = RV.simple(), rs = runs(), many = S.CM.length > 0;
     const lap = r => r.sum.lap != null ? fmtLap(r.sum.lap) + (sm ? '' : ' <span class="note">(' + r.sum.lap.toFixed(3) + ' s)</span>') : 'stopped at ' + RV.fmtInt(r.sum.stoppedAt) + ' m';
     const rowsS = [
@@ -65,11 +67,13 @@
 
     /* detailed view: charts and the section table share the space, one at a time */
     if (sm) S.teleTab = 'charts';
-    else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">100 m sections</button></div>';
+    else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">' + sectGap + ' m sections</button></div>';
 
     if (S.teleTab === 'charts') {
-      h += '<p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'
-        : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>';
+      /* step range input */
+      h += '<div class="tblbar" id="chartBar"><p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'
+        : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>' +
+        '<label class="lbl" for="teleRange">Range (m)</label><div class="inrow sm"><input type="text" id="teleRange" spellcheck="false" style="width:120px" placeholder="0\u2013' + Math.round(R.total) + '" value="' + Math.round(xr[0]) + '\u2013' + Math.round(xr[1]) + '"><button class="btn sm" id="teleReset">Full lap</button></div></div>';
       for (const q of CH) {
         if ((q.gap && !many) || (sm && !q.s)) continue;
         const lgd = q.k !== 'v' ? '' : '<span class="clg"><i class="gsw"></i>Speed (red = slow, green = fast)</span>' + (hasPlan(R) ? '<span class="clg"><i class="dsw"></i>Planned</span>' : '');
@@ -80,21 +84,39 @@
     box.innerHTML = h;
     box.scrollTop = keep;
     box.querySelectorAll('#ttabs button').forEach(b => { b.setAttribute('aria-selected', b.classList.contains('on')); b.onclick = () => { S.teleTab = b.dataset.t; build(); }; });
+    /* step range input */
+    if ($('teleRange')) {
+      $('teleRange').onchange = e => {
+        const m = /^(\d+)\s*[\u2013\-–]\s*(\d+)$/.exec(e.target.value.trim());
+        if (m) { xr = [RV.clamp(+m[1], 0, R.total), RV.clamp(+m[2], 0, R.total)]; if (xr[0] >= xr[1]) xr = [0, R.total]; }
+        else { xr = [0, R.total]; }
+        e.target.value = Math.round(xr[0]) + '\u2013' + Math.round(xr[1]);
+        S.chartsDirty = true;
+      };
+      $('teleRange').onkeydown = e => { if (e.key === 'Enter') $('teleRange').dispatchEvent(new Event('change')); };
+    }
+    if ($('teleReset')) $('teleReset').onclick = () => { xr = [0, R.total]; if ($('teleRange')) $('teleRange').value = '0\u2013' + Math.round(R.total); S.chartsDirty = true; };
     box.querySelectorAll('#sect tr[data-m]').forEach(tr => {
       const f = () => { RV.play.set(false); RV.play.go(RV.idxAtD(R, +tr.dataset.m)); box.querySelectorAll('#sect tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel'); };
       tr.onclick = f; tr.onkeydown = e => { if (e.key === 'Enter') f(); };
     });
     box.querySelectorAll('#sect .sortb').forEach(b => { b.onclick = () => { sectSort = { k: b.dataset.k, dir: sectSort.k === b.dataset.k ? -sectSort.dir : 1 }; build(); const again = document.querySelector('#sect .sortb[data-k="' + b.dataset.k + '"]'); if (again) again.focus(); }; });
     if ($('sectExport')) $('sectExport').onclick = exportSections;
+    /* section gap buttons */
+    box.querySelectorAll('[data-g]').forEach(b => { b.onclick = () => { sectGap = +b.dataset.g; build(); }; });
     box.querySelectorAll('canvas').forEach(wireChart);
     S.chartsDirty = true;
   }
 
-  /* ---------- 100 m sections: one object per section, shown as a sortable table and exported as CSV ---------- */
+  /* ---------- configurable sections: one object per section, shown as a sortable table and exported as CSV ---------- */
   function sectionData() {
-    const R = S.R, rows = [];
-    for (let m = 0; m < R.total - 50; m += 100) {
-      const e = Math.min(m + 100, R.total - 8), a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
+    const R = S.R, rows = [], gap = sectGap;
+    /* always include 0 and the end of the track even if not exact multiples */
+    const starts = [];
+    for (let m = 0; m < R.total - gap * 0.5; m += gap) starts.push(m);
+    if (starts[starts.length - 1] < R.total - 8) starts.push(Math.floor(R.total));
+    for (let si = 0; si < starts.length - 1; si++) {
+      const m = starts[si], e = Math.min(starts[si + 1], R.total - 8), a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
       if (a1 <= a0) continue;
       let lo = 1e9, hi = 0, bm = 0, tm = 0, g0 = 99, g1 = -99;
       for (let k = a0; k <= a1; k++) { lo = Math.min(lo, R.v[k]); hi = Math.max(hi, R.v[k]); bm = Math.max(bm, R.br[k]); tm = Math.max(tm, Math.abs(R.tp[k])); g0 = Math.min(g0, R.g[k]); g1 = Math.max(g1, R.g[k]); }
@@ -117,6 +139,7 @@
     if (col.k !== sectSort.k) sectSort = { k: 'm', dir: 1 };
     sectShown = sectionData().sort((a, b) => (col.f(a) - col.f(b)) * sectSort.dir || a.m - b.m);
     let h = '<div class="tblbar"><p class="note">Times are for the run in focus; the columns for compared runs show their difference to it. Click a row to move the car there, a column heading to sort by it.</p>' +
+      '<label class="lbl">Section gap: <div class="seg" role="group" aria-label="Section gap">' + SECT_GAPS.map(g => '<button class="' + (g === sectGap ? 'on' : '') + '" data-g="' + g + '">' + g + ' m</button>').join('') + '</div></label>' +
       '<button class="btn sm" id="sectExport" title="Download these rows, in this order, as a CSV file">Export CSV</button></div><div class="card"><div class="tablewrap"><table id="sect"><thead><tr>' +
       sectCols.map(c => { const on = c.k === sectSort.k; return '<th class="' + (c.l ? 'l' : '') + '" aria-sort="' + (on ? (sectSort.dir > 0 ? 'ascending' : 'descending') : 'none') + '"><button class="sortb' + (on ? ' on' : '') + '" data-k="' + c.k + '" title="Sort by this column">' + c.ti + '<span class="arr">' + (on ? (sectSort.dir > 0 ? '\u2191' : '\u2193') : '\u2191\u2193') + '</span></button></th>'; }).join('') + '</tr></thead><tbody>';
     for (const r of sectShown) h += '<tr data-m="' + r.m + '" tabindex="0">' + sectCols.map(c => '<td class="' + (c.l ? 'l ' : '') + 'num ' + (c.cls ? c.cls(r) : '') + '">' + c.s(r) + '</td>').join('') + '</tr>';

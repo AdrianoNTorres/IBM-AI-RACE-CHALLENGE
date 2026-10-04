@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 4
+**Last updated:** after Phase 5
 
 ---
 
@@ -72,10 +72,10 @@ Two vertical bars added between the steering wheel and the pedals history graph 
 5. **Per-car size** (`app.js`, `map.js`): `S.carScale = {}` stores a scale multiplier per car. `drawCar` accepts a `userScale` argument. Sliders in the Camera section of the side panel (detailed view) let the user adjust each car's size from 0.3× to 4×, with Reset buttons per car and a "Reset all" button.
 6. **Loop focus dimming** (`map.js` `drawSpeedLine`): `LOOP_DIM = 0.18` constant. When `S.loop` is active, the driven line is drawn in two passes: outside the loop at `LOOP_DIM` opacity, inside at full opacity.
 
-### Phase 5: Telemetry panel improvements
-1. **Configurable section gap**: replace the hardcoded `100` m gap with a user-selectable value (options: 25, 50, 100, 200, 500 m, always include 0 and `R.total`). Add a small control above the sections table.
-2. **Auto-fit**: when a chart is first built (or the selection changes), set `xr` so the entire lap is visible without horizontal scroll — i.e. `xr = [0, R.total]` on initial load. Zoom/pan still works afterward.
-3. **Step range input**: add a small `<input type="text">` above the charts that lets the user type e.g. `1200–2400` to set `xr` directly. Parse the two numbers; reset to full range if invalid.
+### Phase 5 (COMPLETE) — tag: `phase-5`
+1. **Auto-fit** (`telemetry.js`): on first build for a new run, `xr` is set to `[0, R.total]` (whole lap) rather than starting at -12. Wheel/drag zoom still works.
+2. **Step range input** (`telemetry.js`): a text `<input id="teleRange">` and "Full lap" reset button above the charts. Accepts `start–end` format; invalid input resets to full lap.
+3. **Configurable section gap** (`telemetry.js`): `sectGap` variable (default 100 m). A segmented button group above the sections table lets the user pick 25/50/100/200/500 m. Always includes 0 and the end of the track. The subtabs button now reads "`N` m sections" for the current gap.
 
 ### Phase 6: Track tab side panel and sector timing table
 1. **Close button for the side panel**: add a toggle to hide `#side` entirely (a thin arrow button at its edge). Sector table remains visible even when the panel is closed.
