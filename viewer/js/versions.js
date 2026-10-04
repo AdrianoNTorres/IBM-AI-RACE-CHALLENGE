@@ -107,6 +107,7 @@
       '<p class="note">' + notes[mode] + (notes[mode] ? ' ' : '') +
       (sm ? 'Click a version to select it. To compare several, drag across them, or hold Shift and click to select everything in between, or hold Ctrl and click to add or remove one.'
         : 'Click selects one run. Drag or Shift-click selects a range, Ctrl-click adds or removes one (up to ' + RV.MAX_RUNS + ' runs). The run clicked first is in focus.') + '</p>';
+    h += '<div id="bulkBar" class="acts" style="margin:8px 0 4px"><button class="btn sm" id="bulkLoad">Load all versions</button><button class="btn sm" id="bulkUnload">Unload non-selected</button><span id="bulkStatus" class="note" style="margin-left:6px"></span></div>';
     h += '<div class="tablewrap"><table id="vt"><thead><tr>' + (rank ? '<th>#</th>' : '') + '<th class="l">' + (extra ? 'Recording' : 'Version') + '</th>' +
       (extra ? '<th>Size</th>' : '<th class="l">' + (sm ? 'What it changed' : 'Change') + '</th>') + '<th>Lap time</th>' +
       (extra ? '' : '<th title="Lap time difference vs the best lap at that point in development">' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
@@ -128,6 +129,42 @@
     if ($('ko')) $('ko').onchange = e => { S.keptOnly = e.target.checked; render(); };
     RV.sectors.wire(box);
     paintRows(); setupProg(); renderDetail();
+    wireBulk();
+  }
+
+  function wireBulk() {
+    const loadBtn = $('bulkLoad'), unloadBtn = $('bulkUnload'), status = $('bulkStatus');
+    if (!loadBtn) return;
+    loadBtn.onclick = async () => {
+      const ds = S.ds;
+      const pending = ds.versions.filter(v => v.file && !v.bad && !v.sum);
+      if (!pending.length) { status.textContent = 'All versions already loaded.'; return; }
+      loadBtn.disabled = true; unloadBtn.disabled = true;
+      let done = 0;
+      status.textContent = '0 / ' + pending.length + ' loaded…';
+      for (const v of pending) {
+        try { await ds.loadRun(v.id); } catch (e) { /* skip bad loads silently */ }
+        done++;
+        if (status) status.textContent = done + ' / ' + pending.length + ' loaded…';
+      }
+      loadBtn.disabled = false; unloadBtn.disabled = false;
+      status.textContent = done + ' version' + (done === 1 ? '' : 's') + ' loaded.';
+      RV.versions.render();
+    };
+    unloadBtn.onclick = () => {
+      const ds = S.ds;
+      let count = 0;
+      for (const v of ds.versions) {
+        if (S.applied.includes(v.id)) continue;
+        if (v.sum) {
+          delete v.sum; delete v.sec; delete v.beams;
+          ds.runs.delete(v.id);
+          count++;
+        }
+      }
+      RV.toast(count ? count + ' version' + (count === 1 ? '' : 's') + ' unloaded.' : 'Nothing to unload.');
+      RV.versions.render();
+    };
   }
   function paintRows() {
     document.querySelectorAll('#vt tbody tr').forEach(tr => {

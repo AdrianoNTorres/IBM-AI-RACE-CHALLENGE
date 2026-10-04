@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 7
+**Last updated:** after Phase 8
 
 ---
 
@@ -49,6 +49,11 @@ Two vertical bars in `#pedBars` between the wheel and pedal history graph:
 ### Phase 7 (COMPLETE) — tag: `phase-7`
 1. **Camera smoothing** (`app.js`, `map.js`): `S.camFrac` (0–1) is set each tick to the fractional progress within the current step interval when `spd ≤ 1`. `map.js` `smoothCar()` linearly interpolates `R.x/y/yaw` by `camFrac`; the interpolated position and yaw feed the camera centre and rotation angle in `draw()`. `S.camFrac` is reset to 0 on `go()`, `setPlaying(false)`, `hold()`, scrub drag, loop boundary, and when `spd > 1`.
 
+### Phase 8 (COMPLETE) — tag: `phase-8`
+1. **Bulk load** (`versions.js` `wireBulk`): "Load all versions" button iterates `ds.versions` filtered to `v.file && !v.bad && !v.sum`, calls `ds.loadRun(id)` sequentially, shows `N / total loaded…` in `#bulkStatus`. Re-enables buttons and refreshes the table when done.
+2. **Bulk unload** (`versions.js` `wireBulk`): "Unload non-selected" button clears `v.sum`, `v.sec`, `v.beams` and removes the entry from `ds.runs` for every version not in `S.applied`. Shows a toast with the count. Calling `ds.loadRun(id)` again re-fetches the run normally.
+3. `#bulkBar` (`<div class="acts">`) with both buttons and status span is injected at the top of the render HTML, before `#vt`.
+
 ---
 
 ## Architecture
@@ -73,15 +78,6 @@ Static multi-file page under `viewer/`. No build step; loads directly in a brows
 Global namespace: `globalThis.RV`. All modules attach to it.
 
 ---
-
-## Remaining phases (do in order)
-
-### Phase 8: Versions tab bulk actions
-**File to edit:** `viewer/js/versions.js`
-
-- Add a `<div id="bulkBar">` with two buttons above the version table: **"Load all versions"** and **"Unload non-selected"**.
-- "Load all": loops `S.ds.versions.filter(v => v.file && !v.sum)` and calls `S.ds.loadRun(id)` for each, showing a progress counter in `bulkBar`. Do not re-load already-loaded runs.
-- "Unload": for every `v` where `!S.applied.includes(v.id)`, delete `v.sum`, `v.sec`, and clear from `S.ds.byId[v.id]` any heavy fields; call `RV.versions.render()` after. Show a toast with the count unloaded.
 
 ---
 
