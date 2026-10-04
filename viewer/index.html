@@ -51,6 +51,7 @@
       <canvas id="c" tabindex="0" aria-label="Replay of the lap on the track map. Drag to pan, wheel to zoom."></canvas>
       <div id="overlay"><div id="hud"></div><canvas id="mini" width="190" height="190"></canvas></div>
       <div id="leg"></div>
+      <div id="inputs"><canvas id="wheel" aria-label="Steering wheel, turning with the car's steering"></canvas><div class="ped"><canvas id="pedals" aria-label="Throttle and brake over the last seconds"></canvas><div id="pedkey"></div></div></div>
       <div id="mapmsg"></div>
     </div>
     <aside id="side" aria-label="Map controls"></aside>
@@ -67,11 +68,13 @@
   <label class="spd">Speed
     <select id="spd"><option value="0.1">0.1&times;</option><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option><option value="1">1&times;</option><option value="2">2&times;</option><option value="4">4&times;</option></select>
   </label>
+  <button id="loopChip" class="btn sm" hidden title="Stop looping this section"></button>
   <span id="rate" class="num"></span>
   <input id="scrub" type="range" min="0" value="0" aria-label="Position in the lap">
   <span id="pos" class="num"></span>
 </footer>
 
+<div id="tour" hidden><div id="tourHole"></div><div id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle"></div></div>
 <div id="tip"></div>
 <div id="toast" role="alert"></div>
 <input id="dirInput" type="file" webkitdirectory multiple hidden>
@@ -80,10 +83,13 @@
 <script src="js/track.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/sectors.js"></script>
 <script src="js/versions.js"></script>
 <script src="js/map.js"></script>
+<script src="js/inputs.js"></script>
 <script src="js/telemetry.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/tutorial.js"></script>
 <script>RV.boot();</script>
 </body>
 </html>

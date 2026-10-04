@@ -48,10 +48,11 @@
       const f = e.f, sm = simple && simple.get(vid) ? simple.get(vid) : { title: '', f: {} };
       const m = /runs\/(run_\d+_\d+\.csv)/.exec(e.body);
       const kept = (f['Decision'] || '').indexOf('✅') >= 0;
+      const enableChange = /enabling\s+change/i.test(f['Decision'] || '');
       const lap = lapSeconds(f['Lap time']);
       const v = {
         id: vid, title: clean(e.title), lap: lap, top: kmh(f['Top speed']), slow: kmh(f['Min speed']),
-        damage: clean(f['Damage']), kept: kept, base: base,
+        damage: clean(f['Damage']), kept: kept, enableChange: enableChange, base: base,
         delta: (lap && base) ? rnd(lap - laps[base], 2) : null,
         st: clean(sm.title).replace(/\s*\((?:[^()]*; )?rejected\)$/, ''),
         what: clean(sm.f['What changed']), why: clean(sm.f['Why']), learned: clean(sm.f['Learned']), decision: clean(sm.f['Decision']),

@@ -8,8 +8,13 @@
 
   /* camera. z: pixels per metre; ox, oy: pan in pixels; cx, cy, ang: centre and rotation when not following;
      all: keep every car in view (sz, scx, scy: its smoothed zoom and centre; maxAll: its closest zoom) */
-  const view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: true, rot: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
-  const opt = { line: 'full', lineW: 3 };
+  const view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
+  /* fit: the whole track is kept in view (the start state); it ends when the user moves, zooms or follows */
+  const opt = { line: 'upto', lineW: 3, colour: 'speed' };     /* line: how much of the driven line is drawn; colour: by speed or by brake */
+  let near = { x: 0, y: 0, r2: 1e18 };                         /* the part of the track that can be on screen this frame */
+  const buf = document.createElement('canvas'), bg = buf.getContext('2d'), miniBuf = document.createElement('canvas');
+  let bufKey = '', miniKey = '', secNow = '', tourSaved = null;
+  let hudHtml = '';
   let lastCam = null;                   /* base point, centre, angle and zoom of the last drawn frame */
   let cam = null;                       /* world-to-screen of the last drawn frame, for hit-testing clicks */
   let zoomInput = null, carCells = [];
@@ -26,36 +31,68 @@
     if (opt.line === 'near') { k0 = RV.idxAtD(r, r.d[me] - 150); k1 = Math.min(k1, RV.idxAtD(r, r.d[me] + 150)); }
     return [k0, k1];
   }
-  function drawSolid(ctx, r, me, w, col) {
-    const q = lineRange(r, me);
+  /* Recorded points are about a metre apart. Zoomed out, most of them fall on the same pixel, so only every
+     n-th is drawn (about 1.2 px apart), and points well outside the view are skipped altogether. */
+  const stepFor = z => Math.max(1, Math.floor(1.2 / z));
+  const inView = (x, y) => { const dx = x - near.x, dy = y - near.y; return dx * dx + dy * dy <= near.r2; };
+  /* a compared run's line: one path, stroked twice (dark casing, then its colour) */
+  function drawSolid(ctx, r, me, z, wOut, wIn, colOut, colIn) {
+    const q = lineRange(r, me), st = stepFor(z), end = q[1] + 1;
     if (q[1] < q[0]) return;
-    ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = col;
-    ctx.beginPath(); ctx.moveTo(r.x[q[0]], r.y[q[0]]);
-    for (let k = q[0] + 1; k <= q[1] + 1; k++) ctx.lineTo(r.x[k], r.y[k]);
-    ctx.stroke();
-  }
-  /* row indices of the run grouped by speed step, so the line is drawn in NB strokes */
-  function buckets(r) {
-    if (r._bk) return r._bk;
-    const bk = [];
-    for (let k = 0; k < NB; k++) bk.push([]);
-    for (let k = 0; k < r.n - 1; k++) {
-      const f = ((r.v[k] + r.v[k + 1]) / 2 - S.vmin) / (S.vmax - S.vmin || 1);
-      bk[RV.clamp(Math.floor(f * NB), 0, NB - 1)].push(k);
+    const p = new Path2D();
+    let pen = false;
+    for (let k = q[0]; k <= end; k = (k < end && k + st > end) ? end : k + st) {
+      if (!inView(r.x[k], r.y[k])) { pen = false; continue; }
+      if (pen) p.lineTo(r.x[k], r.y[k]); else { p.moveTo(r.x[k], r.y[k]); pen = true; }
     }
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = wOut; ctx.strokeStyle = colOut; ctx.stroke(p);
+    ctx.lineWidth = wIn; ctx.strokeStyle = colIn; ctx.stroke(p);
+  }
+  /* colour step (0 to NB-1) of every piece of the run's line, by speed or by brake */
+  function colourSteps(r) {
+    if (r._bk && r._bkBy === opt.colour) return r._bk;
+    const bk = new Uint8Array(r.n);
+    for (let k = 0; k < r.n - 1; k++) {
+      const f = opt.colour === 'brake' ? (r.br[k] + r.br[k + 1]) / 2 : ((r.v[k] + r.v[k + 1]) / 2 - S.vmin) / (S.vmax - S.vmin || 1);
+      bk[k] = RV.clamp(Math.floor(f * NB), 0, NB - 1);
+    }
+    r._bkBy = opt.colour;
     return (r._bk = bk);
   }
+  let stepCols = null, stepColsKey = '';
+  function colours() {
+    const key = opt.colour + document.documentElement.dataset.theme;
+    if (key !== stepColsKey) { stepCols = []; for (let b = 0; b < NB; b++) stepCols.push(opt.colour === 'brake' ? RV.brakeCol((b + 0.5) / NB) : RV.speedCol((b + 0.5) / NB)); stepColsKey = key; }
+    return stepCols;
+  }
+  /* the driven line of the car in focus: consecutive pieces of the same colour step are stroked together */
   function drawSpeedLine(ctx, r, z, w) {
-    const q = lineRange(r, S.i), bk = buckets(r);
+    const q = lineRange(r, S.i), bk = colourSteps(r), cols = colours(), st = stepFor(z), end = q[1] + 1;
     ctx.lineWidth = w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let b = 0; b < NB; b++) {
-      const L = bk[b];
-      if (!L.length) continue;
-      ctx.beginPath();
-      let any = false;
-      for (const k of L) { if (k < q[0] || k > q[1]) continue; ctx.moveTo(r.x[k], r.y[k]); ctx.lineTo(r.x[k + 1], r.y[k + 1]); any = true; }
-      if (any) { ctx.strokeStyle = RV.speedCol((b + 0.5) / NB); ctx.stroke(); }
+    let cur = -1, pen = false;
+    for (let k = q[0]; k <= q[1]; k += st) {
+      if (!inView(r.x[k], r.y[k])) { if (pen) { ctx.stroke(); pen = false; } continue; }
+      const b = bk[k];
+      if (!pen || b !== cur) { if (pen) ctx.stroke(); ctx.beginPath(); ctx.moveTo(r.x[k], r.y[k]); ctx.strokeStyle = cols[b]; cur = b; pen = true; }
+      const k2 = Math.min(k + st, end);
+      ctx.lineTo(r.x[k2], r.y[k2]);
     }
+    if (pen) ctx.stroke();
+  }
+  /* the track's outline as ready-made paths, built once per track */
+  function trackPaths() {
+    const T = trk();
+    if (T._paths) return T._paths;
+    const line = P => { const p = new Path2D(); p.moveTo(P[0][0], P[0][1]); for (const q of P) p.lineTo(q[0], q[1]); return p; };
+    const road = new Path2D();
+    road.moveTo(T.left[0][0], T.left[0][1]);
+    for (const p of T.left) road.lineTo(p[0], p[1]);
+    for (let k = T.right.length - 1; k >= 0; k--) road.lineTo(T.right[k][0], T.right[k][1]);
+    road.closePath();
+    const marks = new Path2D();
+    for (const m of T.marks) { marks.moveTo(m[1], m[2]); marks.lineTo(m[3], m[4]); }
+    return (T._paths = { road: road, left: line(T.left), right: line(T.right), centre: line(T.centre), marks: marks });
   }
   /* car1-ow1 from above: 4.8 m long, front axle 1.6 m ahead of the centre, rear axle 1.35 m behind, front wheels 0.70 m and
      rear wheels 0.75 m either side, tyres 0.30 m wide. The front wheels turn with the recorded steering (full lock 21 degrees).
@@ -98,23 +135,15 @@
      g = group heading in the panel, d = one-line description, cmp = only shown while runs are compared.
      draw(ctx, zoom) draws in track coordinates (metres); screen(ctx, w2s) draws in pixels. */
   const LAYERS = [
-    { id: 'road', g: 'Track', label: 'Road surface', d: 'The dark area of the road.', on: true, alpha: 1, draw(ctx) {
-      const T = trk();
-      ctx.beginPath(); ctx.moveTo(T.left[0][0], T.left[0][1]);
-      for (const p of T.left) ctx.lineTo(p[0], p[1]);
-      for (let k = T.right.length - 1; k >= 0; k--) ctx.lineTo(T.right[k][0], T.right[k][1]);
-      ctx.closePath(); ctx.fillStyle = RV.pal.road; ctx.fill('evenodd');
-    } },
+    { id: 'road', g: 'Track', label: 'Road surface', d: 'The dark area of the road.', on: true, alpha: 1, draw(ctx) { ctx.fillStyle = RV.pal.road; ctx.fill(trackPaths().road, 'evenodd'); } },
     { id: 'edges', g: 'Track', label: 'Track edges', d: 'The lines at both sides. Beyond them the car is off the track.', on: true, alpha: 1, draw(ctx, z) {
-      ctx.lineWidth = 1.6 / z; ctx.strokeStyle = RV.pal['road-edge']; poly(ctx, trk().left); ctx.stroke(); poly(ctx, trk().right); ctx.stroke();
+      ctx.lineWidth = 1.6 / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().left); ctx.stroke(trackPaths().right);
     } },
     { id: 'centre', g: 'Track', label: 'Centre line', d: 'Dashed line down the middle of the road (track position 0).', on: false, alpha: 0.6, draw(ctx, z) {
-      ctx.setLineDash([6 / z, 6 / z]); ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; poly(ctx, trk().centre); ctx.stroke(); ctx.setLineDash([]);
+      ctx.setLineDash([6 / z, 6 / z]); ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().centre); ctx.setLineDash([]);
     } },
     { id: 'marks', g: 'Track', label: 'Distance marks', d: 'A tick and a label every 100 m from the start line.', on: true, alpha: 0.8, draw(ctx, z) {
-      ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.beginPath();
-      for (const m of trk().marks) { ctx.moveTo(m[1], m[2]); ctx.lineTo(m[3], m[4]); }
-      ctx.stroke();
+      ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().marks);
     }, screen(ctx, w2s) {
       if (view.z < 0.5) return;
       ctx.fillStyle = RV.pal['map-ink']; ctx.font = '12px ' + RV.pal.font;
@@ -134,7 +163,7 @@
         ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 12, p[1] + 4);
       });
     } },
-    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed: blue slowest, yellow fastest.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
+    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (blue slowest, yellow fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
     { id: 'car', g: 'Car and path', label: 'Car', d: 'The car in focus: car1-ow1, the open-wheel car the driver runs, drawn to scale. Its front wheels turn with the recorded steering.', on: true, alpha: 1,
       draw(ctx, z) { drawCar(ctx, S.R, S.i, RV.colMap(S.sel[0]), z); } },
     { id: 'speed', g: 'Car and path', label: 'Speed label', d: 'The current speed, written next to the car.', on: true, alpha: 1, draw() {}, screen(ctx, w2s) {
@@ -168,19 +197,23 @@
       ctx.setLineDash([]);
     } },
     { id: 'lineB', g: 'Compared runs', label: 'Their driven lines', d: 'The path of each compared run, in that run’s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
-      for (const m of others()) { const k = RV.ghostIdx(m.r); drawSolid(ctx, m.r, k, (opt.lineW * 0.6 + 2) / z, RV.pal['car-line']); drawSolid(ctx, m.r, k, opt.lineW * 0.6 / z, RV.colMap(m.id)); }
+      for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (opt.lineW * 0.6 + 2) / z, opt.lineW * 0.6 / z, RV.pal['car-line'], RV.colMap(m.id));
     } },
     { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run’s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
       for (const m of others()) drawCar(ctx, m.r, RV.ghostIdx(m.r), RV.colMap(m.id), z);
     } },
   ];
+  const BEAMS_TIP = '19 distance sensors pointing outward from the car nose';
   const LY = {};
   LAYERS.forEach(L => { LY[L.id] = L; L.on0 = L.on; L.alpha0 = L.alpha; });
-  const DRAW = LAYERS.filter(L => L.id !== 'car').concat(LAYERS.filter(L => L.id === 'car'));   /* the car in focus is drawn last, on top */
+  /* the track itself never changes during a replay; everything else moves. The car in focus is drawn last, on top. */
+  const STATIC = LAYERS.filter(L => L.g === 'Track');
+  const MOVING = LAYERS.filter(L => L.g !== 'Track' && L.id !== 'car').concat(LAYERS.filter(L => L.id === 'car'));
   const OVER = [
     { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true },
     { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true },
     { id: 'leg', label: 'Colour keys', d: 'What the colours mean, bottom left.', on: true },
+    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, and its throttle and brake over the last seconds, bottom right.', on: true },
   ];
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
@@ -251,10 +284,12 @@
   function layersSection(s, sm) {
     const many = S.CM.length > 0;
     if (sm) {
-      s.appendChild(toggleRow('Sensor beams', 'The lines from the car to the edges of the road.', LY.beams.on, v => { LY.beams.on = LY.hits.on = LY.focus.on = v; }));
+      const sb = toggleRow('Sensor beams', 'The lines from the car to the edges of the road.', LY.beams.on, v => { LY.beams.on = LY.hits.on = LY.focus.on = v; });
+      sb.title = BEAMS_TIP; s.appendChild(sb);
       s.appendChild(toggleRow('Driven path', 'The line the car drove, coloured by its speed.', LY.line.on, v => { LY.line.on = v; }));
       s.appendChild(toggleRow('Distance marks', 'A label every 100 m along the track.', LY.marks.on, v => { LY.marks.on = v; }));
       if (many) s.appendChild(toggleRow('The other cars', 'The cars and paths of the other selected versions.', LY.ghost.on, v => { LY.ghost.on = LY.lineB.on = v; }));
+      s.appendChild(toggleRow('Wheel and pedals', 'The steering wheel and the throttle and brake graph, bottom right.', OVER[3].on, v => { OVER[3].on = v; panels(); }));
       return;
     }
     /* detailed: one group open at a time */
@@ -272,6 +307,7 @@
       if (G === 'Panels on the map') { for (const L of OVER) body.appendChild(toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); })); continue; }
       for (const L of items) {
         const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; count(); });
+        if (L.id === 'beams') r.title = BEAMS_TIP;
         slider(r, 'Opacity', 0, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; });
         body.appendChild(r);
         if (L.id === 'line') {
@@ -283,14 +319,33 @@
       }
     }
     const rb = el('button', 'btn wide', 'Restore the default layers');
-    rb.onclick = () => { LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; }); opt.line = 'full'; opt.lineW = 3; panels(); buildSide(); };
+    rb.onclick = () => { LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; }); opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; viewDefaults(); legend(); panels(); buildSide(); };
     s.appendChild(rb);
   }
+  /* sector times on the Track tab: where the car is now, and the table of every opened version */
+  function sectorsSection(s, sm) {
+    if (sm) {
+      s.appendChild(el('div', 'guide', '<h4>Sector times</h4><p>The lap is split into three sectors. Their times, the differences between versions and the best theoretical lap are part of the detailed view.</p>'));
+      const b = el('button', 'btn prim wide', 'Switch to the detailed view');
+      b.onclick = () => RV.setView('detailed');
+      s.appendChild(b);
+      return;
+    }
+    const R = S.R, sc = S.ds.trk && S.ds.trk.sectors;
+    if (!R || !R.sec || !sc) { s.appendChild(el('p', 'note', R ? 'This run has no position on the track map, so it has no sector times.' : 'Select a version to see its sector times.')); return; }
+    s.appendChild(el('div', 'secnow', '<span>Car in focus is in</span><b id="secNow" class="num"></b>'));
+    const t = el('div', 'secside', RV.sectors.table(true) + '<p class="note">' + RV.sectors.NOTE + ' A version joins the table when its recording is opened: select or compare it on the Versions tab.</p>' +
+      '<p class="note">' + sc.where.map((w, k) => '<b>S' + (k + 1) + '</b> ' + esc(w)).join('. ') + '.</p>');
+    s.appendChild(t);
+    RV.sectors.wire(t);
+  }
+  /* what the two views start with: the basic view shows the car and its path, without the sensor beams and their end points */
+  function viewDefaults() { const on = !RV.simple(); LY.beams.on = LY.hits.on = LY.focus.on = on; }
   function helpSection(s, sm) {
     const R = S.R, many = S.CM.length > 0;
     s.appendChild(el('div', 'guide',
       '<h4>What you are looking at</h4><p>The car replays the recorded lap of the selected version. The coloured path is the line it drove: blue where it was slowest, yellow where it was fastest.</p>' +
-      '<p>The lines fanning out from the car are its sensors. Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
+      '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
       '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, or its name in the top bar, to put it in focus.' : '') + '</p>' +
       '<h4>Keys</h4><dl class="keys"><dt><kbd>Space</kbd></dt><dd>play or pause</dd><dt><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
@@ -301,9 +356,13 @@
     s.innerHTML = ''; zoomInput = null; carCells = [];
     if (!S.ds) return;
     if (S.CM.length) s.appendChild(carsTable());
+    /* how the driven line is coloured: always at hand, in both views */
+    const pc = el('div', 'pathcol', '<span>Path colour</span>');
+    pc.appendChild(segs([['speed', 'Speed'], ['brake', 'Brake']], opt.colour, v => { opt.colour = v; legend(); }, 'Colour the driven path by'));
+    s.appendChild(pc);
     const tabs = el('div', 'seg full subtabs');
     tabs.setAttribute('role', 'tablist');
-    for (const [id, label] of [['view', 'Camera'], ['layers', 'Layers'], ['help', 'Help']]) {
+    for (const [id, label] of [['view', 'Camera'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
       const b = el('button', S.sideTab === id ? 'on' : null, label);
       b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', S.sideTab === id);
       b.onclick = () => { S.sideTab = id; buildSide(); };
@@ -312,7 +371,8 @@
     s.appendChild(tabs);
     const body = el('div', 'sidebody');
     s.appendChild(body);
-    if (S.sideTab === 'view') viewSection(body, sm); else if (S.sideTab === 'layers') layersSection(body, sm); else helpSection(body, sm);
+    if (S.sideTab === 'view') viewSection(body, sm); else if (S.sideTab === 'layers') layersSection(body, sm); else if (S.sideTab === 'sectors') sectorsSection(body, sm); else helpSection(body, sm);
+    secNow = '';
     message();
   }
   function panels() { for (const L of OVER) $(L.id).style.display = (L.on && onMap()) ? '' : 'none'; }
@@ -323,10 +383,10 @@
     let h = '';
     if (!S.ds) h = '';
     else if (!S.ds.trk) h = '<h3>No track map</h3><p>' + esc(S.ds.trkNote) + '</p><p class="note">The Versions and Telemetry tabs work without it.</p>';
-    else if (!R) h = '<h3>No run selected</h3><p>Choose a version with a recording on the Versions tab.</p>';
+    else if (!R) h = '';                                  /* the canvas says what to do (draw) */
     else if (!R.x) h = '<h3>This run does not fit the track map</h3><p>The run covers ' + RV.fmtInt(R.maxS) + ' m of track, but the map in use (' + esc(RV.track.title(S.ds.trk)) +
       (S.ds.trkOwn ? ', from the source’s track.xml' : ', bundled with this page') + ') is ' + S.ds.trk.total.toFixed(1) + ' m long.</p><p>' +
-      (S.ds.trkOwn ? 'The track.xml in the source is not the track these runs were driven on.' : 'The source needs its own <b>track.xml</b>: the TORCS track file of the track the runs were driven on, at the root of the repository or folder.') +
+      (S.ds.trkOwn ? 'The track.xml in the source is not the track these runs were driven on.' : 'The source needs its own <b>track.xml</b>: the ' + RV.TORCS + ' track file of the track the runs were driven on, at the root of the repository or folder.') +
       '</p><p class="note">The run is not drawn on a wrong map. The Versions and Telemetry tabs still work.</p>';
     m.innerHTML = h ? '<div class="card">' + h + '</div>' : '';
     m.style.display = h ? '' : 'none';
@@ -354,7 +414,7 @@
   const autoZoom = () => view.follow && view.all && others().length > 0;   /* zoom is set by the keep-all camera: manual zoom is off */
   function zoomAt(mx, my, k) {
     const z2 = RV.clamp(view.z * k, 0.08, 55), kk = z2 / view.z, b = base();
-    view.ox = (mx - b[0]) * (1 - kk) + view.ox * kk; view.oy = (my - b[1]) * (1 - kk) + view.oy * kk; view.z = z2;
+    view.ox = (mx - b[0]) * (1 - kk) + view.ox * kk; view.oy = (my - b[1]) * (1 - kk) + view.oy * kk; view.z = z2; view.fit = false;
   }
   /* freeze the view exactly as it is now and hand it to the user */
   function detach() {
@@ -365,16 +425,17 @@
     view.follow = false; view.rot = false; view.all = false;
     buildSide();
   }
-  function setRot(v) { view.rot = v; view.ang = 0; }
+  function setRot(v) { view.rot = v; view.ang = 0; if (v) view.fit = false; }
   function setAll(v) { view.all = v; view.sInit = false; view.ox = view.oy = 0; buildSide(); }
-  function setFollow(v) { if (v) view.ang = 0; view.follow = v; if (!v && onMap()) { view.cx = S.R.x[S.i]; view.cy = S.R.y[S.i]; } view.ox = view.oy = 0; }
-  function resetView() { view.follow = true; view.rot = true; view.all = false; view.z = 3.2; view.ox = view.oy = 0; buildSide(); }
-  function fitView() {
-    const B = trk().box;
-    view.follow = false; view.rot = false; view.all = false; view.ang = 0; view.cx = (B[0] + B[1]) / 2; view.cy = (B[2] + B[3]) / 2; view.ox = view.oy = 0;
-    view.z = Math.min(c.clientWidth / (B[1] - B[0]), c.clientHeight / (B[3] - B[2])) * 0.9;
-    buildSide();
+  function setFollow(v) { if (v) { view.ang = 0; view.fit = false; if (view.z < 1) view.z = 3.2; } view.follow = v; if (!v && onMap()) { view.cx = S.R.x[S.i]; view.cy = S.R.y[S.i]; } view.ox = view.oy = 0; }
+  function resetView() { view.follow = true; view.rot = true; view.fit = false; view.all = false; view.z = 3.2; view.ox = view.oy = 0; buildSide(); }
+  /* the whole track, centred in the part of the map that the readout on the left does not cover */
+  function applyFit(W, H) {
+    const B = trk().box, left = (W > 900 && OVER[0].on) ? 250 : 0;
+    view.cx = (B[0] + B[1]) / 2; view.cy = (B[2] + B[3]) / 2; view.ang = 0; view.ox = left / 2; view.oy = 0;
+    view.z = Math.min((W - left) / (B[1] - B[0]), H / (B[3] - B[2])) * 0.9;
   }
+  function fitView() { view.follow = false; view.rot = false; view.all = false; view.fit = true; buildSide(); }
 
   /* ---------- the frame ---------- */
   function draw() {
@@ -382,26 +443,61 @@
     if (!W) return;
     if (c.width !== Math.round(W * r) || c.height !== Math.round(H * r)) size();
     g.setTransform(r, 0, 0, r, 0, 0); g.fillStyle = P['map-bg']; g.fillRect(0, 0, W, H);
+    if (!R) {                                             /* no run selected: say how to begin */
+      if (S.ds && S.ds.trk) {
+        g.fillStyle = P['ink-2']; g.font = '600 ' + Math.max(15, Math.min(22, W / 36)) + 'px ' + P.font; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('Select a version on the Versions tab to begin replay', W / 2, H / 2, W - 48);
+        g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+      }
+      return;
+    }
     if (!onMap()) return;
+    if (view.fit && !view.follow) applyFit(W, H);
     const many = others().length > 0, a = view.rot ? Math.PI / 2 - R.yaw[i] : view.ang;
     let b = base(), ce = view.follow ? [R.x[i], R.y[i]] : [view.cx, view.cy];
     if (view.follow && view.all && many) { const f = frameAll(a, W, H); ce = f[0]; view.z = f[1]; b = [W / 2, H / 2]; }
     const z = view.z;
     lastCam = { b: b, ce: ce, a: a, z: z };
-    g.translate(b[0] + view.ox, b[1] + view.oy); g.scale(z, -z); g.rotate(a); g.translate(-ce[0], -ce[1]);
-    for (const L of DRAW) { if (!L.on || (L.cmp && !many)) continue; g.globalAlpha = L.alpha; L.draw(g, z); }
-    g.globalAlpha = 1; g.setTransform(r, 0, 0, r, 0, 0);
     const ca = Math.cos(a), sa = Math.sin(a);
     const w2s = (x, y) => { const dx = x - ce[0], dy = y - ce[1]; return [b[0] + view.ox + (dx * ca - dy * sa) * z, b[1] + view.oy - (dx * sa + dy * ca) * z]; };
     cam = w2s;
-    for (const L of LAYERS) if (L.on && L.screen && !(L.cmp && !many)) { g.globalAlpha = L.alpha; L.screen(g, w2s); }
-    g.globalAlpha = 1;
+    /* what can be on screen: a circle round the camera's centre that covers the canvas */
+    const off = Math.hypot(W / 2 - b[0] - view.ox, H / 2 - b[1] - view.oy), rad = (Math.hypot(W, H) / 2 + off) / z + 20;
+    near = { x: ce[0], y: ce[1], r2: rad * rad };
+    const world = ctx => { ctx.setTransform(r, 0, 0, r, 0, 0); ctx.translate(b[0] + view.ox, b[1] + view.oy); ctx.scale(z, -z); ctx.rotate(a); ctx.translate(-ce[0], -ce[1]); };
+    const paint = (ctx, set) => {
+      world(ctx);
+      for (const L of set) { if (!L.on || (L.cmp && !many)) continue; ctx.globalAlpha = L.alpha; L.draw(ctx, z); }
+      ctx.globalAlpha = 1; ctx.setTransform(r, 0, 0, r, 0, 0);
+      for (const L of set) if (L.on && L.screen && !(L.cmp && !many)) { ctx.globalAlpha = L.alpha; L.screen(ctx, w2s); }
+      ctx.globalAlpha = 1;
+    };
+    if (view.follow) paint(g, STATIC);                    /* the camera moves every frame: nothing to keep */
+    else {
+      /* the camera stands still: the track is painted once into a spare canvas and copied from it each frame */
+      const key = [c.width, c.height, z, view.ox, view.oy, ce[0], ce[1], a, document.documentElement.dataset.theme, RV.simple(), trk().total, STATIC.map(L => L.on + ':' + L.alpha).join()].join('|');
+      if (key !== bufKey) {
+        buf.width = c.width; buf.height = c.height;
+        bg.setTransform(r, 0, 0, r, 0, 0); bg.fillStyle = P['map-bg']; bg.fillRect(0, 0, W, H);
+        paint(bg, STATIC); bufKey = key;
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(buf, 0, 0);
+    }
+    paint(g, MOVING);
+    const sn = secNow !== null && document.getElementById('secNow');
+    if (sn && R.sec) {                                    /* the Sectors section of the side panel: where the car is now */
+      const cu = trk().sectors.cuts, k = R.d[i] < cu[0] ? 0 : R.d[i] < cu[1] ? 1 : 2, t0 = k === 0 ? 0 : k === 1 ? R.sec[0] : (R.sec[0] != null && R.sec[1] != null ? R.sec[0] + R.sec[1] : null);
+      const txt = 'S' + (k + 1) + (t0 != null ? ' \u00b7 ' + Math.max(0, R.t[i] - t0).toFixed(1) + ' s in' : '');
+      if (txt !== secNow) { sn.textContent = txt; secNow = txt; }
+    }
     const sm = RV.simple(), gapTxt = gp => sm ? (Math.abs(gp) < 0.005 ? 'level' : Math.abs(gp).toFixed(2) + ' s ' + (gp > 0 ? 'behind' : 'ahead')) : RV.sgn(gp, 2) + ' s';
     for (const q of carCells) {
-      if (q.foc) { q.gap.textContent = 'in focus'; q.spd.textContent = R.v[i].toFixed(0) + ' km/h'; }
-      else { q.gap.textContent = gapTxt(q.r.t[RV.idxAtD(q.r, R.d[i])] - R.t[i]); q.spd.textContent = q.r.v[RV.ghostIdx(q.r)].toFixed(0) + ' km/h'; }
+      const ga = q.foc ? 'in focus' : gapTxt(q.r.t[RV.idxAtD(q.r, R.d[i])] - R.t[i]), sp = (q.foc ? R.v[i] : q.r.v[RV.ghostIdx(q.r)]).toFixed(0) + ' km/h';
+      if (q.ga !== ga) { q.gap.textContent = ga; q.ga = ga; }                    /* the page is touched only when a value changes */
+      if (q.sp !== sp) { q.spd.textContent = sp; q.sp = sp; }
     }
     if (zoomInput && document.activeElement !== zoomInput) { const lv = Math.log(z).toFixed(2); if (zoomInput.value !== lv) { zoomInput.value = lv; zoomInput.nextSibling.textContent = zoomInput._fmt(+lv); } }
+    if (OVER[3].on) RV.inputs.draw(R, i);
     if (OVER[1].on) drawMini();
     if (OVER[0].on) drawHud(sm, gapTxt);
   }
@@ -409,29 +505,41 @@
     const R = S.R, B = trk().box, P = RV.pal, r = window.devicePixelRatio || 1, cw = mini.clientWidth, chh = mini.clientHeight;
     if (mini.width !== Math.round(cw * r)) { mini.width = Math.round(cw * r); mini.height = Math.round(chh * r); }
     const ms = Math.min((cw - 20) / (B[1] - B[0]), (chh - 20) / (B[3] - B[2]));
-    mg.setTransform(r, 0, 0, r, 0, 0); mg.clearRect(0, 0, cw, chh);
-    mg.translate(cw / 2, chh / 2); mg.scale(ms, -ms); mg.translate(-(B[0] + B[1]) / 2, -(B[2] + B[3]) / 2);
-    mg.lineWidth = 2.4 / ms; mg.strokeStyle = P.mute; mg.lineJoin = 'round'; poly(mg, trk().centre); mg.closePath(); mg.stroke();
+    const place = ctx => { ctx.setTransform(r, 0, 0, r, 0, 0); ctx.translate(cw / 2, chh / 2); ctx.scale(ms, -ms); ctx.translate(-(B[0] + B[1]) / 2, -(B[2] + B[3]) / 2); };
+    const key = [mini.width, mini.height, trk().total, document.documentElement.dataset.theme].join('|');
+    if (key !== miniKey) {                                /* the outline is painted once and copied each frame */
+      miniBuf.width = mini.width; miniBuf.height = mini.height;
+      const mb = miniBuf.getContext('2d');
+      place(mb); mb.lineWidth = 2.4 / ms; mb.strokeStyle = P.mute; mb.lineJoin = 'round'; mb.stroke(trackPaths().centre);
+      miniKey = key;
+    }
+    mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, mini.width, mini.height); mg.drawImage(miniBuf, 0, 0);
+    place(mg);
     for (const m of others()) { const k = RV.ghostIdx(m.r); mg.beginPath(); mg.arc(m.r.x[k], m.r.y[k], 4.5 / ms, 0, 7); mg.fillStyle = RV.col(m.id); mg.fill(); }
     mg.beginPath(); mg.arc(R.x[S.i], R.y[S.i], 5.5 / ms, 0, 7); mg.fillStyle = RV.col(S.sel[0]); mg.fill(); mg.lineWidth = 1.5 / ms; mg.strokeStyle = P.surface; mg.stroke();
   }
   function drawHud(sm, gapTxt) {
     const R = S.R, i = S.i, kv = [];
-    const add = (k, v) => kv.push('<dt>' + k + '</dt><dd class="num">' + v + '</dd>');
-    add('Lap time', R.t[i].toFixed(2) + ' s'); add('Distance', R.s[i].toFixed(0) + ' m');
-    if (sm) add('Doing', R.br[i] > 0 ? 'Braking' : R.th[i] >= 0.99 ? 'Full throttle' : R.th[i] > 0.05 ? 'Part throttle' : 'Coasting');
-    else {
+    const add = (k, v, tip) => kv.push('<dt' + (tip ? ' title="' + tip + '"' : '') + '>' + k + '</dt><dd class="num">' + v + '</dd>');
+    add('Lap time', R.t[i].toFixed(2) + ' s');
+    if (!sm && R.sec && trk().sectors) { const cu = trk().sectors.cuts, d = R.d[i]; add('Sector', d < cu[0] ? 'S1' : d < cu[1] ? 'S2' : 'S3'); }
+    add('Distance', R.s[i].toFixed(0) + ' m');
+    if (!sm) {
       add('Gear', R.g[i]); add('Plan allows', R.al[i] > 350 || !R.al[i] ? 'no limit' : R.al[i].toFixed(0) + ' km/h');
-      add('Throttle', R.th[i].toFixed(2)); add('Brake', R.br[i].toFixed(2)); add('Steering', R.st[i].toFixed(2)); add('Track position', R.tp[i].toFixed(2));
+      add('Throttle', R.th[i].toFixed(2)); add('Brake', R.br[i].toFixed(2)); add('Steering', R.st[i].toFixed(2)); add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
       if (R.beams) { let mn = 1e9, mx = -1; for (let k = 0; k < 19; k++) { const d = R.b[i * 19 + k]; if (d >= 0) { mn = Math.min(mn, d); mx = Math.max(mx, d); } } add('Beams', mx < 0 ? 'off track' : mn.toFixed(0) + ' to ' + mx.toFixed(0) + ' m'); }
     }
     for (const m of S.CM) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
-    $('hud').innerHTML = '<div class="big num">' + R.v[i].toFixed(0) + '<small>km/h</small></div><div class="who"><i class="sw" style="background:' + RV.col(S.sel[0]) + '"></i>' + esc(R.name) + '</div><dl class="kv">' + kv.join('') + '</dl>';
+    const doing = R.br[i] > 0 ? 'Braking' : R.th[i] >= 0.99 ? 'Full throttle' : R.th[i] > 0.05 ? 'Part throttle' : 'Coasting';
+    const html = '<div class="big num">' + R.v[i].toFixed(0) + '<small>km/h</small></div><div class="who"><i class="sw" style="background:' + RV.col(S.sel[0]) + '"></i>' + esc(R.name) + '</div><div class="hud-doing">' + doing + '</div><dl class="kv">' + kv.join('') + '</dl>';
+    if (html !== hudHtml) { $('hud').innerHTML = html; hudHtml = html; }
   }
   function legend() {
     const R = S.R, sm = RV.simple();
     if (!R) { $('leg').innerHTML = ''; return; }
-    $('leg').innerHTML = '<div class="cap">' + (sm ? 'Path colour: speed' : 'Driven line: speed') + '</div><div class="grad" style="background:' + RV.speedGradient + '"></div><div class="ends num"><span>' + S.vmin.toFixed(0) + '</span><span>km/h</span><span>' + S.vmax.toFixed(0) + '</span></div>' +
+    $('leg').innerHTML = (opt.colour === 'brake'
+        ? '<div class="cap">' + (sm ? 'Path colour: braking' : 'Driven line: brake') + '</div><div class="grad brakegrad"></div><div class="ends num"><span>none</span><span>brake</span><span>full</span></div>'
+        : '<div class="cap">' + (sm ? 'Path colour: speed' : 'Driven line: speed') + '</div><div class="grad" style="background:' + RV.speedGradient + '"></div><div class="ends num"><span>' + S.vmin.toFixed(0) + '</span><span>km/h</span><span>' + S.vmax.toFixed(0) + '</span></div>') +
       (R.beams ? '<div class="cap">' + (sm ? 'Sensor colour: distance to the road edge' : 'Beams: distance to the edge') + '</div><div class="grad" style="background:' + RV.beamGradient + '"></div><div class="ends num"><span>0</span><span>m</span><span>200</span></div>' : '') +
       (S.CM.length ? '<div class="cap">Compared runs</div>' + S.CM.map(m => '<div><i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id) + '</div>').join('') : '');
   }
@@ -449,7 +557,7 @@
   c.addEventListener('pointermove', e => {
     if (!drag) { const h = carAt(e); c.style.cursor = (h && h !== S.sel[0]) ? 'pointer' : ''; return; }
     moved += Math.abs(e.clientX - drag[0]) + Math.abs(e.clientY - drag[1]);
-    if (moved >= 5) detach();
+    if (moved >= 5) { detach(); view.fit = false; }
     view.ox += e.clientX - drag[0]; view.oy += e.clientY - drag[1]; drag = [e.clientX, e.clientY];
   });
   c.addEventListener('pointerup', e => { drag = null; c.classList.remove('drag'); if (moved < 5) { const h = carAt(e); if (h && h !== S.sel[0]) RV.sel.makeRef(h); } });
@@ -473,7 +581,19 @@
   RV.map = {
     draw: draw, size: size, legend: legend, buildSide: buildSide, key: key,
     resetAuto() { view.sInit = false; },
-    fromHash(H) { if (H.all) view.all = true; if (H.fixed) view.rot = false; if (H.zoom) view.z = +H.zoom; },
+    /* the address can ask for the camera that follows the car (follow, zoom, all, fixed); otherwise the whole track is shown */
+    fromHash(H) {
+      if (H.follow || H.zoom || H.all || H.fixed) { view.follow = true; view.rot = !H.fixed; view.fit = false; }
+      if (H.all) view.all = true;
+      if (H.zoom) view.z = +H.zoom;
+    },
+    viewDefaults: viewDefaults,
+    /* the tutorial talks about the sensor beams, so they are shown while it runs and put back afterwards */
+    tourLayers(on) {
+      if (on) { if (!tourSaved) tourSaved = [LY.beams.on, LY.hits.on, LY.focus.on]; LY.beams.on = LY.hits.on = LY.focus.on = true; }
+      else if (tourSaved) { LY.beams.on = tourSaved[0]; LY.hits.on = tourSaved[1]; LY.focus.on = tourSaved[2]; tourSaved = null; }
+      buildSide();
+    },
     LAYERS: LAYERS,
   };
 })();

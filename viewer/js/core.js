@@ -74,6 +74,7 @@
     for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower',
       'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line',
       'speed-slow', 'speed-mid', 'speed-fast', 'brake-none', 'brake-full']) P[k] = v('--' + k);
+    P['warn'] = v('--warn-ink');
     P.run = []; P.runMap = [];
     for (let k = 1; k <= RV.MAX_RUNS; k++) { P.run.push(v('--run-' + k)); P.runMap.push(v('--runmap-' + k)); }
     P.font = v('--font-ui'); P.fontNum = v('--font-display');

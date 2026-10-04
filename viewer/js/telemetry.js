@@ -4,16 +4,20 @@
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$, esc = RV.esc, sgn = RV.sgn, fmtLap = RV.fmtLap;
 
-  /* k: run field; s: also shown in the basic view; cap / adv: caption in the basic / detailed view */
+  /* k: run field; s: also shown in the basic view; c: the caption under the chart */
   const CH = [
-    { k: 'v', ti: 'Speed', u: 'km/h', cap: 'How fast the car is going. The dips are the corners.', adv: 'Thin grey line: the speed the driver’s plan allows (run in focus).', al: true, s: 1 },
-    { k: 'th', ti: 'Throttle', u: '0 to 1', cap: 'How far the accelerator is pressed. 1 is flat out.', s: 1 },
-    { k: 'br', ti: 'Brake', u: '0 to 1', cap: 'How hard the brake is pressed.', s: 1 },
-    { k: 'st', ti: 'Steering', u: '+1 = full left' },
-    { k: 'tp', ti: 'Track position', u: '+1 = left edge, −1 = right edge', fixed: [-1, 1] },
-    { k: 'g', ti: 'Gear', u: '', step: true },
-    { k: 'gap', ti: 'Time gap', u: 'seconds', cap: 'Above zero a compared car is behind the car in focus; below zero it is ahead.', adv: 'Compared run minus the run in focus, at the same distance.', gap: true, s: 1 },
+    { k: 'v', ti: 'Speed', u: 'km/h', s: 1, c: 'Speed (km/h) \u2014 red = slow, green = fast; dips show braking zones and corners' },
+    { k: 'th', ti: 'Throttle', u: '0 to 1', s: 1, c: 'Throttle input (0\u20131) \u2014 1 is full power' },
+    { k: 'br', ti: 'Brake', u: '0 to 1', s: 1, c: 'Brake input (0\u20131) \u2014 1 is maximum braking' },
+    { k: 'st', ti: 'Steering', u: '', c: 'Steering (+1 full left to \u22121 full right) \u2014 large swings may signal instability' },
+    { k: 'tp', ti: 'Track position', u: '', fixed: [-1, 1], c: 'Track position (\u22121 right edge to +1 left edge)' },
+    { k: 'g', ti: 'Gear', u: '', step: true, c: 'Gear selected (0 = neutral)' },
+    { k: 'gap', ti: 'Time gap', u: 'seconds', gap: true, s: 1, c: 'Cumulative time gap vs the compared run \u2014 positive = ahead' },
   ];
+  const NC = 24;                       /* colour steps of the speed line */
+  let sectSort = { k: 'm', dir: 1 }, sectShown = [], sectCols = [], scrolled = false;
+  /* whether the run's CSV had a planned speed (an "allowed" column) */
+  const hasPlan = r => { if (r._plan == null) r._plan = r.al.some(x => x > 0); return r._plan; };
   const PL = 52, PR = 12;              /* left and right margins of a plot */
   let xr = [-12, 1], gapS = null, lastCur = -1, lastTotal = 0;
 
@@ -45,7 +49,7 @@
       ['Lap time', lap], ['Top speed', r => r.sum.top.toFixed(0) + ' km/h'], ['Slowest corner', r => r.sum.slow ? r.sum.slow.toFixed(0) + ' km/h' : 'none'],
       [sm ? 'Closest to the road edge (1 = on the edge)' : 'Max |trackPos|', r => r.sum.maxtp.toFixed(sm ? 2 : 3) + ' at ' + RV.fmtInt(r.sum.maxtp_at) + ' m'],
       ['Damage', r => r.sum.damage.toFixed(0)],
-      [sm ? 'Part of the lap spent braking' : 'Braking', r => r.sum.brake + ' %'], [sm ? 'Part of the lap at full throttle' : 'Full throttle', r => r.sum.full + ' %'],
+      [sm ? 'Part of the lap spent braking' : 'Braking', r => r.sum.brake + ' %'], [sm ? '% of the lap at full throttle' : '% of the lap at full throttle', r => r.sum.full + ' %'],
     ];
     let h = '<div class="card sumcard"><div class="cardhead"><h3>Summary</h3></div><div class="tablewrap"><table class="sumt"><thead><tr><th class="l"></th>' +
       rs.map((m, k) => '<th>' + sw(m.id) + esc(m.id) + (k === 0 && many ? ' <span class="note">in focus</span>' : '') + '</th>').join('') + '</tr></thead><tbody>';
@@ -64,28 +68,14 @@
     else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">100 m sections</button></div>';
 
     if (S.teleTab === 'charts') {
-      h += '<p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there.'
-        : 'Wheel: zoom the distance axis. Drag: pan. Click: move the car there. Double-click: the whole lap.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>';
+      h += '<p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'
+        : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>';
       for (const q of CH) {
         if ((q.gap && !many) || (sm && !q.s)) continue;
-        const cap = sm ? q.cap : q.adv;
-        h += '<div class="card chart"><div class="cardhead"><h3>' + q.ti + (q.u ? ' <span class="unit">' + q.u + '</span>' : '') + '</h3>' + (cap ? '<span class="note">' + cap + '</span>' : '') + '</div><canvas data-k="' + q.k + '" aria-label="' + q.ti + ' along the lap"></canvas></div>';
+        const lgd = q.k !== 'v' ? '' : '<span class="clg"><i class="gsw"></i>Speed (red = slow, green = fast)</span>' + (hasPlan(R) ? '<span class="clg"><i class="dsw"></i>Planned</span>' : '');
+        h += '<div class="card chart"><div class="cardhead"><h3>' + q.ti + (q.u ? ' <span class="unit">' + q.u + '</span>' : '') + '</h3>' + lgd + '</div><canvas data-k="' + q.k + '" aria-label="' + q.ti + ' along the lap"></canvas><p class="chart-caption">' + q.c + '</p>' + (q.gap ? '' : statsBar(R, q)) + '</div>';
       }
-    } else {
-      h += '<p class="note">Times are for the run in focus; the columns for compared runs show their difference to it. Click a row to move the car there.</p><div class="card"><div class="tablewrap"><table id="sect"><thead><tr><th class="l">From</th><th>Time</th>' +
-        S.CM.map(m => '<th>' + sw(m.id) + esc(m.id) + '</th>').join('') + '<th>Min speed</th><th>Max speed</th><th>Max brake</th><th>Max |trackPos|</th></tr></thead><tbody>';
-      for (let m = 0; m < R.total - 50; m += 100) {
-        const e = Math.min(m + 100, R.total - 8), a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
-        if (a1 <= a0) continue;
-        let lo = 1e9, hi = 0, bm = 0, tm = 0;
-        for (let k = a0; k <= a1; k++) { lo = Math.min(lo, R.v[k]); hi = Math.max(hi, R.v[k]); bm = Math.max(bm, R.br[k]); tm = Math.max(tm, Math.abs(R.tp[k])); }
-        const ta = R.t[a1] - R.t[a0];
-        let cmp = '';
-        for (const q of S.CM) { const df = q.r.t[RV.idxAtD(q.r, e)] - q.r.t[RV.idxAtD(q.r, m)] - ta; cmp += '<td class="num ' + (df < -0.005 ? 'faster' : df > 0.005 ? 'slower' : '') + '">' + sgn(df, 2) + '</td>'; }
-        h += '<tr data-m="' + m + '" tabindex="0"><td class="l num">' + RV.fmtInt(m) + ' m</td><td class="num">' + ta.toFixed(2) + '</td>' + cmp + '<td class="num">' + lo.toFixed(0) + '</td><td class="num">' + hi.toFixed(0) + '</td><td class="num">' + bm.toFixed(2) + '</td><td class="num">' + tm.toFixed(2) + '</td></tr>';
-      }
-      h += '</tbody></table></div></div>';
-    }
+    } else h += sectionsTable();
     const keep = box.scrollTop;
     box.innerHTML = h;
     box.scrollTop = keep;
@@ -94,8 +84,72 @@
       const f = () => { RV.play.set(false); RV.play.go(RV.idxAtD(R, +tr.dataset.m)); box.querySelectorAll('#sect tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel'); };
       tr.onclick = f; tr.onkeydown = e => { if (e.key === 'Enter') f(); };
     });
+    box.querySelectorAll('#sect .sortb').forEach(b => { b.onclick = () => { sectSort = { k: b.dataset.k, dir: sectSort.k === b.dataset.k ? -sectSort.dir : 1 }; build(); const again = document.querySelector('#sect .sortb[data-k="' + b.dataset.k + '"]'); if (again) again.focus(); }; });
+    if ($('sectExport')) $('sectExport').onclick = exportSections;
     box.querySelectorAll('canvas').forEach(wireChart);
     S.chartsDirty = true;
+  }
+
+  /* ---------- 100 m sections: one object per section, shown as a sortable table and exported as CSV ---------- */
+  function sectionData() {
+    const R = S.R, rows = [];
+    for (let m = 0; m < R.total - 50; m += 100) {
+      const e = Math.min(m + 100, R.total - 8), a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
+      if (a1 <= a0) continue;
+      let lo = 1e9, hi = 0, bm = 0, tm = 0, g0 = 99, g1 = -99;
+      for (let k = a0; k <= a1; k++) { lo = Math.min(lo, R.v[k]); hi = Math.max(hi, R.v[k]); bm = Math.max(bm, R.br[k]); tm = Math.max(tm, Math.abs(R.tp[k])); g0 = Math.min(g0, R.g[k]); g1 = Math.max(g1, R.g[k]); }
+      const t = R.t[a1] - R.t[a0];
+      rows.push({ m: m, t: t, lo: lo, hi: hi, bm: bm, tm: tm, g0: g0, g1: g1, c: S.CM.map(q => {
+        const b0 = RV.idxAtD(q.r, m), b1 = RV.idxAtD(q.r, e);
+        let qlo = 1e9, qbm = 0;
+        for (let k = b0; k <= b1; k++) { qlo = Math.min(qlo, q.r.v[k]); qbm = Math.max(qbm, q.r.br[k]); }
+        return { dt: q.r.t[b1] - q.r.t[b0] - t, dv: qlo - lo, db: qbm - bm };     /* compared run minus the run in focus */
+      }) });
+    }
+    return rows;
+  }
+  function sectionsTable() {
+    sectCols = [{ k: 'm', ti: 'From', l: 1, f: r => r.m, s: r => RV.fmtInt(r.m) + ' m' }, { k: 't', ti: 'Time', f: r => r.t, s: r => r.t.toFixed(2) }]
+      .concat(S.CM.map((q, n) => ({ k: 'c' + n, ti: sw(q.id) + esc(q.id), f: r => r.c[n].dt, s: r => sgn(r.c[n].dt, 2), cls: r => (r.c[n].dt < -0.005 ? 'faster' : r.c[n].dt > 0.005 ? 'slower' : '') })))
+      .concat([{ k: 'lo', ti: 'Min speed', f: r => r.lo, s: r => r.lo.toFixed(0) }, { k: 'hi', ti: 'Max speed', f: r => r.hi, s: r => r.hi.toFixed(0) },
+        { k: 'bm', ti: 'Max brake', f: r => r.bm, s: r => r.bm.toFixed(2) }, { k: 'tm', ti: 'Max |trackPos|', f: r => r.tm, s: r => r.tm.toFixed(2) }]);
+    const col = sectCols.find(c => c.k === sectSort.k) || sectCols[0];
+    if (col.k !== sectSort.k) sectSort = { k: 'm', dir: 1 };
+    sectShown = sectionData().sort((a, b) => (col.f(a) - col.f(b)) * sectSort.dir || a.m - b.m);
+    let h = '<div class="tblbar"><p class="note">Times are for the run in focus; the columns for compared runs show their difference to it. Click a row to move the car there, a column heading to sort by it.</p>' +
+      '<button class="btn sm" id="sectExport" title="Download these rows, in this order, as a CSV file">Export CSV</button></div><div class="card"><div class="tablewrap"><table id="sect"><thead><tr>' +
+      sectCols.map(c => { const on = c.k === sectSort.k; return '<th class="' + (c.l ? 'l' : '') + '" aria-sort="' + (on ? (sectSort.dir > 0 ? 'ascending' : 'descending') : 'none') + '"><button class="sortb' + (on ? ' on' : '') + '" data-k="' + c.k + '" title="Sort by this column">' + c.ti + '<span class="arr">' + (on ? (sectSort.dir > 0 ? '\u2191' : '\u2193') : '\u2191\u2193') + '</span></button></th>'; }).join('') + '</tr></thead><tbody>';
+    for (const r of sectShown) h += '<tr data-m="' + r.m + '" tabindex="0">' + sectCols.map(c => '<td class="' + (c.l ? 'l ' : '') + 'num ' + (c.cls ? c.cls(r) : '') + '">' + c.s(r) + '</td>').join('') + '</tr>';
+    return h + '</tbody></table></div></div>';
+  }
+  function exportSections() {
+    const id = S.sel[0], head = ['section_start_m', 'time_s', 'min_speed_kmh', 'max_speed_kmh', 'max_brake', 'max_abs_trackpos', 'min_gear', 'max_gear'];
+    for (const q of S.CM) head.push(q.id + '_time_diff_s', q.id + '_min_speed_diff_kmh', q.id + '_max_brake_diff');
+    const lines = [head.join(',')];
+    for (const r of sectShown) {
+      const f = [r.m, r.t.toFixed(3), r.lo.toFixed(1), r.hi.toFixed(1), r.bm.toFixed(3), r.tm.toFixed(3), r.g0, r.g1];
+      for (const c of r.c) f.push(c.dt.toFixed(3), c.dv.toFixed(1), c.db.toFixed(3));
+      lines.push(f.join(','));
+    }
+    const a = document.createElement('a'), url = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+    a.href = url; a.download = 'sections_' + String(id).replace(/[^\w.-]+/g, '_') + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  /* 3: the speed of the run in focus, each piece coloured by its speed (0 = red, the run's top speed = green) */
+  function speedLine(x, se, k0, k1, X, Y) {
+    const top = S.vmax || 1;
+    x.lineWidth = se.w; x.lineJoin = 'round'; x.lineCap = 'round';
+    for (let b = 0; b < NC; b++) {
+      let any = false;
+      x.beginPath();
+      for (let k = k0; k < k1; k++) {
+        if (RV.clamp(Math.floor((se.v[k] + se.v[k + 1]) / 2 / top * NC), 0, NC - 1) !== b) continue;
+        x.moveTo(X(se.s[k]), Y(se.v[k])); x.lineTo(X(se.s[k + 1]), Y(se.v[k + 1])); any = true;
+      }
+      if (any) { x.strokeStyle = RV.speedChartCol((b + 0.5) / NC); x.stroke(); }
+    }
+    x.lineCap = 'butt';
   }
 
   /* Sector times of the run in focus against the previous best, and of the compared runs against the run in focus. */
@@ -121,6 +175,15 @@
     return h;
   }
 
+  /* lowest, mean and highest value of a channel over every frame of the run in focus */
+  function statsBar(R, q) {
+    const a = R[q.k], n = R.n;
+    let lo = Infinity, hi = -Infinity, sum = 0;
+    for (let k = 0; k < n; k++) { const v = a[k]; if (v < lo) lo = v; if (v > hi) hi = v; sum += v; }
+    const f = v => q.step ? String(Math.round(v)) : v.toFixed(1);
+    return '<div class="chart-stats"><span>min <b class="num">' + f(lo) + '</b></span><span>mean <b class="num">' + f(sum / n) + '</b></span><span>max <b class="num">' + f(hi) + '</b></span></div>';
+  }
+
   function wireChart(cv) {
     let dn = null, moved = false;
     const R = () => S.R, at = e => { const r = cv.getBoundingClientRect(); return xr[0] + (e.clientX - r.left - PL) / (r.width - PL - PR) * (xr[1] - xr[0]); };
@@ -130,17 +193,26 @@
       if (b - a < 20) return;
       xr = [Math.max(-12, a), Math.min(R().total, b)]; S.chartsDirty = true;
     }, { passive: false });
-    cv.addEventListener('pointerdown', e => { dn = e.clientX; moved = false; cv.setPointerCapture(e.pointerId); });
+    /* drag: select a section of the lap to play on a loop. Shift-drag: pan. Click: move the car there. */
+    let pan = false, d0 = 0;
+    cv.addEventListener('pointerdown', e => { dn = e.clientX; moved = false; pan = e.shiftKey; d0 = at(e); cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => {
       const r = cv.getBoundingClientRect();
       if (dn !== null) {
         const dx = e.clientX - dn;
         if (Math.abs(dx) > 3) moved = true;
-        if (moved) { let sh = -dx / (r.width - PL - PR) * (xr[1] - xr[0]); sh = RV.clamp(sh, -12 - xr[0], R().total - xr[1]); xr = [xr[0] + sh, xr[1] + sh]; dn = e.clientX; }
+        if (moved && pan) { let sh = -dx / (r.width - PL - PR) * (xr[1] - xr[0]); sh = RV.clamp(sh, -12 - xr[0], R().total - xr[1]); xr = [xr[0] + sh, xr[1] + sh]; dn = e.clientX; }
+        else if (moved) { const d1 = RV.clamp(at(e), 0, R().total - 8), a0 = RV.clamp(d0, 0, R().total - 8); S.loopDraft = [Math.min(a0, d1), Math.max(a0, d1)]; }
       }
       S.hoverD = at(e); tip(e); S.chartsDirty = true;
     });
-    cv.addEventListener('pointerup', () => { if (!moved && S.hoverD !== null) { RV.play.set(false); RV.play.go(RV.idxAtD(R(), S.hoverD)); } dn = null; });
+    cv.addEventListener('pointerup', () => {
+      if (moved && !pan && S.loopDraft && S.loopDraft[1] - S.loopDraft[0] >= 5) {
+        const L = S.loopDraft;
+        RV.play.setLoop(L); RV.play.go(RV.idxAtD(R(), L[0])); RV.play.set(true);
+      } else if (!moved && S.hoverD !== null) { RV.play.set(false); RV.play.go(RV.idxAtD(R(), S.hoverD)); }
+      S.loopDraft = null; dn = null; S.chartsDirty = true;
+    });
     cv.addEventListener('pointerleave', () => { S.hoverD = null; $('tip').style.display = 'none'; S.chartsDirty = true; });
     cv.addEventListener('dblclick', () => { xr = [-12, R().total]; S.chartsDirty = true; });
   }
@@ -156,16 +228,34 @@
     T.style.left = Math.min(innerWidth - T.offsetWidth - 8, e.clientX + 14) + 'px'; T.style.top = Math.max(64, e.clientY - T.offsetHeight - 10) + 'px';
   }
 
+  /* A chart changes only when the selection, the zoom, the view or the theme changes, but its cursor moves every
+     frame. So each chart is painted once into a spare canvas; a frame copies that and draws the cursor on top.
+     Charts scrolled out of sight are skipped until they come back. */
   function draw() {
     const R = S.R, i = S.i;
-    if (!R || (!S.chartsDirty && lastCur === i)) return;
-    S.chartsDirty = false; lastCur = i;
-    const r = window.devicePixelRatio || 1, P = RV.pal, sm = RV.simple();
+    if (!R || (!S.chartsDirty && lastCur === i && !scrolled)) return;
+    const dirty = S.chartsDirty;
+    S.chartsDirty = false; lastCur = i; scrolled = false;
+    const r = window.devicePixelRatio || 1, P = RV.pal, sm = RV.simple(), port = $('pt').getBoundingClientRect();
     document.querySelectorAll('#pt canvas').forEach(cv => {
       const W = cv.clientWidth, H = cv.clientHeight;
       if (!W) return;
-      if (cv.width !== Math.round(W * r)) { cv.width = Math.round(W * r); cv.height = Math.round(H * r); }
-      const q = CH.find(z => z.k === cv.dataset.k), x = cv.getContext('2d');
+      if (dirty) cv._stale = true;
+      const rc = cv.getBoundingClientRect();
+      if (rc.bottom < port.top - 40 || rc.top > port.bottom + 40) return;
+      const pxW = Math.round(W * r), pxH = Math.round(H * r);
+      if (cv.width !== pxW || cv.height !== pxH) { cv.width = pxW; cv.height = pxH; cv._stale = true; }
+      if (!cv._buf) { cv._buf = document.createElement('canvas'); cv._stale = true; }
+      if (cv._stale) { cv._buf.width = pxW; cv._buf.height = pxH; paintChart(cv, cv._buf.getContext('2d'), W, H, r, P, sm); cv._stale = false; }
+      const x = cv.getContext('2d'), T = 8, B = 22, pw = W - PL - PR, ph = H - T - B;
+      x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, pxW, pxH); x.drawImage(cv._buf, 0, 0);
+      const cx = PL + (R.d[i] - xr[0]) / (xr[1] - xr[0]) * pw;
+      if (cx >= PL && cx <= PL + pw) { x.setTransform(r, 0, 0, r, 0, 0); x.strokeStyle = P.ink; x.lineWidth = 1.5; x.beginPath(); x.moveTo(cx, T); x.lineTo(cx, T + ph); x.stroke(); }
+    });
+  }
+  function paintChart(cv, x, W, H, r, P, sm) {
+    {
+      const R = S.R, q = CH.find(z => z.k === cv.dataset.k);
       x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, W, H);
       const T = 8, B = 22, pw = W - PL - PR, ph = H - T - B, X = d => PL + (d - xr[0]) / (xr[1] - xr[0]) * pw;
       const series = [];
@@ -188,34 +278,52 @@
       for (let d = Math.ceil(xr[0] / stp) * stp; d <= xr[1]; d += stp) { const xx = X(d); x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke(); x.fillText(RV.fmtInt(d + 0) + ' m', xx, T + ph + 6); }
       if (lo < 0 && hi > 0) { x.strokeStyle = P.mute; x.beginPath(); x.moveTo(PL, Y(0)); x.lineTo(W - PR, Y(0)); x.stroke(); }
       x.save(); x.beginPath(); x.rect(PL, T, pw, ph); x.clip();
+      const lp = S.loopDraft || S.loop;                  /* the section played on a loop, or being selected */
+      if (lp) {
+        const xa = X(lp[0]), xb = X(lp[1]);
+        x.globalAlpha = S.loopDraft ? 0.12 : 0.18; x.fillStyle = P.accent; x.fillRect(xa, T, xb - xa, ph); x.globalAlpha = 1;
+        x.strokeStyle = P.accent; x.lineWidth = 1.5; x.beginPath(); x.moveTo(xa, T); x.lineTo(xa, T + ph); x.moveTo(xb, T); x.lineTo(xb, T + ph); x.stroke();
+      }
       if (!sm && R.sec) {                                /* sector boundaries */
         x.strokeStyle = P.best; x.fillStyle = P.best; x.lineWidth = 1; x.setLineDash([5, 4]); x.textAlign = 'left'; x.textBaseline = 'top'; x.font = '600 11px ' + P.font;
         S.ds.trk.sectors.cuts.forEach((d, k) => { const xx = X(d); x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke(); x.fillText('S' + (k + 2), xx + 4, T + 2); });
         x.setLineDash([]);
       }
-      if (q.al && !sm) {                                 /* the planned speed of the run in focus */
-        x.strokeStyle = P.mute; x.lineWidth = 1; x.beginPath();
+      if (q.k === 'v' && hasPlan(R)) {                   /* the planned speed of the run in focus, dashed */
+        x.strokeStyle = P['ink-2']; x.lineWidth = 1.2; x.setLineDash([6, 4]); x.beginPath();
         const k0 = RV.bsearch(R.d, xr[0]), k1 = Math.min(R.n - 1, RV.bsearch(R.d, xr[1]) + 1);
         let pen = false;
         for (let k = k0; k <= k1; k++) { if (!R.al[k]) { pen = false; continue; } const yy = Y(Math.min(R.al[k], hi * 1.5)); if (pen) x.lineTo(X(R.d[k]), yy); else x.moveTo(X(R.d[k]), yy); pen = true; }
         x.stroke();
       }
+      x.setLineDash([]);
       for (let n = series.length - 1; n >= 0; n--) {
         const se = series[n], k0 = RV.bsearch(se.s, xr[0]), k1 = Math.min(se.s.length - 1, RV.bsearch(se.s, xr[1]) + 1);
+        if (q.k === 'v' && n === 0) { speedLine(x, se, k0, k1, X, Y); continue; }
         x.strokeStyle = se.col; x.lineWidth = se.w; x.lineJoin = 'round'; x.beginPath();
         for (let k = k0; k <= k1; k++) { const xx = X(se.s[k]), yy = Y(se.v[k]); if (k === k0) x.moveTo(xx, yy); else { if (q.step) x.lineTo(xx, Y(se.v[k - 1])); x.lineTo(xx, yy); } }
         x.stroke();
       }
-      const cx = X(R.d[i]);
-      x.strokeStyle = P.ink; x.lineWidth = 1.5; x.beginPath(); x.moveTo(cx, T); x.lineTo(cx, T + ph); x.stroke();
+      if (q.gap && gapS !== null) {                      /* where each compared run's gap is largest */
+        for (const m of S.CM) {
+          let pk = 0;
+          for (let k = 1; k < gapS.length; k++) if (Math.abs(m.gap[k]) > Math.abs(m.gap[pk])) pk = k;
+          const px = X(gapS[pk]), py = Y(m.gap[pk]);
+          x.beginPath(); x.arc(px, py, 5, 0, 7); x.fillStyle = RV.col(m.id); x.fill(); x.strokeStyle = P.surface; x.lineWidth = 1.5; x.stroke();
+          x.font = '600 11px ' + P.fontNum; x.fillStyle = P.ink; x.textAlign = 'center';
+          if (py - 9 - 14 >= T) { x.textBaseline = 'bottom'; x.fillText(RV.sgn(m.gap[pk], 2) + ' s', px, py - 9); }
+          else { x.textBaseline = 'top'; x.fillText(RV.sgn(m.gap[pk], 2) + ' s', px, py + 9); }
+        }
+      }
       if (S.hoverD !== null) {
         const hx = X(S.hoverD);
         x.strokeStyle = P['ink-2']; x.lineWidth = 1; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(hx, T); x.lineTo(hx, T + ph); x.stroke(); x.setLineDash([]);
         for (const se of series) { const k = RV.bsearch(se.s, S.hoverD); x.beginPath(); x.arc(X(se.s[k]), Y(se.v[k]), 4, 0, 7); x.fillStyle = se.col; x.fill(); x.strokeStyle = P.surface; x.lineWidth = 2; x.stroke(); }
       }
       x.restore();
-    });
+    }
   }
+  $('pt').addEventListener('scroll', () => { scrolled = true; }, { passive: true });
 
   RV.tele = { build: build, buildGap: buildGap, draw: draw };
 })();

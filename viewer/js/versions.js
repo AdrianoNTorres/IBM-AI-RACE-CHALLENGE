@@ -12,7 +12,9 @@
   /* chart classes: [palette key, filled dot?, meaning] */
   const CLS = {
     kb: ['best', true, 'Kept, new best lap'], ks: ['kept', true, 'Kept, not a new best lap'],
+    ke: ['warn', true, 'Kept, enabling change'],
     rf: ['best', false, 'Rejected, although its single lap was faster'], rs: ['mute', false, 'Rejected, slower or equal'],
+    re: ['mute', false, 'Rejected, enabling change'],
   };
 
   /* each version against the best kept lap before it */
@@ -21,7 +23,9 @@
     let best = null, bestId = null;
     for (const v of LV) {
       v.dbest = best == null ? null : +(v.lap - best).toFixed(2);
-      v.cls = !v.kept ? (v.dbest != null && v.dbest < 0 ? 'rf' : 'rs') : (v.dbest == null || v.dbest < 0 ? 'kb' : 'ks');
+      v.cls = !v.kept
+        ? (v.enableChange ? 're' : v.dbest != null && v.dbest < 0 ? 'rf' : 'rs')
+        : (v.enableChange ? 'ke' : v.dbest == null || v.dbest < 0 ? 'kb' : 'ks');
       v.bestBefore = best; v.bestBeforeId = bestId;
       if (v.kept && (best == null || v.lap < best)) { best = v.lap; bestId = v.id; }
       v.bestAfter = best;
@@ -42,6 +46,8 @@
   }
   function badge(v) {
     if (v.kept == null) return '<span class="badge">Recording</span>';
+    if (v.kept && v.enableChange) return '<span class="badge warn-badge"><i>&#10003;</i>Enabling change</span>';
+    if (!v.kept && v.enableChange) return '<span class="badge rej dim-badge"><i>&#10005;</i>Enabling change</span>';
     return v.kept ? '<span class="badge kept"><i>&#10003;</i>Kept</span>' : '<span class="badge rej"><i>&#10005;</i>Rejected</span>';
   }
   function deltaTxt(d) { return RV.simple() ? (d === 0 ? 'the same' : Math.abs(d).toFixed(2) + ' s ' + (d < 0 ? 'faster' : 'slower')) : sgn(d, 2) + ' s'; }
@@ -58,11 +64,25 @@
     const kept = LV.filter(v => v.kept), best = kept.slice().sort((a, b) => a.lap - b.lap)[0] || LV.slice().sort((a, b) => a.lap - b.lap)[0];
     const first = LV[0], lastV = V[V.length - 1], nk = V.filter(v => v.kept).length;
     const t = (cap, big, sub, cls) => '<div class="tile ' + (cls || '') + '"><div class="cap">' + cap + '</div><div class="big num">' + big + '</div><div class="sub">' + sub + '</div></div>';
-    return '<div class="tiles">' +
+    /* best theoretical lap: the best S1, S2 and S3 of the versions whose recordings have been opened, kept or not */
+    const sv = V.filter(v => v.sec && v.sec.every(x => x != null));
+    let theo = '';
+    if (!RV.simple() && sv.length >= 2) {
+      const who = [0, 1, 2].map(k => sv.reduce((a, b) => (b.sec[k] < a.sec[k] ? b : a)));
+      theo = t('Best theoretical', fmtLap(who.reduce((s, b, k) => s + b.sec[k], 0)),
+        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + ' \u00b7 from the ' + sv.length + ' versions opened so far');
+    }
+    return '<div class="tiles' + (theo ? ' five' : '') + '">' +
       t('Best lap', fmtLap(best.lap), esc(best.id) + ', the fastest kept version', 'hero') +
       t('Gained since ' + esc(first.id), (first.lap - best.lap).toFixed(2) + ' s', 'from ' + fmtLap(first.lap) + ' down to ' + fmtLap(best.lap)) +
       t('Versions', String(V.length), nk + ' kept, ' + (V.length - nk) + ' rejected') +
-      t('Latest', esc(lastV.id), (lastV.lap ? fmtLap(lastV.lap) + ', ' : '') + (lastV.kept ? 'kept' : 'rejected')) + '</div>';
+      t('Latest', esc(lastV.id), (lastV.lap ? fmtLap(lastV.lap) + ', ' : '') + (lastV.kept ? 'kept' : 'rejected')) + theo + '</div>';
+  }
+
+  /* Detailed view: the sector times of every version whose recording has been opened, kept or not. */
+  function sectorGrid() {
+    if (RV.simple() || RV.sectors.opened().length < 2) return '';
+    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">Only versions whose recording has been opened are listed. ' + RV.sectors.NOTE + '</span></div>' + RV.sectors.table(false) + '</div>';
   }
 
   function render() {
@@ -76,7 +96,7 @@
       top: 'The ten highest top speeds.',
     };
     const lists = LISTS.concat(S.ds.extras.length ? [['extra', 'Other recordings (' + S.ds.extras.length + ')']] : []);
-    let h = tiles() +
+    let h = tiles() + sectorGrid() +
       '<div class="card chartcard"><div class="cardhead"><h3>' + (sm ? 'Lap time, version by version' : 'Lap time by version') + '</h3>' +
       '<div class="key">' + Object.keys(CLS).map(k => '<span><i class="' + (CLS[k][1] ? 'dot' : 'ring') + ' c-' + CLS[k][0] + '"></i>' + CLS[k][2] + '</span>').join('') + '<span><i class="ln"></i>Best lap so far</span></div></div>' +
       '<canvas id="prog" tabindex="0" aria-label="Lap time of every version; lower is faster"></canvas>' +
@@ -89,8 +109,8 @@
         : 'Click selects one run. Drag or Shift-click selects a range, Ctrl-click adds or removes one (up to ' + RV.MAX_RUNS + ' runs). The run clicked first is in focus.') + '</p>';
     h += '<div class="tablewrap"><table id="vt"><thead><tr>' + (rank ? '<th>#</th>' : '') + '<th class="l">' + (extra ? 'Recording' : 'Version') + '</th>' +
       (extra ? '<th>Size</th>' : '<th class="l">' + (sm ? 'What it changed' : 'Change') + '</th>') + '<th>Lap time</th>' +
-      (extra ? '' : '<th>' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
-      (sm || extra ? '' : '<th class="xcol">Top</th><th class="xcol">Slowest corner</th>') + (extra ? '' : '<th class="l">Result</th>') + '<th class="l xcol">Recording</th></tr></thead><tbody>';
+      (extra ? '' : '<th title="Lap time difference vs the best lap at that point in development">' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
+      (sm || extra ? '' : '<th class="xcol" title="Top speed reached during the lap (km/h)">Top</th><th class="xcol">Slowest corner</th>') + (extra ? '' : '<th class="l">Result</th>') + '<th class="l xcol">Recording</th></tr></thead><tbody>';
     listRows().forEach((v, k) => {
       const lapTxt = v.lap != null ? fmtLap(v.lap) : (v.sum && !v.sum.complete ? 'stopped at ' + RV.fmtInt(v.sum.stoppedAt) + ' m' : v.extra ? (v.size < 1000 ? 'empty' : 'not opened yet') : 'no lap');
       h += '<tr data-id="' + esc(v.id) + '" tabindex="0" class="' + (v.file && !v.bad ? '' : 'nofile') + '">' + (rank ? '<td class="num">' + (k + 1) + '</td>' : '') +
@@ -106,6 +126,7 @@
     if (focusRow) { const tr = box.querySelector('#vt tbody tr[data-id="' + CSS.escape(focusRow) + '"]'); if (tr) tr.focus({ preventScroll: true }); }
     box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; render(); }; });
     if ($('ko')) $('ko').onchange = e => { S.keptOnly = e.target.checked; render(); };
+    RV.sectors.wire(box);
     paintRows(); setupProg(); renderDetail();
   }
   function paintRows() {
@@ -192,7 +213,7 @@
     if (v.damage) add('Damage', esc(v.damage));
     if (!sm && sum) {
       add('Closest to the edge', sum.maxtp.toFixed(3) + ' at ' + RV.fmtInt(sum.maxtp_at) + ' m');
-      add('Braking', sum.brake + ' % of the lap'); add('Full throttle', sum.full + ' % of the lap');
+      add('Braking', sum.brake + ' % of the lap'); add('% of the lap at full throttle', sum.full + ' %');
     }
     h += '<dl class="kv">' + kv.join('') + '</dl>';
     if (!sm) h += RV.sectorsBlock(v.id);
