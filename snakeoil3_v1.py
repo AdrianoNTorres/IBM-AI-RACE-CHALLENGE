@@ -616,10 +616,6 @@ def drive_example(c):
     dab_keep=.7         # ... (1.0 and .5 gain half as much) ...
     dab_steer=.15       # ... only while the smoothed |steer| is below this (a dab in a bend still restarts the throttle from its floor; with no steer and no speed gate and dab_keep 1: 1 of 30 off at the flick) ...
     dab_v=230           # km/h: ... and only below this speed (start kink 219-229 km/h; 240 measures the same, 250 reaches the flick approach, where the brake touches at 245-275 km/h set the arc entry speed: shifted max 0.98).
-    soft_n=2            # v1.03: soft dab: for the first this many steps of a brake application that starts in a held bend from at least soft_thr of stored throttle, the pedal is scaled by soft_brake (0 = off) ...
-    soft_brake=.1       # ... share of the pedal sent on those steps (.5 over 4 steps: +0.039 s over 70 runs) ...
-    soft_thr=.5         # ... stored throttle at the first step of the application from which it counts as coming from flat-out ...
-    soft_steer=.25      # ... only while the smoothed |steer| is below this (and below dab_v).
     thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
@@ -956,12 +952,7 @@ def drive_example(c):
         c.brk_n= getattr(c, 'brk_n', 0) + 1   # steps of this brake application
         dab= c.brk_n <= dab_n and c.steer_f < dab_steer and S['speedX'] < dab_v
         touch_thr= R['accel']*(dab_keep if dab else touch_keep*(R['brake'] < touch_brake))
-        # Soft Dab (v1.03): the start kink's second false plan dip (183-190 m) brakes
-        # for four steps at pedal 0.44-0.57 right after a bend detection, from full
-        # throttle with the wheel near straight. Such an application starts soft.
-        if c.brk_n == 1: c.soft= R['accel'] >= soft_thr and side != 0
         R['accel']= 0
-        if c.soft and c.brk_n <= soft_n and c.steer_f < soft_steer and S['speedX'] < dab_v: R['brake']*= soft_brake
     elif ahead >= 0 and S['speedX'] > allowed_speed:
         c.brk_n= 0
         lift= True
