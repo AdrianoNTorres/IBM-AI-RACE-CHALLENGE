@@ -89,7 +89,7 @@
     if (!S.ds) return;
     const box = $('vmain'), sm = RV.simple(), mode = S.listMode, rank = mode !== 'all' && mode !== 'extra', extra = mode === 'extra';
     const notes = {
-      all: '', extra: 'CSV files in the folder’s runs/ that no changelog entry names, newest first. A lap time appears once a recording has been opened.',
+      all: '', extra: 'CSV files in the folder\u2019s runs/ that no changelog entry names, newest first. A lap time appears once a recording has been opened.',
       fast: sm ? 'The ten quickest laps.' : 'Ten lowest single-lap times.',
       gain: sm ? 'The ten changes that cut the most time off the lap, compared with the last kept version before them.' : 'Largest lap-time reductions against the previous kept version.',
       loss: sm ? 'The ten changes that added the most time, compared with the last kept version before them.' : 'Largest lap-time increases against the previous kept version.',

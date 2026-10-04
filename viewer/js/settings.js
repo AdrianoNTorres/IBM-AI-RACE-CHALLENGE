@@ -87,7 +87,7 @@
       '<p>One entry per version: a heading, then a two-column table whose rows are <code>| **Field** | text |</code>.</p>' +
       '<pre>## v0.7 — Steer toward the open road\n\n| Field | Value |\n|---|---|\n| **What changed** | … |\n| **Lap time** | 2:19.31 |\n| **Top speed** | 148 km/h |\n| **Min speed** | 41 km/h |\n| **Damage** | 0 |\n| **Observed** | … Telemetry: runs/run_20261001_154006.csv |\n| **Decision** | ✅ Kept — faster, no damage |\n| **Learned** | … |</pre>' +
       '<table class="spec"><tr><th>Part</th><th>Rule</th><th>Used for</th></tr>' +
-      '<tr><td>Heading</td><td><code>## vX.Y — Title</code> (a dash or a hyphen)</td><td>the version’s name and its title in the detailed view</td></tr>' +
+      '<tr><td>Heading</td><td><code>## vX.Y \u2014 Title</code> (a dash or a hyphen)</td><td>the version\u2019s name and its title in the detailed view</td></tr>' +
       '<tr><td>Lap time</td><td>starts with <code>m:ss.cc</code> or <code>m:ss:cc</code></td><td>the lap time, the chart, the rankings</td></tr>' +
       '<tr><td>Top speed, Min speed</td><td>start with <code>NNN km/h</code></td><td>the Top and Slowest corner columns</td></tr>' +
       '<tr><td>Damage</td><td>any text</td><td>shown in the details</td></tr>' +
@@ -105,15 +105,15 @@
       '<tr><td><code>gear</code>, <code>accel</code>, <code>brake</code>, <code>steer</code></td><td>required</td><td>gear; throttle and brake 0 to 1; steering −1 to +1 (+1 = full left)</td></tr>' +
       '<tr><td><code>trackPos</code></td><td>required</td><td>sideways position: 0 centre, +1 left edge, −1 right edge</td></tr>' +
       '<tr><td><code>angle</code></td><td>required</td><td>angle between the car and the track direction, radians</td></tr>' +
-      '<tr><td><code>damage</code></td><td>required</td><td>damage points; the last row’s value is shown</td></tr>' +
-      '<tr><td><code>allowed</code></td><td>optional</td><td>the speed the driver’s plan allows, km/h; without it the grey line on the speed chart is missing</td></tr>' +
+      '<tr><td><code>damage</code></td><td>required</td><td>damage points; the last row\u2019s value is shown</td></tr>' +
+      '<tr><td><code>allowed</code></td><td>optional</td><td>the speed the driver\u2019s plan allows, km/h; without it the grey line on the speed chart is missing</td></tr>' +
       '<tr><td><code>track0</code> … <code>track18</code></td><td>optional</td><td>the 19 distance sensors, metres (−1 off track); without them the run replays without beams</td></tr>' +
       '<tr><td><code>focA</code>, <code>foc0</code> … <code>foc4</code></td><td>optional</td><td>focus rays: centre angle and five distances; without them no focus rays</td></tr></table>' +
       '<p><b>Lap time of a recording:</b> the <code>lastLapTime</code> of the first row after the line if there is one; otherwise the last clock reading plus the remaining distance at the last speed. <b>Slowest corner:</b> the lowest speed more than 100 m from the start line and after the first 8 seconds. Other columns are ignored.</p>' +
       '<p>A version without a CSV is listed but cannot be replayed. A recording that stops early is shown as an incomplete lap; an empty one is reported as such.</p>'],
     optional: ['Optional files',
       '<h4>docs/CHANGELOG-simple.md</h4><p>Same format as <code>docs/CHANGELOG.md</code>, same version names. Its title and its What changed, Why, Decision and Learned fields are the texts of the <b>basic view</b>. Without this file the basic view cannot be selected and the page uses the detailed view.</p>' +
-      '<h4>track.xml</h4><p>The map is computed from a TORCS track file. <b>Supplying it is your job:</b> to see your own track, put the track’s TORCS file (for example <code>tracks/road/&lt;name&gt;/&lt;name&gt;.xml</code> from a TORCS install) at the root of the repository or folder, named <code>track.xml</code>.</p>' +
+      '<h4>track.xml</h4><p>The map is computed from a TORCS track file. <b>Supplying it is your job:</b> to see your own track, put the track\u2019s TORCS file (for example <code>tracks/road/&lt;name&gt;/&lt;name&gt;.xml</code> from a TORCS install) at the root of the repository or folder, named <code>track.xml</code>.</p>' +
       '<p>Without it the page uses the Corkscrew track bundled with it. If a run does not fit the track in use (its longest <code>distFromStart</code> differs from the track length by more than ' + RV.data.FIT_TOL + ' m), the Track tab says so instead of drawing the run on a wrong map; Versions and Telemetry still work.</p>' +
       '<h4>Other CSVs in runs/</h4><p>In a local folder, CSVs that no changelog entry names (manual laps) are listed under “Other recordings” on the Versions tab. From GitHub only the recordings named in the changelog are read.</p>'],
   };

@@ -459,7 +459,7 @@
     else if (!S.ds.trk) h = '<h3>No track map</h3><p>' + esc(S.ds.trkNote) + '</p><p class="note">The Versions and Telemetry tabs work without it.</p>';
     else if (!R) h = '';                                  /* the canvas says what to do (draw) */
     else if (!R.x) h = '<h3>This run does not fit the track map</h3><p>The run covers ' + RV.fmtInt(R.maxS) + ' m of track, but the map in use (' + esc(RV.track.title(S.ds.trk)) +
-      (S.ds.trkOwn ? ', from the source’s track.xml' : ', bundled with this page') + ') is ' + S.ds.trk.total.toFixed(1) + ' m long.</p><p>' +
+      (S.ds.trkOwn ? ', from the source\u2019s track.xml' : ', bundled with this page') + ') is ' + S.ds.trk.total.toFixed(1) + ' m long.</p><p>' +
       (S.ds.trkOwn ? 'The track.xml in the source is not the track these runs were driven on.' : 'The source needs its own <b>track.xml</b>: the ' + RV.TORCS + ' track file of the track the runs were driven on, at the root of the repository or folder.') +
       '</p><p class="note">The run is not drawn on a wrong map. The Versions and Telemetry tabs still work.</p>';
     m.innerHTML = h ? '<div class="card">' + h + '</div>' : '';
