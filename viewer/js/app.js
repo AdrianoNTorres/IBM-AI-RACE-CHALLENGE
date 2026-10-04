@@ -378,6 +378,17 @@
       if (S.ds && H.tab && H.tab !== 'ps') showTab(H.tab);
       /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
       if (S.ds && !RV.prefs.tutorialDone && !location.hash.slice(1)) RV.tutorial.start(true);
+      /* opened as a local file and nothing loaded: offer the folder picker right on the status page */
+      if (!S.ds && location.protocol === 'file:') {
+        statusPage(
+          '<h2>Open your project folder</h2>' +
+          '<p class="lead">The page was opened from disk. Fetching from GitHub is not available here, but you can open your local project folder directly.</p>' +
+          '<div class="acts"><button class="btn prim" id="eFolder">Open folder \u2026</button></div>' +
+          '<p class="note">Pick the folder that contains <code>docs/CHANGELOG.md</code> and your <code>runs/</code> CSV files.</p>'
+        );
+        showTab('pe');
+        $('eFolder').onclick = () => RV.settings.useSource({ kind: 'local', _pick: true });
+      }
     });
     requestAnimationFrame(tick);
   };

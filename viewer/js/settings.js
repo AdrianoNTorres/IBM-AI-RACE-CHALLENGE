@@ -248,5 +248,5 @@
     if ($('sFolder')) $('sFolder').onclick = () => apply(pickFolder);
   }
 
-  RV.settings = { render: render, useSource(src) { srcKind = src.kind; return apply(async () => src); } };
+  RV.settings = { render: render, useSource(src) { srcKind = src.kind; return src._pick ? apply(pickFolder) : apply(async () => src); } };
 })();
