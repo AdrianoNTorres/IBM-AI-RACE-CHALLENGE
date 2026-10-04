@@ -1,14 +1,14 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 1
+**Last updated:** after Phase 2
 
 ---
 
 ## What has been done
 
-### Phase 1 (COMPLETE)
-All trivial UI and label fixes. Commit tag: `phase-1`.
+### Phase 1 (COMPLETE) — tag: `phase-1`
+All trivial UI and label fixes.
 
 Changes made:
 1. **Telemetry label** (`telemetry.js`, `versions.js`): "Part of the lap at full throttle" and "Full throttle" both renamed to "% of the lap at full throttle" in both Basic and Detailed views.
@@ -18,6 +18,20 @@ Changes made:
    - Kept enabling changes: **yellow/warning badge** ("Enabling change"), yellow dot on the chart.
    - Rejected enabling changes: **grey badge** ("Enabling change"), grey dot on the chart (same as other rejected).
    - New `ke` and `re` chart classes added to `CLS`. `c-warn` CSS class added to the key legend. `P['warn']` added to palette (reads `--warn-ink`).
+
+### Phase 2 (COMPLETE) — tag: `phase-2`
+Shared red/green color-scale utility added to `core.js`:
+
+- `RV.colorScale(value, min, max, direction)` → CSS rgb string. direction=1: high=green; direction=-1: low=green.
+- `RV.deltaColor(delta, maxDelta)` → diverging white-centered scale (white at 0, green faster, red slower). Used by Phase 6 lap delta bar.
+- `RV.gearColor(gear)` → sequential palette for gears -1 through 6.
+
+Applied in `telemetry.js`:
+- Speed chart line: now uses `RV.colorScale` (red→green by speed).
+- Throttle chart: colored line using `RV.colorScale` (green=full throttle, red=none).
+- Brake chart: colored line (green=no brake, red=full brake).
+- Steering and Track position: colored by `|value|` (green=near 0, red=near ±1).
+- Gear chart: filled area per gear, each gear has its own color via `RV.gearColor`. Gear range extended to include -1 (reverse).
 
 ---
 
@@ -43,15 +57,6 @@ Global namespace is `globalThis.RV`. All modules attach to it.
 ---
 
 ## Remaining phases (ordered, easiest first)
-
-### Phase 2: Shared red/green color-scale system
-Build one utility: `RV.colorScale(value, min, max, direction)` → CSS color string.
-- Green = better (faster, more throttle), red = worse (slower, more brake).
-- White-centered (diverging) variant for the lap delta bar in Phase 6.
-- Later phases (deltas, line accuracy, sector indicators) all reuse this.
-- In `telemetry.js` speed chart: currently uses `RV.speedChartCol`; replace with this utility for the red-to-green format rule.
-- In `versions.js` chart: lap time coloring should use this utility.
-- Export as `RV.deltaColor(delta, maxDelta)` → CSS color string.
 
 ### Phase 3: Throttle/brake vertical bars in the HUD
 Add two small vertical bars between the steering wheel and the pedals history graph:

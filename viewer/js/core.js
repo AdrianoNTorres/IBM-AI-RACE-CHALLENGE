@@ -106,6 +106,53 @@
   const tokenRamp = (names, f) => 'rgb(' + ramp(names.map(n => hexRGB(RV.pal[n])))(f).join(',') + ')';
   RV.speedChartCol = f => tokenRamp(['speed-slow', 'speed-mid', 'speed-fast'], f);
   RV.brakeCol = f => tokenRamp(['brake-none', 'brake-full'], f);
+
+  /* ---------- shared red/green color-scale utility ----------
+     RV.colorScale(value, min, max, direction)
+       direction  1 = high is green (throttle, speed)
+                 -1 = low is green (brake, lap delta where negative = faster)
+     Returns a CSS rgb() string.
+
+     RV.deltaColor(delta, maxDelta)
+       delta > 0 = slower (red), delta < 0 = faster (green), 0 = white.
+       The diverging white-centred scale is used for the lap delta bar (Phase 6).
+       maxDelta: the delta at which the colour reaches full saturation (default 5 s).
+
+     RV.gearColor(gear)
+       Returns a CSS rgb() colour for gears -1 through 6.
+  */
+  const GREEN_RGB = [14, 159, 79];    /* --in-throttle light */
+  const RED_RGB   = [217, 45, 32];    /* --in-brake light */
+  const WHITE_RGB = [255, 255, 255];
+  function lerpRGB(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+  RV.colorScale = function (value, min, max, direction) {
+    const f = RV.clamp((value - min) / (max - min || 1), 0, 1);
+    const t = direction >= 0 ? f : 1 - f;             /* t=1 → green, t=0 → red */
+    const rgb = lerpRGB(RED_RGB, GREEN_RGB, t);
+    return 'rgb(' + rgb.join(',') + ')';
+  };
+  RV.deltaColor = function (delta, maxDelta) {
+    maxDelta = maxDelta || 5;
+    const t = RV.clamp(Math.abs(delta) / maxDelta, 0, 1);
+    const base = delta < 0 ? GREEN_RGB : delta > 0 ? RED_RGB : WHITE_RGB;
+    const rgb = lerpRGB(WHITE_RGB, base, t);
+    return 'rgb(' + rgb.join(',') + ')';
+  };
+  /* Sequential palette for gears: -1 (reverse) through 6 */
+  const GEAR_COLORS = [
+    [140, 100, 200],   /* -1: reverse — purple */
+    [100, 120, 200],   /* 0:  neutral — blue-grey */
+    [44,  150, 220],   /* 1 */
+    [50,  190, 170],   /* 2 */
+    [80,  190, 80],    /* 3 */
+    [200, 185, 50],    /* 4 */
+    [220, 130, 40],    /* 5 */
+    [210, 60,  50],    /* 6 */
+  ];
+  RV.gearColor = function (gear) {
+    const k = RV.clamp(gear + 1, 0, GEAR_COLORS.length - 1);
+    return 'rgb(' + GEAR_COLORS[k].join(',') + ')';
+  };
   /* the name TORCS, with its explanation on hover */
   RV.TORCS = '<abbr title="The Open Racing Car Simulator \u2014 the physics engine used to train the driver">TORCS</abbr>';
   const css = stops => 'linear-gradient(90deg,' + stops.map(s => 'rgb(' + s.join(',') + ')').join(',') + ')';

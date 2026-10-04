@@ -147,7 +147,25 @@
         if (RV.clamp(Math.floor((se.v[k] + se.v[k + 1]) / 2 / top * NC), 0, NC - 1) !== b) continue;
         x.moveTo(X(se.s[k]), Y(se.v[k])); x.lineTo(X(se.s[k + 1]), Y(se.v[k + 1])); any = true;
       }
-      if (any) { x.strokeStyle = RV.speedChartCol((b + 0.5) / NC); x.stroke(); }
+      if (any) { x.strokeStyle = RV.colorScale((b + 0.5) / NC, 0, 1, 1); x.stroke(); }
+    }
+    x.lineCap = 'butt';
+  }
+
+  /* coloured step line for throttle, brake, steering, trackPos using the shared color scale */
+  function coloredLine(x, se, k0, k1, X, Y, scaleDir, scaleMin, scaleMax) {
+    const NC2 = 16;
+    x.lineWidth = se.w; x.lineJoin = 'round'; x.lineCap = 'round';
+    for (let b = 0; b < NC2; b++) {
+      let any = false;
+      x.beginPath();
+      for (let k = k0; k < k1; k++) {
+        const mid = (se.v[k] + se.v[k + 1]) / 2;
+        const bucket = RV.clamp(Math.floor((mid - scaleMin) / (scaleMax - scaleMin || 1) * NC2), 0, NC2 - 1);
+        if (bucket !== b) continue;
+        x.moveTo(X(se.s[k]), Y(se.v[k])); x.lineTo(X(se.s[k + 1]), Y(se.v[k + 1])); any = true;
+      }
+      if (any) { x.strokeStyle = RV.colorScale(scaleMin + (b + 0.5) / NC2 * (scaleMax - scaleMin), scaleMin, scaleMax, scaleDir); x.stroke(); }
     }
     x.lineCap = 'butt';
   }
@@ -266,7 +284,7 @@
       if (q.fixed) { lo = q.fixed[0]; hi = q.fixed[1]; }
       else if (q.gap) { const m = Math.max(Math.abs(lo), Math.abs(hi), 0.05) * 1.1; lo = -m; hi = m; }
       else if (q.k === 'th' || q.k === 'br') { lo = 0; hi = 1; }
-      else if (q.k === 'g') { lo = 0; hi = 6.4; }
+      else if (q.k === 'g') { lo = -0.4; hi = 6.4; }
       else if (q.k === 'st') { const m = Math.max(Math.abs(lo), Math.abs(hi), 0.1) * 1.08; lo = -m; hi = m; }
       else { lo = 0; hi = Math.ceil(hi * 1.04 / 50) * 50; }
       const Y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
@@ -300,6 +318,42 @@
       for (let n = series.length - 1; n >= 0; n--) {
         const se = series[n], k0 = RV.bsearch(se.s, xr[0]), k1 = Math.min(se.s.length - 1, RV.bsearch(se.s, xr[1]) + 1);
         if (q.k === 'v' && n === 0) { speedLine(x, se, k0, k1, X, Y); continue; }
+        /* gear chart: filled area per gear value, colored with the shared gear palette */
+        if (q.k === 'g' && n === 0) {
+          const y0 = Y(0);
+          let curG = se.v[k0], segStart = X(se.s[k0]);
+          for (let k = k0 + 1; k <= k1; k++) {
+            const g = se.v[k];
+            if (g !== curG || k === k1) {
+              const segEnd = X(se.s[k]);
+              x.fillStyle = RV.gearColor(curG);
+              x.globalAlpha = 0.6;
+              x.fillRect(segStart, Y(curG), segEnd - segStart, y0 - Y(curG));
+              x.globalAlpha = 1;
+              curG = g; segStart = segEnd;
+            }
+          }
+          continue;
+        }
+        /* throttle (green=high), brake (green=low), steering/trackPos (green=near 0, red=near ±1) — only for the run in focus */
+        if (n === 0 && (q.k === 'th' || q.k === 'br' || q.k === 'st' || q.k === 'tp')) {
+          if (q.k === 'th') { coloredLine(x, se, k0, k1, X, Y, 1, 0, 1); continue; }
+          if (q.k === 'br') { coloredLine(x, se, k0, k1, X, Y, -1, 0, 1); continue; }
+          /* steering and trackPos: abs value drives bucket; original Y used for drawing */
+          const NC3 = 16;
+          x.lineWidth = se.w; x.lineJoin = 'round'; x.lineCap = 'round';
+          for (let b = 0; b < NC3; b++) {
+            let any = false; x.beginPath();
+            for (let k = k0; k < k1; k++) {
+              const av = (Math.abs(se.v[k]) + Math.abs(se.v[k + 1])) / 2;
+              if (RV.clamp(Math.floor(av * NC3), 0, NC3 - 1) !== b) continue;
+              x.moveTo(X(se.s[k]), Y(se.v[k])); x.lineTo(X(se.s[k + 1]), Y(se.v[k + 1])); any = true;
+            }
+            if (any) { x.strokeStyle = RV.colorScale(b / NC3, 0, 1, -1); x.stroke(); }
+          }
+          x.lineCap = 'butt';
+          continue;
+        }
         x.strokeStyle = se.col; x.lineWidth = se.w; x.lineJoin = 'round'; x.beginPath();
         for (let k = k0; k <= k1; k++) { const xx = X(se.s[k]), yy = Y(se.v[k]); if (k === k0) x.moveTo(xx, yy); else { if (q.step) x.lineTo(xx, Y(se.v[k - 1])); x.lineTo(xx, yy); } }
         x.stroke();
