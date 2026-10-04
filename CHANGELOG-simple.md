@@ -1933,6 +1933,22 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — the best single lap of any kept version; none of the 30 robustness laps and none of the 40 shifted-start laps off the road; 0.033 s faster over all 70 laps (42 faster, 25 slower, 3 unchanged). The chosen value was one of three similar ones among about 20 settings tried, so the true gain is more likely 0.02 to 0.03 s; what supports it is that every form of the change gained the same small amount in the same three high-speed braking zones. |
 | **Learned** | The flick no longer blocks this and several other changes, though most of the others turned out simply slower. One further change (more wheelspin allowed when running straight) was measured on top of this version as a little faster still, but within chance by itself; it was left as the candidate for the next version. |
 
+## v1.06 — Major design change: the car now knows which corner is coming
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.06 |
+| **What changed** | A major change of design. Until now (v0.1 to v1.05) the car was purely rule-based: it drove only from what its sensors showed at that moment and knew nothing about the track. On 4 October 2026 the competition officials confirmed that the car may use a map of the track prepared in advance to anticipate turns, as long as the sensors stay its main input. From this version the car carries a short hand-written table of seven places on the lap. At each one the table adjusts the speed its braking plan allows by a few km/h: faster through six bends, slightly slower into the last hairpin. The sensors still make every decision; the table only tells the car which corner it is in. |
+| **Why** | In several medium bends the car was driving exactly at the speed its own plan allowed, with grip and road width to spare. The plan uses one grip figure for every bend, which suits some bends and is too cautious for others, and nothing the car can sense tells those bends apart. Knowing where it is on the lap does. |
+| **Prediction** | About 0.4 s gained, all of it in the bends the table adjusts; no change at the flick, and more room at the exit of the last hairpin. |
+| **Lap time** | 1:13:14 |
+| **Damage** | 0 |
+| **Top speed** | 286 km/h |
+| **Min speed** | 58 km/h |
+| **Observed** | Lap 1:13:14 (0.42 s faster), damage 0, top speed 286 km/h, slowest corner 58 km/h. All 70 test laps were faster than with v1.05, by 0.43 s on average, and none left the road. The car also stayed further from the edge at its two tightest spots than before. |
+| **Decision** | ✅ Kept — the largest single gain since the early versions: 0.43 s faster over all 70 laps (every one of them faster), none off the road, and more room to the edge of the track, not less. |
+| **Learned** | In five bends and on the downhill after the Corkscrew it was the plan that limited the speed, not the car. The adjustment has to cover the braking zone and the bend together, and where each adjustment begins matters most: starting all of them 20 m earlier is slower than having none. At two bends (near 450 m and 770 m) every adjustment was slower, so they were left alone. Because the car now uses knowledge of the track, lap times from this version on cannot be compared like for like with those before it. |
+
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.05 run.*
+*Simplified from CHANGELOG.md as it stood after the v1.06 run.*
