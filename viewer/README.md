@@ -6,7 +6,7 @@ It is a static site: plain files, no server code and no build step. It loads its
 
 ## Running it
 
-**Hosted.** Publish this folder (`tools/run_viewer/`) on GitHub Pages or any static host and open it. Nothing else is needed.
+**Hosted.** Publish this folder (`viewer/`) on GitHub Pages or any static host and open it. Nothing else is needed.
 
 **On your computer.** Double-click `index.html`. No server is needed.
 
@@ -44,7 +44,7 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 - **Details:** the panel on the right shows what the last clicked version changed, why, and what was decided. Its buttons replay it on the track, open its telemetry, add or remove it from the comparison, or put it in focus. In the detailed view the technical record from `CHANGELOG.md` is folded underneath.
 - **Chart:** filled purple dot = kept and a new best lap; filled green dot = kept but not a new best; purple ring = rejected although its single lap was faster; grey ring = rejected. The step line is the best kept lap so far. Selected runs are ringed in their colour.
 
-**Track.** The replay. The car's path is coloured by speed (blue slowest, yellow fastest) and each sensor beam by its length (pink close, cyan far), with a dot where it meets the edge of the road.
+**Track.** The replay. The car's path is coloured by speed (blue slowest, yellow fastest; in the detailed view Layers, Car and path, "Colour path by" switches it to brake pressure, blue none to red full) and each sensor beam by its length (pink close, cyan far), with a dot where it meets the edge of the road.
 
 - Drag to pan, mouse wheel to zoom, double-click to return to the car. Dragging takes over the camera: "Follow car", "Keep all cars in view" and "Car points up" switch off and the view stays where it was. While "Keep all cars in view" is on, zoom is automatic.
 - Space plays and pauses. The left and right arrow keys move one step; holding one plays at 0.1x, then 0.25x, then 0.5x. `+` and `-` zoom, `F` toggles following, Home returns to the start.
@@ -52,13 +52,17 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 - Compared runs appear as cars and thin lines in their own colours. A Cars table at the top of the side panel lists them with lap time, gap and speed. Click a row there, a car on the map, or a name in the top bar to put that car in focus.
 - The cars are drawn as car1-ow1, to scale; the front wheels turn with the recorded steering.
 
-**Telemetry.** A summary of the selected runs and charts along the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. The detailed view adds more channels and a second section, "100 m sections".
+**Telemetry.** A summary of the selected runs and charts along the lap, each with a one-line caption and, for the run in focus, the lowest, mean and highest value of that channel over the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. On the speed chart the line of the run in focus is coloured by speed (red slow, green fast) and, when the recording has an `allowed` column, the planned speed is drawn dashed. The detailed view adds more channels and a second section, "100 m sections": click a column heading to sort by it (again to reverse), and "Export CSV" downloads the rows in the order shown as `sections_<version>.csv`, with the gear range and, per compared run, the differences in time, minimum speed and maximum brake.
 
 **Sectors (detailed view only).** The lap is split into three sectors. Corkscrew is modelled on Laguna Seca, so it uses that circuit's official timing sectors, from IMSA's sector map: S1 4,514 ft 10 in, S2 4,793 ft 3 in, S3 2,508 ft 7 in (together the 2.238-mile lap). The TORCS start line is taken as the finish line and each boundary is placed at the same share of the lap: S2 starts at 1,379 m (on the straight before Turn 5) and S3 at 2,842 m (after Turn 9, Rainey Curve). A track without known sectors is split into thirds. The definition is `REAL_SECTORS` in `js/track.js`.
 
 - The Telemetry page shows a Sectors table: the run in focus, the previous best and the difference per sector, and for each compared run its sector times and its difference to the run in focus.
 - "Previous best" is the fastest kept version before the run in focus (for a recording that is not a version: the fastest kept version of all). Its recording is loaded in the background the first time it is needed.
-- The details panel on the Versions page shows the same three sector times and differences for a version whose recording is loaded.
+- The details panel on the Versions page shows a sector row (S1 | S2 | S3) for a version whose recording is loaded: each sector's time and its difference to the run in focus, or to the previous best when the version is itself in focus.
+- The Versions page gets a fifth headline tile, "Best theoretical": the best S1, S2 and S3 added up. It counts the versions, kept or rejected, whose recordings have been opened in this session (recordings load on demand), needs at least two of them, and says which ones it used.
+- Below the tiles, "Sectors across versions" lists S1, S2, S3 and the lap of every version opened so far; the best time of each sector is marked, and times more than 0.5 s off it are marked as slower.
+- The time-gap chart marks, for each compared run, the point where its gap is largest, with the value.
+- The readout on the map names the sector the car is in.
 - The charts mark where S2 and S3 start, and the map has a "Sector lines" layer.
 
 **Settings.** Theme (Light, Dark, System), the view, the data source, replay preferences, a reset, and the guide to the data format.
@@ -66,6 +70,8 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 - **GitHub repository:** `https://github.com/owner/repo`, the same with `/tree/<branch>` or `/tree/<branch>/<folder>`, or `owner/repo`.
 - **Local folder:** chosen with the browser's folder picker, or dropped on the Settings page. The folder is read in the browser and nothing is uploaded. Browsers do not keep folder access, so after a reload the page returns to the GitHub repository.
 - A source is checked before the page switches to it. Without a `CHANGELOG.md` that has at least one version entry it is refused and the current source stays. The result says how many versions and run CSVs were found and whether a simplified changelog and a track file are present.
+
+**Welcome and tutorial.** On the first visit the page shows a welcome and offers a tour of about a minute: ten steps, each pointing at one part of the page (Next, Back, End the tour; Esc closes it, the arrow keys move between steps). It is shown once; whether it has been seen is saved with the other settings. It does not appear when the address carries options. The **Help** tab of Settings has a summary of the site (pages, selecting and comparing, mouse and keyboard, colours, own data, common problems) and a "Redo the tutorial" button. `#help` in the address opens it. The tour is `js/tutorial.js`; its steps are the `STEPS` list there.
 
 **Basic view and Detailed view.** The basic view uses the plain-language texts from `CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
 
@@ -87,6 +93,7 @@ Options can be added to the address after `#`, joined with `&`:
 | `zoom=12` | start at that zoom, in pixels per metre |
 | `list=fast`, `gain`, `loss`, `top` | choose the ranking on the Versions page |
 | `pause` | start paused |
+| `help` | open the Help tab of Settings |
 
 Example: `index.html#tab=pm&run=v1.05&cmp=v0.96&frame=2440&mode=detailed`
 
@@ -101,6 +108,7 @@ Example: `index.html#tab=pm&run=v1.05&cmp=v0.96&frame=2440&mode=detailed`
 | `js/data.js` | Changelogs to the version list, a run CSV to a run object, the GitHub and local-folder sources, validation. No page code. |
 | `js/app.js` | The page's state: open data set, selection, replay clock, tabs, view switch, start-up. |
 | `js/versions.js`, `js/map.js`, `js/telemetry.js`, `js/settings.js` | One file per page. |
+| `js/tutorial.js` | The welcome and the guided tour. |
 | `tracks/corkscrew.xml` | The Corkscrew track file from TORCS (GPL), the default map. |
 | `legacy/` | The previous viewer (a page opened from disk plus `build.py`, which pre-built its data). Kept only as the reference the new code was checked against; not used by the site and safe to delete. `build.py` no longer runs from this location. |
 

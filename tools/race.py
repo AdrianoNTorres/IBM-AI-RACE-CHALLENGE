@@ -26,7 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-DRIVER = os.path.join(REPO, 'snakeoil3_v1.py')
+DRIVER = os.path.join(REPO, 'driver', 'snakeoil3_v1.py')
 TORCS_DIR = r'C:\torcs\torcs'
 WORK = os.path.join(tempfile.gettempdir(), 'torcs_tools')
 SLOTS = list(range(1, 10)) + [0]  # scr_server slots in order of use (port 3001+slot); slot 0 (run_race.py's) only at n=10

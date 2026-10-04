@@ -1,10 +1,10 @@
 '''Run one race without the TORCS menus and print the lap result.
 
-    python run_race.py
+    python harness/run_race.py
 
 Starts TORCS with a race file (`wtorcs.exe -r <race>.xml`: no menus, no
 graphics, runs as fast as the computer allows, ~2 s per lap), drives it with
-snakeoil3_v1.py (which writes runs/run_<date>_<time>.csv), makes sure TORCS
+driver/snakeoil3_v1.py (which writes runs/run_<date>_<time>.csv), makes sure TORCS
 has closed, then prints lap_report.py for the new run.
 
 The simulation is deterministic: the first run in this mode reproduced the
@@ -21,6 +21,7 @@ import glob, os, subprocess, sys, time
 TORCS_DIR = r'C:\torcs\torcs'
 RACE_FILE = 'config/raceman/practice.xml'   # relative to TORCS_DIR, so TORCS can also save its results file
 HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
 TIMEOUT = 300   # s; a lap takes ~2 s in this mode
 
 def torcs_running():
@@ -30,18 +31,18 @@ def torcs_running():
 def main():
     if torcs_running():
         sys.exit('TORCS is already running. Close it first (it holds the driver\'s port 3001).')
-    before = set(glob.glob(os.path.join(HERE, 'runs', '*.csv')))
+    before = set(glob.glob(os.path.join(REPO, 'runs', '*.csv')))
     torcs = subprocess.Popen([os.path.join(TORCS_DIR, 'wtorcs.exe'), '-r', RACE_FILE], cwd=TORCS_DIR)
     time.sleep(2)   # let TORCS load the track and open the port
     try:
-        subprocess.run([sys.executable, '-W', 'ignore', os.path.join(HERE, 'snakeoil3_v1.py')], cwd=HERE,
+        subprocess.run([sys.executable, '-W', 'ignore', os.path.join(REPO, 'driver', 'snakeoil3_v1.py')], cwd=REPO,
                        timeout=TIMEOUT, stdout=subprocess.DEVNULL)
     finally:
         try:
             torcs.wait(timeout=10)
         except subprocess.TimeoutExpired:
             torcs.kill()
-    new = sorted(set(glob.glob(os.path.join(HERE, 'runs', '*.csv'))) - before)
+    new = sorted(set(glob.glob(os.path.join(REPO, 'runs', '*.csv'))) - before)
     if not new:
         sys.exit('No new telemetry file was written.')
     sys.path.insert(0, HERE)

@@ -16,7 +16,7 @@
   /* what a data set contains, in words */
   function reportHtml(ds) {
     const r = ds.report, li = [];
-    li.push('<b>' + r.versions + '</b> version' + (r.versions === 1 ? '' : 's') + ' in CHANGELOG.md');
+    li.push('<b>' + r.versions + '</b> version' + (r.versions === 1 ? '' : 's') + ' in docs/CHANGELOG.md');
     li.push(r.withFile != null ? '<b>' + r.withFile + '</b> of them have a run CSV in runs/' + (r.named > r.withFile ? ' (' + (r.named - r.withFile) + ' more are named in the changelog but the file is missing)' : '')
       : '<b>' + r.named + '</b> of them name a run CSV (whether each file exists was not checked)');
     li.push(r.simple ? 'Simplified changelog: <b>found</b>, so the basic view is available' : 'Simplified changelog: <b>not found</b>, so only the detailed view is available');
@@ -80,10 +80,10 @@
   const GUIDE = {
     layout: ['Folder layout',
       '<p>A data source is a public GitHub repository or a folder on this computer, laid out like this:</p>' +
-      '<pre>CHANGELOG.md            required   one entry per version\nCHANGELOG-simple.md     optional   the same entries in plain language\ntrack.xml               optional   the TORCS track file of the track driven\nruns/\n  run_20261003_220700.csv          one telemetry file per version\n  run_&lt;date&gt;_&lt;time&gt;.csv</pre>' +
+      '<pre>docs/\n  CHANGELOG.md        required   one entry per version\n  CHANGELOG-simple.md optional   the same entries in plain language\ntrack.xml               optional   the TORCS track file of the track driven\nruns/\n  run_20261003_220700.csv          one telemetry file per version\n  run_&lt;date&gt;_&lt;time&gt;.csv</pre>' +
       '<p>The page only reads. It writes nothing to the source; settings stay in this browser.</p>' +
-      '<p>From GitHub the page fetches <code>CHANGELOG.md</code>, <code>CHANGELOG-simple.md</code> and <code>track.xml</code> when it opens, and a run CSV only when that run is opened or compared. A link may end in <code>/tree/&lt;branch&gt;</code> or <code>/tree/&lt;branch&gt;/&lt;folder&gt;</code>; without it the default branch is read.</p>'],
-    changelog: ['CHANGELOG.md',
+      '<p>From GitHub the page fetches <code>docs/CHANGELOG.md</code>, <code>docs/CHANGELOG-simple.md</code> and <code>track.xml</code> when it opens, and a run CSV only when that run is opened or compared. A link may end in <code>/tree/&lt;branch&gt;</code> or <code>/tree/&lt;branch&gt;/&lt;folder&gt;</code>; without it the default branch is read.</p>'],
+    changelog: ['docs/CHANGELOG.md',
       '<p>One entry per version: a heading, then a two-column table whose rows are <code>| **Field** | text |</code>.</p>' +
       '<pre>## v0.7 — Steer toward the open road\n\n| Field | Value |\n|---|---|\n| **What changed** | … |\n| **Lap time** | 2:19.31 |\n| **Top speed** | 148 km/h |\n| **Min speed** | 41 km/h |\n| **Damage** | 0 |\n| **Observed** | … Telemetry: runs/run_20261001_154006.csv |\n| **Decision** | ✅ Kept — faster, no damage |\n| **Learned** | … |</pre>' +
       '<table class="spec"><tr><th>Part</th><th>Rule</th><th>Used for</th></tr>' +
@@ -112,11 +112,62 @@
       '<p><b>Lap time of a recording:</b> the <code>lastLapTime</code> of the first row after the line if there is one; otherwise the last clock reading plus the remaining distance at the last speed. <b>Slowest corner:</b> the lowest speed more than 100 m from the start line and after the first 8 seconds. Other columns are ignored.</p>' +
       '<p>A version without a CSV is listed but cannot be replayed. A recording that stops early is shown as an incomplete lap; an empty one is reported as such.</p>'],
     optional: ['Optional files',
-      '<h4>CHANGELOG-simple.md</h4><p>Same format as <code>CHANGELOG.md</code>, same version names. Its title and its What changed, Why, Decision and Learned fields are the texts of the <b>basic view</b>. Without this file the basic view cannot be selected and the page uses the detailed view.</p>' +
+      '<h4>docs/CHANGELOG-simple.md</h4><p>Same format as <code>docs/CHANGELOG.md</code>, same version names. Its title and its What changed, Why, Decision and Learned fields are the texts of the <b>basic view</b>. Without this file the basic view cannot be selected and the page uses the detailed view.</p>' +
       '<h4>track.xml</h4><p>The map is computed from a TORCS track file. <b>Supplying it is your job:</b> to see your own track, put the track’s TORCS file (for example <code>tracks/road/&lt;name&gt;/&lt;name&gt;.xml</code> from a TORCS install) at the root of the repository or folder, named <code>track.xml</code>.</p>' +
       '<p>Without it the page uses the Corkscrew track bundled with it. If a run does not fit the track in use (its longest <code>distFromStart</code> differs from the track length by more than ' + RV.data.FIT_TOL + ' m), the Track tab says so instead of drawing the run on a wrong map; Versions and Telemetry still work.</p>' +
       '<h4>Other CSVs in runs/</h4><p>In a local folder, CSVs that no changelog entry names (manual laps) are listed under “Other recordings” on the Versions tab. From GitHub only the recordings named in the changelog are read.</p>'],
   };
+
+  /* 9: the name TORCS carries its explanation */
+  for (const k in GUIDE) GUIDE[k][1] = GUIDE[k][1].replace(/TORCS/g, RV.TORCS);
+
+  /* ---------- the Help tab ---------- */
+  function helpHtml() {
+    const ds = S.ds, k = s => '<kbd>' + s + '</kbd>';
+    const card = (title, body) => '<div class="card helpcard"><div class="cardhead"><h3>' + title + '</h3></div>' + body + '</div>';
+    return '<div class="setgrid"><div class="col">' +
+      card('New here?', '<p>The tutorial walks through the three pages in about a minute and points at each part of the screen in turn.</p>' +
+        '<div class="acts"><button class="btn prim" id="hTour">Redo the tutorial</button></div>') +
+      card('What this site is', '<p>The run viewer replays the laps of a self-driving racing car in the simulator ' + RV.TORCS + '. The car\u2019s driver is a set of hand-written rules that was improved one version at a time; each version drove one measured lap, and each was either kept or rejected.</p>' +
+        '<p>The site only reads data. It changes nothing in the source, and nothing you open is uploaded anywhere. Your settings are saved in this browser.</p>') +
+      card('The pages', '<dl class="helpdl">' +
+        '<dt>Versions</dt><dd>Every version with its lap time, the lap-time chart, the rankings, and a panel that explains what the selected version changed and why.</dd>' +
+        '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams.</dd>' +
+        '<dt>Telemetry</dt><dd>Charts of speed, throttle, brake and more along the lap, and in the detailed view sector times and a table of 100 m sections.</dd>' +
+        '<dt>Settings</dt><dd>Theme, view, data source and replay preferences, the guide to the data format, and this help.</dd></dl>') +
+      card('Selecting and comparing', '<ul class="helpul"><li><b>Select one version:</b> click its row on the Versions page.</li>' +
+        '<li><b>Compare several (up to ' + RV.MAX_RUNS + '):</b> drag across rows, or Shift-click for a range, or Ctrl-click to add or remove one. Each gets its own colour.</li>' +
+        '<li><b>The car in focus</b> is the one clicked first: the map follows it and time gaps are measured against it. Click another car on the map, its row in the Cars table, or its name in the top bar to put that one in focus.</li>' +
+        '<li><b>Remove one:</b> the \u00d7 beside its name in the top bar. \u201cClear comparison\u201d keeps only the car in focus.</li></ul>') +
+      card('Basic view and Detailed view', '<p>The switch in the top bar. <b>Basic view</b> uses plain-language descriptions and shows the main controls. <b>Detailed view</b> adds the technical record of each version, every telemetry channel, sector times and all the map layers. Nothing moves between the two: the detailed view adds to what the basic view shows.</p>' +
+        (ds && !ds.hasSimple ? '<p class="warn">' + RV.NO_BASIC + '</p>' : '')) +
+      '</div><div class="col">' +
+      card('Mouse and keyboard', '<table class="spec"><tr><th>Where</th><th>Do this</th><th>To</th></tr>' +
+        '<tr><td>Replay</td><td>' + k('Space') + '</td><td>play or pause</td></tr>' +
+        '<tr><td>Replay</td><td>' + k('\u2190') + ' ' + k('\u2192') + '</td><td>move one step; hold for slow motion (0.1\u00d7, then 0.25\u00d7, then 0.5\u00d7)</td></tr>' +
+        '<tr><td>Replay</td><td>' + k('Home') + '</td><td>back to the start of the lap</td></tr>' +
+        '<tr><td>Map</td><td>drag, wheel, double-click</td><td>move the map, zoom, return to the car</td></tr>' +
+        '<tr><td>Map</td><td>' + k('+') + ' ' + k('\u2212') + ', ' + k('F') + '</td><td>zoom; follow the car or stop following</td></tr>' +
+        '<tr><td>Charts</td><td>wheel, drag, click, double-click</td><td>zoom the distance axis, pan, move the car there, show the whole lap</td></tr>' +
+        '<tr><td>Versions table</td><td>' + k('\u2191') + ' ' + k('\u2193') + ', ' + k('Enter') + ', ' + k('Space') + '</td><td>move between rows, select the row, add it to or remove it from the comparison</td></tr>' +
+        '<tr><td>Lap-time chart</td><td>' + k('\u2190') + ' ' + k('\u2192') + ', ' + k('+') + ' ' + k('\u2212') + ', ' + k('0') + '</td><td>step through the versions, zoom, reset</td></tr>' +
+        '<tr><td>Anywhere</td><td>' + k('Tab') + '</td><td>move to the next control</td></tr></table>') +
+      card('Reading the colours', '<ul class="helpul"><li><b>Path on the map:</b> blue where the car was slowest, yellow where it was fastest. In the detailed view it can show braking instead.</li>' +
+        '<li><b>Sensor beams:</b> pink means the edge of the road is close, cyan means it is far.</li>' +
+        '<li><b>Lap-time chart:</b> filled purple = kept and a new best lap; filled green = kept; purple ring = rejected although its lap was faster; grey ring = rejected.</li>' +
+        '<li><b>Time differences:</b> a minus sign, or \u201cfaster\u201d, means time gained.</li></ul>') +
+      card('Using your own data', '<p>The site can show any project laid out the same way: a public GitHub repository, or a folder on this computer. Choose it under Settings, Data source. The source is checked first, and the page says what it found.</p>' +
+        '<div class="acts"><button class="btn" id="hFormat">Show the data format</button></div>' +
+        '<p class="note">Now showing: ' + (ds ? esc(ds.src.label()) : 'nothing is loaded') + '.</p>') +
+      card('If something does not work', '<dl class="helpdl">' +
+        '<dt>\u201cThe data could not be loaded\u201d</dt><dd>The page needs the network to read from GitHub. Check the connection and press Try again. A firewall or an extension that blocks raw.githubusercontent.com has the same effect.</dd>' +
+        '<dt>A version cannot be replayed</dt><dd>It has no recording: the changelog names no run file for it, or the file is missing from the source.</dd>' +
+        '<dt>\u201cThis run does not fit the track map\u201d</dt><dd>The runs were driven on another track than the map in use. The source needs its own track.xml (see the data format).</dd>' +
+        '<dt>Basic view cannot be chosen</dt><dd>The source has no simplified changelog (docs/CHANGELOG-simple.md).</dd>' +
+        '<dt>A local folder is gone after a reload</dt><dd>Browsers do not keep access to a folder. Choose it again under Settings, Data source.</dd></dl>') +
+      card('Links to a particular state', '<p>Options after <code>#</code> in the address open the page in a given state, for example <code>#tab=pm&amp;run=v1.05&amp;cmp=v0.96&amp;mode=detailed</code>. <code>tab</code> is <code>pv</code>, <code>pm</code>, <code>pt</code> or <code>ps</code>; <code>run</code> and <code>cmp</code> name versions; <code>frame</code> pauses on a frame; <code>help</code> opens this page. The README lists them all.</p>') +
+      '</div></div>';
+  }
 
   function render() {
     const box = $('ps'), P = RV.prefs, ds = S.ds;
@@ -124,7 +175,17 @@
     if (srcKind == null) srcKind = ds && ds.src.kind === 'local' ? 'local' : 'github';
     const noBasic = ds && !ds.hasSimple ? RV.NO_BASIC : '';
     const current = ds ? esc(ds.src.label()) : 'nothing is loaded';
-    let h = '<div class="setwrap"><div class="pagehead"><h1>Settings</h1><p class="lead">Saved in this browser only.</p></div>' +
+    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['help', 'Help']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
+    if (S.setTab === 'help') {
+      const keep0 = box.scrollTop;
+      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Help</h1><p class="lead">What the run viewer shows and how to use it.</p></div>' + tabs + helpHtml() + '</div>';
+      box.scrollTop = keep0;
+      box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
+      $('hTour').onclick = () => RV.tutorial.start(true);
+      $('hFormat').onclick = () => { S.setTab = 'prefs'; render(); const g = box.querySelector('.guidecard'); if (g) g.scrollIntoView({ block: 'start' }); };
+      return;
+    }
+    let h = '<div class="setwrap"><div class="pagehead"><h1>Settings</h1><p class="lead">Saved in this browser only.</p></div>' + tabs +
 
       '<div class="setgrid"><div class="col">' +
       '<div class="card"><div class="cardhead"><h3>Appearance</h3></div>' +
@@ -146,9 +207,9 @@
         ? '<label class="lbl" for="sLink">Repository link</label><div class="inrow"><input type="text" id="sLink" spellcheck="false" autocomplete="off" value="' + esc(draft) + '"><button class="btn prim" id="sApply"' + (working ? ' disabled' : '') + '>Load</button></div>' +
           '<p class="note">A public repository: <code>https://github.com/owner/repo</code>, the same with <code>/tree/&lt;branch&gt;</code>, or <code>owner/repo</code>. ' + (draft.trim() !== RV.DEFAULT_LINK ? '<button class="link" id="sDefault">Use the default repository</button>' : 'This is the default repository.') + '</p>'
         : '<div class="inrow"><button class="btn prim" id="sFolder"' + (working ? ' disabled' : '') + '>Choose a folder …</button></div>' +
-          '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains CHANGELOG.md, or drop it on this page. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
+          '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains docs/CHANGELOG.md, or drop it on this page. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
       '<div id="srcResult" class="result"></div>' +
-      '<p class="note"><b>The map:</b> to see your own track, the source must include its TORCS track file as <code>track.xml</code>. ' +
+      '<p class="note"><b>The map:</b> to see your own track, the source must include its ' + RV.TORCS + ' track file as <code>track.xml</code>. ' +
       (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p></div>' +
 
       '<div class="card guidecard"><div class="cardhead"><h3>Data format</h3><span class="note">What a repository or folder must contain</span></div>' +
@@ -162,6 +223,7 @@
     if (focusLink) { const i = $('sLink'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 
     const on = (id, fn) => box.querySelectorAll('#' + id + ' button').forEach(b => { b.onclick = () => fn(b.dataset.v, b); });
+    on('sTabs', v => { S.setTab = v; render(); box.scrollTop = 0; });
     on('sTheme', v => { P.theme = v; RV.savePrefs(); RV.applyTheme(); render(); });
     on('sView', v => { RV.setView(v); });
     on('sSpeed', v => { P.speed = +v; RV.savePrefs(); $('spd').value = v; render(); });

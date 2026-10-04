@@ -6,7 +6,7 @@
 
   RV.DEFAULT_LINK = 'https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/tree/main';
   /* the bundled track file, as published in the site's repository: used when the page is opened from disk */
-  RV.TRACK_URL = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/main/tools/run_viewer/tracks/corkscrew.xml';
+  RV.TRACK_URL = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/main/viewer/tracks/corkscrew.xml';
   RV.MAX_RUNS = 6;                       /* runs that can be shown together: one colour each */
 
   /* ---------- small helpers ---------- */
@@ -47,6 +47,7 @@
     source: { kind: 'github', link: RV.DEFAULT_LINK }, /* a local folder cannot be saved: browsers do not keep folder access */
     speed: 1,                                          /* replay speed */
     autoplay: true,                                    /* start the replay when a run opens */
+    tutorialDone: false,                               /* the welcome and tour have been seen (or skipped) */
     sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
   });
   RV.loadPrefs = function () {
@@ -71,7 +72,8 @@
     const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
     const P = RV.pal;
     for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower',
-      'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line']) P[k] = v('--' + k);
+      'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line',
+      'speed-slow', 'speed-mid', 'speed-fast', 'brake-none', 'brake-full']) P[k] = v('--' + k);
     P.run = []; P.runMap = [];
     for (let k = 1; k <= RV.MAX_RUNS; k++) { P.run.push(v('--run-' + k)); P.runMap.push(v('--runmap-' + k)); }
     P.font = v('--font-ui'); P.fontNum = v('--font-display');
@@ -93,6 +95,18 @@
   const speedRGB = ramp(SPEED), beamRGB = ramp(BEAM);
   RV.speedCol = f => 'rgb(' + speedRGB(f).join(',') + ')';
   RV.beamCol = (d, a) => 'rgba(' + beamRGB(d / 200).join(',') + ',' + a + ')';
+  /* Scales whose colours are theme tokens: the speed chart (red slow, green fast) and braking on the map
+     (blue none, red full). f runs from 0 to 1. */
+  function hexRGB(c) {
+    c = c.replace('#', '');
+    if (c.length === 3) c = c.split('').map(h => h + h).join('');
+    return [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16));
+  }
+  const tokenRamp = (names, f) => 'rgb(' + ramp(names.map(n => hexRGB(RV.pal[n])))(f).join(',') + ')';
+  RV.speedChartCol = f => tokenRamp(['speed-slow', 'speed-mid', 'speed-fast'], f);
+  RV.brakeCol = f => tokenRamp(['brake-none', 'brake-full'], f);
+  /* the name TORCS, with its explanation on hover */
+  RV.TORCS = '<abbr title="The Open Racing Car Simulator \u2014 the physics engine used to train the driver">TORCS</abbr>';
   const css = stops => 'linear-gradient(90deg,' + stops.map(s => 'rgb(' + s.join(',') + ')').join(',') + ')';
   RV.speedGradient = css(SPEED);
   RV.beamGradient = css(BEAM);

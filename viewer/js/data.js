@@ -76,7 +76,7 @@
     const missing = REQUIRED.filter(c => header.indexOf(c) < 0);
     if (missing.length) throw new RVError('csv', 'This recording lacks the column' + (missing.length > 1 ? 's ' : ' ') + missing.join(', ') + '.',
       'See the data format guide in Settings for the columns a run CSV needs.');
-    const want = REQUIRED.concat(['allowed', 'focA']);
+    const want = REQUIRED.concat(['allowed', 'focA', 'clutch']);
     for (let k = 0; k < 19; k++) want.push('track' + k);
     for (let k = 0; k < 5; k++) want.push('foc' + k);
     const names = want.filter(c => header.indexOf(c) >= 0), idx = names.map(c => header.indexOf(c));
@@ -103,7 +103,7 @@
   /* A run object from CSV text. trk may be null (no track could be loaded); the run then has no map position.
      Field names: x, y, yaw (map pose), t (lap time), s (distFromStart), d (lap distance, never decreasing),
      v (speed), tp (track position), al (planned speed), st (steering), th (throttle), br (brake), g (gear),
-     b (19 beams per row), foc (focus looks by row index), sum (summary). */
+     b (19 beams per row), foc (focus looks by row index), cl (clutch, or null), sum (summary). */
   function buildRun(text, label, trk) {
     const c = parseCsv(text), n = c.n, C = c.col;
     if (!n) throw new RVError('csv', 'This recording has no rows of a lap (it is empty, or it stopped before the start line).');
@@ -121,6 +121,7 @@
       x: fits ? F() : null, y: fits ? F() : null, yaw: fits ? F() : null,
       t: F(), s: F(), d: F(), v: F(), tp: F(), al: F(), st: F(), th: F(), br: F(), g: new Int8Array(n),
       b: beams ? new Float32Array(n * 19) : null, foc: {},
+      cl: c.has('clutch') ? F() : null,              /* clutch pedal, only if the recording has that column */
     };
     let firstAfter = -1;
     for (let i = 0; i < n; i++) {
@@ -146,6 +147,7 @@
       R.al[i] = hasAl ? rnd(C.allowed[i], 1) : 0;
       R.st[i] = rnd(C.steer[i], 3); R.th[i] = rnd(C.accel[i], 3); R.br[i] = rnd(C.brake[i], 3);
       R.g[i] = Math.trunc(C.gear[i]);
+      if (R.cl) R.cl[i] = rnd(C.clutch[i], 3);
       if (beams) for (let k = 0; k < 19; k++) R.b[i * 19 + k] = C['track' + k][i];
       if (hasFoc && C.foc0[i] > 0) R.foc[i] = [C.focA[i], C.foc0[i], C.foc1[i], C.foc2[i], C.foc3[i], C.foc4[i]];
     }
@@ -232,7 +234,7 @@
       try { r = await fetch(api); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
       if (r.status === 404) return new RVError('repo', 'The repository ' + name + ' was not found, or it is private.',
         'The page reads public repositories only. Check the spelling of the owner and the repository name.');
-      if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ', and GitHub’s request limit prevented checking why (HTTP ' + r.status + ').',
+      if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ', and GitHub's request limit prevented checking why (HTTP ' + r.status + ').',
         'Check the link, or wait a few minutes and try again.');
       const info = await r.json();
       if (branch !== 'HEAD') {
@@ -240,8 +242,8 @@
         if (b && b.status === 404) return new RVError('branch', 'The repository ' + name + ' has no branch called "' + branch + '".',
           'Its default branch is "' + info.default_branch + '".');
       }
-      return new RVError('nochangelog', 'CHANGELOG.md is missing from ' + name + ' (' + (branch === 'HEAD' ? 'default branch' : 'branch ' + branch) + ').',
-        'A source needs a CHANGELOG.md at its root. The data format guide in Settings describes it.');
+      return new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + name + ' (' + (branch === 'HEAD' ? 'default branch' : 'branch ' + branch) + ').',
+        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
     }
     /* Reads CHANGELOG.md and, on the way, settles which part of the link is the branch and which a folder. */
     src.readChangelog = async function () {
@@ -250,7 +252,7 @@
       for (let k = 1; k <= r.length; k++) cands.push([r.slice(0, k).join('/'), r.slice(k).length ? r.slice(k).join('/') + '/' : '']);
       for (const [branch, dir] of cands) {
         try {
-          const text = await (await http(raw(branch, dir, 'CHANGELOG.md'), 'CHANGELOG.md')).text();
+          const text = await (await http(raw(branch, dir, 'docs/CHANGELOG.md'), 'docs/CHANGELOG.md')).text();
           src.branch = branch; src.dir = dir;
           return text;
         } catch (e) { if (e.code !== 'missing') throw e; }
@@ -287,7 +289,7 @@
       }
     }
     src.readText = async path => (await file(path)).text();
-    src.readChangelog = () => src.readText('CHANGELOG.md');
+    src.readChangelog = () => src.readText('docs/CHANGELOG.md');
     src.listRuns = async function () {
       const out = new Map();
       let runs;
@@ -313,7 +315,7 @@
       if (!files.has(path)) throw new RVError('missing', path + ' was not found.');
       return files.get(path).text();
     };
-    src.readChangelog = () => src.readText('CHANGELOG.md');
+    src.readChangelog = () => src.readText('docs/CHANGELOG.md');
     src.listRuns = async function () {
       const out = new Map();
       for (const [p, f] of files) { const m = /^runs\/([^/]+\.csv)$/i.exec(p); if (m) out.set(m[1], f.size); }
@@ -349,20 +351,20 @@
   async function openSource(src, opts) {
     opts = opts || {};
     const step = opts.onStep || function () {};
-    step('Reading CHANGELOG.md');
+    step('Reading docs/CHANGELOG.md');
     let text;
     try { text = await src.readChangelog(); } catch (e) {
-      if (e.code === 'missing') throw new RVError('nochangelog', 'CHANGELOG.md is missing from ' + src.where() + '.',
-        'A source needs a CHANGELOG.md at its root. The data format guide in Settings describes it.');
+      if (e.code === 'missing') throw new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + src.where() + '.',
+        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
       throw e;
     }
     const full = parseChangelog(text);
-    if (!full.size) throw new RVError('format', 'CHANGELOG.md was found in ' + src.where() + ', but it has no version entries.',
+    if (!full.size) throw new RVError('format', 'docs/CHANGELOG.md was found in ' + src.where() + ', but it has no version entries.',
       'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See the data format guide in Settings.');
 
     step('Reading CHANGELOG-simple.md');
     let simple = null;
-    try { simple = parseChangelog(await src.readText('CHANGELOG-simple.md')); } catch (e) { if (e.code !== 'missing') throw e; }
+    try { simple = parseChangelog(await src.readText('docs/CHANGELOG-simple.md')); } catch (e) { if (e.code !== 'missing') throw e; }
     if (simple && !simple.size) simple = null;
 
     step('Reading the track');
