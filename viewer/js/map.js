@@ -237,10 +237,10 @@
       }
       ctx.setLineDash([]);
     } },
-    { id: 'lineB', g: 'Compared runs', label: 'Their driven lines', d: 'The path of each compared run, in that run’s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
+    { id: 'lineB', g: 'Compared runs', label: 'Their driven lines', d: 'The path of each compared run, in that run\u2019s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
       for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (opt.lineW * 0.6 + 2) / z, opt.lineW * 0.6 / z, RV.pal['car-line'], RV.colMap(m.id));
     } },
-    { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run's colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
+    { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run\u2019s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
       for (const m of others()) drawCar(ctx, m.r, RV.ghostIdx(m.r), RV.colMap(m.id), z, S.carScale[m.id]);
     } },
   ];
