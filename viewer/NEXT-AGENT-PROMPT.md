@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 3
+**Last updated:** after Phase 4
 
 ---
 
@@ -64,13 +64,13 @@ Two vertical bars added between the steering wheel and the pedals history graph 
 - CSS `--bar-h` custom property drives the `::after` height; updated each frame in `drawBars(R, i)` in `inputs.js`.
 - The `#pedBars` container sits between `#wheel` and `.ped` in `#inputs`.
 
-### Phase 4: Track map visual markers
-1. **Start/finish marker** on the track map at distance 0 (where the lap starts). Draw a chequered or solid line perpendicular to the track.
-2. **Left mini-map**: add sector boundary lines and a finish line marker to the overview map (`drawMini`).
-3. **Slowest corner pin**: mark the point of the run's slowest corner speed on the main map. Show a dot and a small label.
-4. **Default camera for comparison runs**: when `S.CM.length > 0`, default `view.all = true` (whole-track view) instead of follow. Do not change after the user interacts.
-5. **Per-car size adjustment**: add a multiplier per car (stored in `S.carScale = {}`). Show a small number input or slider in the side panel's Camera section, one per car. A "reset" button restores `1.0`. The `drawCar` function receives the scale.
-6. **Loop focus dimming**: when a loop is active (`S.loop != null`), fade out the portions of the map **outside** the loop boundaries. Only the looped section of the driven line is full strength; the rest is at ~20% opacity (a named constant). Clear when the loop ends. This applies to the driven line layer on the main canvas.
+### Phase 4 (COMPLETE) — tag: `phase-4`
+1. **Start / finish line** (`map.js`): new `finish` path in `trackPaths()`. A `finish` layer in the Track group draws a chequered line across the road at distance 0. A "Start / Finish" label appears at zoom ≥ 1.
+2. **Mini-map** (`drawMini`): finish line and sector boundaries (detailed view only) are now painted into the mini-map's static background buffer.
+3. **Slowest corner pin** (`map.js`): new `slowcorner` layer in the "Car and path" group. Shows a purple dot and a speed label at the run's slowest corner. `data.js` now stores `sum.slow_at` (frame index) alongside `sum.slow`.
+4. **Default whole-track view on comparison** (`map.js` `resetAuto`): when `S.CM.length > 0`, `fitView()` is called so the whole track is shown by default.
+5. **Per-car size** (`app.js`, `map.js`): `S.carScale = {}` stores a scale multiplier per car. `drawCar` accepts a `userScale` argument. Sliders in the Camera section of the side panel (detailed view) let the user adjust each car's size from 0.3× to 4×, with Reset buttons per car and a "Reset all" button.
+6. **Loop focus dimming** (`map.js` `drawSpeedLine`): `LOOP_DIM = 0.18` constant. When `S.loop` is active, the driven line is drawn in two passes: outside the loop at `LOOP_DIM` opacity, inside at full opacity.
 
 ### Phase 5: Telemetry panel improvements
 1. **Configurable section gap**: replace the hardcoded `100` m gap with a user-selectable value (options: 25, 50, 100, 200, 500 m, always include 0 and `R.total`). Add a small control above the sections table.

@@ -67,18 +67,29 @@
     return stepCols;
   }
   /* the driven line of the car in focus: consecutive pieces of the same colour step are stroked together */
+  const LOOP_DIM = 0.18;                               /* opacity of the driven line outside a looped section */
   function drawSpeedLine(ctx, r, z, w) {
     const q = lineRange(r, S.i), bk = colourSteps(r), cols = colours(), st = stepFor(z), end = q[1] + 1;
     ctx.lineWidth = w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    let cur = -1, pen = false;
-    for (let k = q[0]; k <= q[1]; k += st) {
-      if (!inView(r.x[k], r.y[k])) { if (pen) { ctx.stroke(); pen = false; } continue; }
-      const b = bk[k];
-      if (!pen || b !== cur) { if (pen) ctx.stroke(); ctx.beginPath(); ctx.moveTo(r.x[k], r.y[k]); ctx.strokeStyle = cols[b]; cur = b; pen = true; }
-      const k2 = Math.min(k + st, end);
-      ctx.lineTo(r.x[k2], r.y[k2]);
+    const lp = S.loop;
+    const inLoop = lp ? (k => r.d[k] >= lp[0] && r.d[k] <= lp[1]) : null;
+    /* draw two passes when a loop is active: faded outside, full inside */
+    const passes = lp ? [false, true] : [null];
+    for (const pass of passes) {
+      if (pass === false) ctx.globalAlpha *= LOOP_DIM;
+      else if (pass === true) ctx.globalAlpha = Math.min(1, ctx.globalAlpha / LOOP_DIM);
+      let cur = -1, pen = false;
+      for (let k = q[0]; k <= q[1]; k += st) {
+        if (pass !== null && inLoop(k) === pass) { if (pen) { ctx.stroke(); pen = false; } continue; }
+        if (!inView(r.x[k], r.y[k])) { if (pen) { ctx.stroke(); pen = false; } continue; }
+        const b = bk[k];
+        if (!pen || b !== cur) { if (pen) ctx.stroke(); ctx.beginPath(); ctx.moveTo(r.x[k], r.y[k]); ctx.strokeStyle = cols[b]; cur = b; pen = true; }
+        const k2 = Math.min(k + st, end);
+        ctx.lineTo(r.x[k2], r.y[k2]);
+      }
+      if (pen) ctx.stroke();
+      if (pass === false) ctx.globalAlpha /= LOOP_DIM;  /* restore before the next pass */
     }
-    if (pen) ctx.stroke();
   }
   /* the track's outline as ready-made paths, built once per track */
   function trackPaths() {
@@ -92,13 +103,16 @@
     road.closePath();
     const marks = new Path2D();
     for (const m of T.marks) { marks.moveTo(m[1], m[2]); marks.lineTo(m[3], m[4]); }
-    return (T._paths = { road: road, left: line(T.left), right: line(T.right), centre: line(T.centre), marks: marks });
+    /* finish line: the line across the road at distance 0 */
+    const finish = new Path2D();
+    finish.moveTo(T.left[0][0], T.left[0][1]); finish.lineTo(T.right[0][0], T.right[0][1]);
+    return (T._paths = { road: road, left: line(T.left), right: line(T.right), centre: line(T.centre), marks: marks, finish: finish });
   }
   /* car1-ow1 from above: 4.8 m long, front axle 1.6 m ahead of the centre, rear axle 1.35 m behind, front wheels 0.70 m and
      rear wheels 0.75 m either side, tyres 0.30 m wide. The front wheels turn with the recorded steering (full lock 21 degrees).
      Never drawn smaller than about 16 px. */
-  function drawCar(ctx, r, k, fill, z) {
-    const sc = Math.max(1, 16 / (4.8 * z)), lw = 0.05, P = RV.pal;
+  function drawCar(ctx, r, k, fill, z, userScale) {
+    const sc = Math.max(1, 16 / (4.8 * z)) * (userScale || 1), lw = 0.05, P = RV.pal;
     ctx.save(); ctx.translate(r.x[k], r.y[k]); ctx.rotate(r.yaw[k]); ctx.scale(sc, sc);
     ctx.strokeStyle = P['road-mark']; ctx.lineWidth = 0.06; ctx.beginPath();
     for (const w of [[1.6, 0.70], [1.6, -0.70], [-1.35, 0.75], [-1.35, -0.75]]) {
@@ -142,6 +156,18 @@
     { id: 'centre', g: 'Track', label: 'Centre line', d: 'Dashed line down the middle of the road (track position 0).', on: false, alpha: 0.6, draw(ctx, z) {
       ctx.setLineDash([6 / z, 6 / z]); ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().centre); ctx.setLineDash([]);
     } },
+    { id: 'finish', g: 'Track', label: 'Start / finish line', d: 'The start and finish line across the road.', on: true, alpha: 1, draw(ctx, z) {
+      ctx.lineWidth = 3 / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().finish);
+      /* chequered pattern: alternate black/white dashes */
+      ctx.lineWidth = 3 / z; ctx.setLineDash([4 / z, 4 / z]);
+      ctx.strokeStyle = RV.pal['road']; ctx.stroke(trackPaths().finish); ctx.setLineDash([]);
+    }, screen(ctx, w2s) {
+      if (view.z < 1) return;
+      const T = trk(), p = w2s(T.left[0][0], T.left[0][1]), s = 'Start / Finish', w = ctx.measureText(s).width;
+      ctx.font = '600 11px ' + RV.pal.font;
+      ctx.fillStyle = RV.pal['road-edge']; ctx.beginPath(); ctx.roundRect(p[0] + 6, p[1] - 9, w + 12, 18, 4); ctx.fill();
+      ctx.fillStyle = RV.pal['road']; ctx.fillText(s, p[0] + 12, p[1] + 3);
+    } },
     { id: 'marks', g: 'Track', label: 'Distance marks', d: 'A tick and a label every 100 m from the start line.', on: true, alpha: 0.8, draw(ctx, z) {
       ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().marks);
     }, screen(ctx, w2s) {
@@ -165,7 +191,22 @@
     } },
     { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (blue slowest, yellow fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
     { id: 'car', g: 'Car and path', label: 'Car', d: 'The car in focus: car1-ow1, the open-wheel car the driver runs, drawn to scale. Its front wheels turn with the recorded steering.', on: true, alpha: 1,
-      draw(ctx, z) { drawCar(ctx, S.R, S.i, RV.colMap(S.sel[0]), z); } },
+      draw(ctx, z) { drawCar(ctx, S.R, S.i, RV.colMap(S.sel[0]), z, S.carScale[S.sel[0]]); } },
+    { id: 'slowcorner', g: 'Car and path', label: 'Slowest corner', d: 'A pin marking the slowest corner of the selected run.', on: true, alpha: 1, draw(ctx, z) {
+      const R = S.R; if (!R || !R.sum || !R.sum.slow || !R.x) return;
+      const k = R.sum.slow_at || 0;
+      ctx.beginPath(); ctx.arc(R.x[k], R.y[k], 6 / z, 0, 7);
+      ctx.fillStyle = RV.pal['best']; ctx.fill();
+      ctx.beginPath(); ctx.arc(R.x[k], R.y[k], 9 / z, 0, 7);
+      ctx.strokeStyle = RV.pal['surface']; ctx.lineWidth = 2 / z; ctx.stroke();
+    }, screen(ctx, w2s) {
+      const R = S.R; if (!R || !R.sum || !R.sum.slow || !R.x || view.z < 0.8) return;
+      const k = R.sum.slow_at || 0, p = w2s(R.x[k], R.y[k]);
+      const s = R.sum.slow.toFixed(0) + ' km/h', w = ctx.measureText(s).width;
+      ctx.font = '600 11px ' + RV.pal.fontNum;
+      ctx.fillStyle = RV.pal.best; ctx.beginPath(); ctx.roundRect(p[0] + 12, p[1] - 9, w + 10, 18, 4); ctx.fill();
+      ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 17, p[1] + 3);
+    } },
     { id: 'speed', g: 'Car and path', label: 'Speed label', d: 'The current speed, written next to the car.', on: true, alpha: 1, draw() {}, screen(ctx, w2s) {
       const R = S.R, p = w2s(R.x[S.i], R.y[S.i]), s = R.v[S.i].toFixed(0) + ' km/h';
       ctx.font = '600 14px ' + RV.pal.fontNum;
@@ -199,8 +240,8 @@
     { id: 'lineB', g: 'Compared runs', label: 'Their driven lines', d: 'The path of each compared run, in that run’s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
       for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (opt.lineW * 0.6 + 2) / z, opt.lineW * 0.6 / z, RV.pal['car-line'], RV.colMap(m.id));
     } },
-    { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run’s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
-      for (const m of others()) drawCar(ctx, m.r, RV.ghostIdx(m.r), RV.colMap(m.id), z);
+    { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run's colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
+      for (const m of others()) drawCar(ctx, m.r, RV.ghostIdx(m.r), RV.colMap(m.id), z, S.carScale[m.id]);
     } },
   ];
   const BEAMS_TIP = '19 distance sensors pointing outward from the car nose';
@@ -279,6 +320,26 @@
       const o = el('div', 'opt', '<div class="cap">Where the other cars are placed. Same lap time shows who is ahead; same distance shows the difference in line.</div>');
       o.appendChild(segs([['t', 'Same lap time'], ['d', 'Same distance']], RV.prefs.sync, v => { RV.prefs.sync = v; RV.savePrefs(); }, 'Where the other cars are placed'));
       s.appendChild(o);
+    }
+    /* per-car size sliders */
+    if (!sm) {
+      const sc = el('div', 'opt');
+      sc.innerHTML = '<div class="cap">Car size (1 = true scale)</div>';
+      const allIds = [S.sel[0]].concat(S.CM.map(m => m.id));
+      for (const id of allIds) {
+        const cur = S.carScale[id] || 1;
+        const row = el('div', 'lr');
+        row.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex:1"><i class="sw" style="background:' + RV.col(id) + '"></i><span class="ln" style="flex:1">' + esc(id) + '</span></div>';
+        const resetBtn = el('button', 'btn sm', 'Reset');
+        resetBtn.onclick = () => { delete S.carScale[id]; buildSide(); };
+        const slRow = el('div', 'lo', '<small>Scale</small><input type="range" min="0.3" max="4" step="0.1" value="' + cur.toFixed(1) + '" aria-label="Car size for ' + esc(id) + '"><span class="num">' + cur.toFixed(1) + '×</span>');
+        slRow.querySelector('input').oninput = e => { S.carScale[id] = +e.target.value; e.target.nextSibling.textContent = (+e.target.value).toFixed(1) + '×'; };
+        row.appendChild(slRow); row.appendChild(resetBtn); sc.appendChild(row);
+      }
+      const resetAll = el('button', 'btn wide', 'Reset all car sizes');
+      resetAll.onclick = () => { S.carScale = {}; buildSide(); };
+      sc.appendChild(resetAll);
+      s.appendChild(sc);
     }
   }
   function layersSection(s, sm) {
@@ -506,11 +567,19 @@
     if (mini.width !== Math.round(cw * r)) { mini.width = Math.round(cw * r); mini.height = Math.round(chh * r); }
     const ms = Math.min((cw - 20) / (B[1] - B[0]), (chh - 20) / (B[3] - B[2]));
     const place = ctx => { ctx.setTransform(r, 0, 0, r, 0, 0); ctx.translate(cw / 2, chh / 2); ctx.scale(ms, -ms); ctx.translate(-(B[0] + B[1]) / 2, -(B[2] + B[3]) / 2); };
-    const key = [mini.width, mini.height, trk().total, document.documentElement.dataset.theme].join('|');
+    const key = [mini.width, mini.height, trk().total, document.documentElement.dataset.theme, RV.simple()].join('|');
     if (key !== miniKey) {                                /* the outline is painted once and copied each frame */
       miniBuf.width = mini.width; miniBuf.height = mini.height;
       const mb = miniBuf.getContext('2d');
+      const T = trk();
       place(mb); mb.lineWidth = 2.4 / ms; mb.strokeStyle = P.mute; mb.lineJoin = 'round'; mb.stroke(trackPaths().centre);
+      /* finish line */
+      mb.lineWidth = 2 / ms; mb.strokeStyle = P['road-edge']; mb.stroke(trackPaths().finish);
+      /* sector lines (detailed view only) */
+      if (!RV.simple() && T.sectors) {
+        mb.lineWidth = 1.5 / ms; mb.strokeStyle = P.best;
+        for (const m of T.sectors.lines) { mb.beginPath(); mb.moveTo(m[0], m[1]); mb.lineTo(m[2], m[3]); mb.stroke(); }
+      }
       miniKey = key;
     }
     mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, mini.width, mini.height); mg.drawImage(miniBuf, 0, 0);
@@ -580,7 +649,11 @@
 
   RV.map = {
     draw: draw, size: size, legend: legend, buildSide: buildSide, key: key,
-    resetAuto() { view.sInit = false; },
+    resetAuto() {
+      view.sInit = false;
+      /* default to whole-track view when a comparison run is added */
+      if (S.CM && S.CM.length > 0) fitView();
+    },
     /* the address can ask for the camera that follows the car (follow, zoom, all, fixed); otherwise the whole track is shown */
     fromHash(H) {
       if (H.follow || H.zoom || H.all || H.fixed) { view.follow = true; view.rot = !H.fixed; view.fit = false; }

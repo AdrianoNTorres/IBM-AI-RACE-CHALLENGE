@@ -161,17 +161,17 @@
     else if (complete) lap = C.curLapTime[e] + Math.max(0, total - C.distFromStart[e]) / Math.max(C.speedX[e] / 3.6, 1);
     /* slowest corner: the slowest point away from the start line (the standing start is slower than any corner) */
     const hi = Math.abs(total - 3608.5) < 1 ? 3500 : total - 108.5;
-    let top = -1e9, slow = 1e9, k = 0, nb = 0, nf = 0;
+    let top = -1e9, slow = 1e9, slowIdx = 0, k = 0, nb = 0, nf = 0;
     for (let i = 0; i < n; i++) {
       if (R.v[i] > top) top = R.v[i];
-      if (R.s[i] > 100 && R.s[i] < hi && R.t[i] > 8 && R.v[i] < slow) slow = R.v[i];
+      if (R.s[i] > 100 && R.s[i] < hi && R.t[i] > 8 && R.v[i] < slow) { slow = R.v[i]; slowIdx = i; }
       if (Math.abs(R.tp[i]) > Math.abs(R.tp[k])) k = i;
       if (R.br[i] > 0) nb++;
       if (R.th[i] >= 0.99) nf++;
     }
     R.sum = {
       lap: lap == null ? null : rnd(lap, 3), complete: complete, stoppedAt: complete ? null : Math.max(0, Math.round(R.d[e])),
-      top: top, slow: slow === 1e9 ? 0 : slow, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
+      top: top, slow: slow === 1e9 ? 0 : slow, slow_at: slow === 1e9 ? 0 : slowIdx, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
       damage: C.damage[e], brake: rnd(100 * nb / n, 1), full: rnd(100 * nf / n, 1), frames: n,
     };
     /* sector times: the lap clock at each sector boundary, read between the two rows around it */

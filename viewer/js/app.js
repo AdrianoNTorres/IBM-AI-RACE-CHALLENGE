@@ -7,13 +7,15 @@
   const S = RV.S = {
     ds: null,                        /* the open data set (see data.js openSource) */
     sel: [], selCol: {},             /* selected run ids (first = the car in focus) and their colour numbers */
+    carScale: {},                    /* per-car scale multiplier (id → number, default 1) */
     applied: [],                     /* the selection whose runs are loaded and shown */
     R: null, CM: [],                 /* the run in focus and the compared runs [{r, id}] */
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
     hold: { dir: 0, start: 0, rate: 0 },
     tab: 'pv', listMode: 'all', keptOnly: true, detailId: null,
-    sideTab: 'view', layerGroup: 'Track', teleTab: 'charts', guideTab: 'layout',
+    sideTab: 'view', layerGroup: 'Track', teleTab: 'charts', guideTab: 'layout', setTab: 'prefs',
     hoverD: null, chartsDirty: true, progDirty: true, loadTok: 0,
+    loop: null, loopDraft: null,     /* a section of the lap played on a loop: [from, to] in metres of lap distance; the one being dragged */
     vmin: 0, vmax: 1,                /* speed range of the run in focus, for the colour scale */
   };
   /* Basic view needs the simplified changelog; without it the page uses the detailed view. */
@@ -41,21 +43,27 @@
     const ref = RV.refIdFor(id), ds = S.ds, rv = ref && ds.byId[ref];
     if (!rv || !rv.file || rv.sum || rv.refTried) return;
     rv.refTried = true;
-    ds.loadRun(ref).then(() => { if (ds === S.ds) { RV.tele.build(); RV.versions.renderDetail(); } }, () => {});
+    ds.loadRun(ref).then(() => { if (ds === S.ds) { RV.tele.build(); RV.versions.render(); RV.map.buildSide(); } }, () => {});
   };
   const secDelta = d => '<span class="' + (d < -0.0005 ? 'faster' : d > 0.0005 ? 'slower' : '') + '">' + RV.sgn(d, 3) + '</span>';
   RV.secDelta = secDelta;
-  /* the compact sector table of one version, for the details panel */
+  /* The sector row of one version, for the details panel: S1 | S2 | S3, each with its time and a difference.
+     The difference is against the run in focus when that is another run, otherwise against the previous best. */
   RV.sectorsBlock = function (id) {
     const v = S.ds.byId[id], trk = S.ds.trk;
     if (!v || !v.sec || !trk) return '';
-    const ref = RV.refIdFor(id), rv = ref && S.ds.byId[ref];
-    RV.needRef(id);
-    const rs = rv && rv.sec;
-    return '<h4>Sectors <span class="note">' + (rv ? 'against the previous best, ' + esc(ref) : 'no earlier best to compare with') + '</span></h4><table class="sect3"><tbody>' +
-      ['S1', 'S2', 'S3'].map((n, k) => '<tr title="' + esc(trk.sectors.where[k]) + '"><td class="l">' + n + '</td><td class="num">' + (v.sec[k] == null ? '\u2013' : v.sec[k].toFixed(3) + ' s') + '</td><td class="num">' +
-        (rs && rs[k] != null && v.sec[k] != null ? secDelta(v.sec[k] - rs[k]) + ' s' : (rv && rv.file && !rv.sum ? '\u2026' : '')) + '</td></tr>').join('') + '</tbody></table>' +
-      (rv && !rv.file ? '<p class="note">' + esc(ref) + ' has no recording, so there is nothing to compare the sectors with.</p>' : '');
+    const foc = S.sel[0], fv = foc && foc !== id ? S.ds.byId[foc] : null;
+    let rs = null, what;
+    if (fv && fv.sec) { rs = fv.sec; what = '\u0394 against ' + esc(foc) + ', the run in focus'; }
+    else {
+      const ref = RV.refIdFor(id), rv = ref && S.ds.byId[ref];
+      RV.needRef(id);
+      rs = rv && rv.sec;
+      what = !rv ? 'no earlier best to compare with' : rv.file ? '\u0394 against the previous best, ' + esc(ref) : 'the previous best, ' + esc(ref) + ', has no recording to compare with';
+    }
+    return '<h4>Sectors <span class="note">' + what + '</span></h4><div class="sec3">' + [0, 1, 2].map(k =>
+      '<div title="' + esc(trk.sectors.where[k]) + '"><span>S' + (k + 1) + '</span><b class="num">' + (v.sec[k] == null ? '\u2013' : v.sec[k].toFixed(3)) + '</b>' +
+      (rs && rs[k] != null && v.sec[k] != null ? '<em class="num">' + secDelta(v.sec[k] - rs[k]) + '</em>' : '<em>&nbsp;</em>') + '</div>').join('') + '</div>';
   };
 
   /* ---------- busy line under the top bar ---------- */
@@ -155,7 +163,15 @@
   function setPlaying(p) { S.playing = p; $('play').textContent = p ? 'Pause' : 'Play'; }
   function hold(dir) { if (!S.R) return; setPlaying(false); go(S.i + dir); S.hold.dir = dir; S.hold.start = performance.now(); }
   function release() { S.hold.dir = 0; S.hold.rate = 0; }
-  RV.play = { go: go, set: setPlaying };
+  /* Loops the replay over a section of the lap (null: no loop). */
+  function setLoop(range) {
+    S.loop = range; S.loopDraft = null;
+    const chip = $('loopChip');
+    chip.hidden = !range;
+    if (range) chip.textContent = 'Loop ' + RV.fmtInt(range[0]) + '\u2013' + RV.fmtInt(range[1]) + ' m  \u00d7';
+    S.chartsDirty = true;
+  }
+  RV.play = { go: go, set: setPlaying, setLoop: setLoop };
 
   let last = null;
   function tick(now) {
@@ -165,7 +181,8 @@
     last = now;
     if (S.tab === 'pv') { RV.versions.drawProg(); return; }
     const R = S.R;
-    if (!R || (S.tab !== 'pm' && S.tab !== 'pt')) return;
+    if (!R) { if (S.tab === 'pm' && S.ds) RV.map.draw(); return; }
+    if (S.tab !== 'pm' && S.tab !== 'pt') return;
     const n = R.n, H = S.hold;
     if (H.dir) {                                        /* a held arrow: one step, then slow motion that speeds up */
       const h = (now - H.start) / 1000;
@@ -173,7 +190,9 @@
       if (H.rate) seekT(RV.clamp(S.t + H.dir * dt * H.rate, R.t[0], R.t[n - 1]));
     } else if (S.playing) {
       const tt = S.t + dt * +$('spd').value;
-      if (tt >= R.t[n - 1]) { S.i = 0; S.t = R.t[0]; } else seekT(tt);
+      const end = S.loop ? R.t[RV.idxAtD(R, S.loop[1])] : null;
+      if (end != null && S.t <= end && tt > end) go(RV.idxAtD(R, S.loop[0]));      /* the end of the looped section: back to its start */
+      else if (tt >= R.t[n - 1]) { S.i = 0; S.t = R.t[0]; } else seekT(tt);
     }
     $('rate').textContent = H.dir ? (H.rate ? (H.dir < 0 ? 'back ' : '') + H.rate + '×, held' : 'one step') : (S.playing ? '' : 'paused');
     $('scrub').value = S.i;
@@ -214,6 +233,7 @@
   function setView(m) {
     if (m === 'basic' && S.ds && !S.ds.hasSimple) { RV.toast(NO_BASIC); return; }
     RV.prefs.view = m; RV.savePrefs();
+    RV.map.viewDefaults();
     refreshAll();
   }
   RV.setView = setView; RV.NO_BASIC = NO_BASIC;
@@ -235,11 +255,14 @@
   /* Makes ds the page's data set. start: optional {run, cmp, detail} from the address. */
   function useDataset(ds, start) {
     start = start || {};
+    setLoop(null);
     S.ds = ds; S.sel = []; S.selCol = {}; S.applied = []; S.R = null; S.CM = []; S.i = 0; S.t = 0; S.loadTok++;
     if (S.listMode === 'extra' && !ds.extras.length) S.listMode = 'all';
     $('brandSub').textContent = ds.trk ? RV.track.title(ds.trk) : '';
     $('brandSub').title = ds.src.label();
     RV.versions.prepare();
+    S.secHidden = {};
+    RV.map.viewDefaults();
     const withFile = ds.versions.filter(v => v.file);
     const first = (start.run && ds.byId[start.run] && ds.byId[start.run].file) ? start.run : (withFile.length ? withFile[withFile.length - 1].id : null);
     S.detailId = start.detail || first || (ds.versions.length ? ds.versions[ds.versions.length - 1].id : null);
@@ -291,12 +314,14 @@
     location.hash.slice(1).split('&').forEach(q => { const p = q.split('='); if (p[0]) H[p[0]] = p[1] === undefined ? true : decodeURIComponent(p[1]); });
     if (H.mode) RV.prefs.view = (H.mode === 'simple' || H.mode === 'basic') ? 'basic' : 'detailed';
     if (H.list) S.listMode = H.list;
+    if (H.help) S.setTab = 'help';
     RV.map.fromHash(H);
     S.tab = 'pe';
 
     document.querySelectorAll('.tab').forEach(b => { b.onclick = () => showTab(b.dataset.t); });
     document.querySelectorAll('#viewsw button').forEach(b => { b.onclick = () => setView(b.dataset.m); });
     $('clr').onclick = () => RV.sel.only(S.sel[0]);
+    $('loopChip').onclick = () => setLoop(null);
     $('play').onclick = () => setPlaying(!S.playing);
     $('scrub').oninput = e => go(+e.target.value);
     $('spd').value = String(RV.prefs.speed);
@@ -320,6 +345,7 @@
         if (tg.tagName === 'BUTTON' || tg.tagName === 'SELECT' || tg.type === 'checkbox') return;   /* space presses the focused control */
         e.preventDefault(); setPlaying(!S.playing);
       } else if (e.key === 'Home') go(0);
+      else if (e.key === 'Escape' && S.loop) setLoop(null);
       else RV.map.key(e);
     });
     addEventListener('keyup', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') release(); });
@@ -327,12 +353,16 @@
     addEventListener('resize', () => { RV.map.size(); S.chartsDirty = true; S.progDirty = true; });
 
     paintView();
-    showTab(H.tab === 'ps' ? 'ps' : 'pe');
+    showTab(H.tab === 'ps' || H.help ? 'ps' : 'pe');
     setPlaying(RV.prefs.autoplay && !H.pause && !H.frame);
     loadAtStart({
       run: H.run, cmp: H.cmp, detail: H.detail,
       then() { if (H.frame) go(+H.frame - 1); },
-    }).then(() => { if (S.ds && H.tab && H.tab !== 'ps') showTab(H.tab); });
+    }).then(() => {
+      if (S.ds && H.tab && H.tab !== 'ps') showTab(H.tab);
+      /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
+      if (S.ds && !RV.prefs.tutorialDone && !location.hash.slice(1)) RV.tutorial.start(true);
+    });
     requestAnimationFrame(tick);
   };
 })();
