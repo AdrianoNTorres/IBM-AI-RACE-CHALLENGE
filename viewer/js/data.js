@@ -234,7 +234,7 @@
       try { r = await fetch(api); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
       if (r.status === 404) return new RVError('repo', 'The repository ' + name + ' was not found, or it is private.',
         'The page reads public repositories only. Check the spelling of the owner and the repository name.');
-      if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ', and GitHub's request limit prevented checking why (HTTP ' + r.status + ').',
+      if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ", and GitHub\u2019s request limit prevented checking why (HTTP " + r.status + ').',
         'Check the link, or wait a few minutes and try again.');
       const info = await r.json();
       if (branch !== 'HEAD') {
