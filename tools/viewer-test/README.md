@@ -10,6 +10,7 @@ The viewer (`viewer/`) has no build step and no unit tests. It is checked by dri
 | `h.js` | `open(hash, prefs, opts)` opens the viewer in a fresh browser tab and returns helpers. |
 | `smoke.js` | Opens every page and tab, runs a comparison, the tour and a phone-width window, and fails on any script error. |
 | `phase15.js` | Phase 15: the validator, the "Add versions" window (one version, import, export, change, delete), a reload in between. Empties the browser's database of entered versions before and after. |
+| `github.js` | Phase 15.1: log in, the Repository page (add, upload, move, remove, edit, a conflict, a new branch), publishing an entered version, settings saved and loaded. Writes go to a stand-in for the GitHub API inside the page; one check reads the real repository without a login. |
 
 `open()` redirects the page's requests to `raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/<branch>/...` to the local server, so the page reads the changelog and the runs **of your working tree**, not what is on GitHub.
 

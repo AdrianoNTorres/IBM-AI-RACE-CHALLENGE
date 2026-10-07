@@ -55,6 +55,7 @@
       '<h4>Importing files</h4><p>Several CSV files can be chosen at once. A run CSV becomes a version with that recording. A <b>table</b> has one row per version and these columns (only <code>version</code> is required; the window has a template):</p>' +
       '<pre>' + RV.validate.TABLE_HEAD.join(', ') + '</pre>' +
       '<p><code>result</code> is <code>kept</code>, <code>kept-enabling</code>, <code>rej-enabling</code> or <code>rejected</code>. <code>recording</code> names a run CSV chosen together with the table. Each version is checked on its own; those that cannot be entered are skipped and the rest are imported.</p>' +
+      '<h4>Publish</h4><p>Logged in with GitHub (top right), \u201cPublish the ticked to GitHub\u201d puts the entries at the end of <code>docs/CHANGELOG.md</code> and the recordings into <code>runs/</code>, the two places the viewer reads. You see the files on the Repository page first and save them with Commit. Once the branch the viewer shows has them, the copies in the browser are deleted.</p>' +
       '<h4>Export</h4><p>The tab \u201cIn this browser\u201d of the window exports all of them or only the ticked ones as a zip: <code>docs/CHANGELOG-additions.md</code> (the entries, to paste at the end of the repository\u2019s changelog), the recordings under <code>runs/</code>, and <code>versions.csv</code> (the table, which can be imported in another browser together with the recordings). Once the repository has them, every visitor sees them and the copies in the browser can be deleted.</p>'],
   };
 
@@ -77,6 +78,8 @@
         '<dt>Versions</dt><dd>Every version with its lap time, the lap-time chart, the rankings, and a panel that explains what the selected version changed and why.</dd>' +
         '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams.</dd>' +
         '<dt>Telemetry</dt><dd>Charts of speed, throttle, brake and more along the lap, and in the detailed view sector times and a table of 100 m sections.</dd>' +
+        '<dt>Repository</dt><dd>The files of the source\u2019s GitHub repository, branch by branch. Every file says what it is to the viewer. Logged in, you can add, change, move and remove files there; changes wait in the bar at the bottom until you commit them.</dd>' +
+        '<dt>Log in (top right)</dt><dd>Logging in with a GitHub token of your own lets the page save to your repository: versions you entered, files, and your settings, so another device has them. Everything else works without a login.</dd>' +
         '<dt>Settings</dt><dd>Five tabs: General (theme, view, reset), Replay (how a replay starts and looks), Data (the source and your own API keys), Customization (colours and themes) and Controls (the replay keys).</dd>' +
         '<dt>Help</dt><dd>This page. The list on the left has one entry per subject; the search box finds a word in all of them.</dd></dl>') +
       card('Selecting and comparing', '<ul class="helpul"><li><b>Select one version:</b> click its row on the Versions page.</li>' +
@@ -109,6 +112,8 @@
         '<dt>\u201cThis run does not fit the track map\u201d</dt><dd>The runs were driven on another track than the map in use. The source needs its own track.xml (see the data format).</dd>' +
         '<dt>Basic view cannot be chosen</dt><dd>The source has no simplified changelog (docs/CHANGELOG-simple.md).</dd>' +
         '<dt>A version I entered is gone</dt><dd>Entered versions are kept in the browser they were entered in, for the source they were entered under. Another browser or device, a private window, or cleared site data does not have them. Export them to put them into the repository (Data format, Entered by hand).</dd>' +
+        '<dt>\u201cGitHub does not allow this with your token\u201d</dt><dd>The token may read but not write. On GitHub, give it \u201cContents: Read and write\u201d for the repository, or make a new one (the Log in page has the steps).</dd>' +
+        '<dt>\u201c\u2026 was changed on GitHub after you opened it\u201d</dt><dd>Someone else saved the same file in the meantime, so nothing was written. Reload the Repository page and make the change again.</dd>' +
         '<dt>A local folder is gone after a reload</dt><dd>Browsers do not keep access to a folder. Choose it again under Settings, Data.</dd></dl>') +
       card('Links to a particular state', '<p>Options after <code>#</code> in the address open the page in a given state, for example <code>#tab=pm&amp;run=v1.05&amp;cmp=v0.96&amp;mode=detailed</code>. <code>tab</code> is <code>pv</code>, <code>pm</code>, <code>pt</code>, <code>ps</code> or <code>ph</code> (this page); <code>run</code> and <code>cmp</code> name versions; <code>frame</code> pauses on a frame; <code>help</code> opens this page. The README lists them all.</p>') +
       '');

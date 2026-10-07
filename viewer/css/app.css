@@ -220,7 +220,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .page.on { display: block; }
 
 /* status (loading, errors, empty) */
-#pe, #pt, #ps, #ph { overflow: auto; padding: 26px 28px 40px; }
+#pe, #pt, #ps, #ph, #pa { overflow: auto; padding: 26px 28px 40px; }
 .card.status { max-width: 640px; margin: 6vh auto 0; padding: 28px 30px; }
 .card.status h2 { margin-bottom: 8px; }
 .steps { list-style: none; padding: 0; margin: 14px 0 0; }
@@ -636,6 +636,53 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 .cpick .lbl { margin-top: 8px; } .cpick .inrow { margin-bottom: 6px; } #cpText.bad { border-color: var(--slower); outline: 1px solid var(--slower); }
 .cpnow { width: 40px; border-radius: 8px; border: 1px solid var(--line); flex: none; } .cpick .tour-acts { margin-top: 8px; }
 
+/* ---------- the account (js/account.js) ---------- */
+#accountTab { gap: 8px; padding-left: 12px; } #accountMark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; background: var(--surface-2); flex: none; }
+#accountMark img { width: 100%; height: 100%; display: block; } #accountMark svg { width: 16px; height: 16px; }
+#accountName { max-width: 130px; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
+.acct { max-width: 1080px; } .acctgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; } .acctgrid .col { display: grid; gap: 18px; min-width: 0; }
+.acct h4.first, .rnone h4.first { margin-top: 0; } .acct .card p { max-width: 62ch; }
+.accthead { display: flex; align-items: center; gap: 16px; } .accthead img, .acctnoimg { width: 56px; height: 56px; border-radius: 50%; flex: none; background: var(--surface-2); display: grid; place-items: center; }
+.acctnoimg svg { width: 30px; height: 30px; fill: none; stroke: var(--mute); stroke-width: 1.6; } .accthead > div { flex: 1; min-width: 0; } .accthead .lead { margin: 0; }
+.acctrow { display: flex; gap: 22px; flex-wrap: wrap; margin: 12px 0 6px; } .acctsteps { padding-left: 20px; margin: 4px 0 12px; } .acctsteps li { margin-bottom: 6px; max-width: 60ch; }
+.acctsaved { color: var(--ink); font-weight: 600; margin: 12px 0 0; } .acct a.btn { text-decoration: none; display: inline-block; }
+
+/* ---------- the repository (js/repo.js): folders, the files of one, one file; the waiting changes in a bar below ---------- */
+.repo { height: 100%; display: flex; flex-direction: column; } .repo.loading .rbody { opacity: .55; }
+.rhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 22px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.rname { margin-right: auto; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; } .rname h1 { font-size: 24px; overflow-wrap: anywhere; }
+.rbranch { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); } .rbranch select { max-width: 240px; font-weight: 600; }
+.rhead a.btn { text-decoration: none; } .rerr { margin: 10px 22px 0; }
+.rbody { flex: 1 1 0; display: grid; grid-template-columns: 230px minmax(0, 1.2fr) minmax(0, 1fr); min-height: 0; }
+.rtree, .rmid, .rside { overflow: auto; min-height: 0; } .rtree { padding: 12px 8px; border-right: 1px solid var(--line); } .rmid { padding: 12px 18px 20px; } .rside { padding: 16px 22px 24px; border-left: 1px solid var(--line); background: var(--surface); }
+.rdir { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink-2); padding: 6px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rdir:hover { background: var(--surface-2); color: var(--ink); } .rdir.on { background: var(--sel); color: var(--ink); font-weight: 600; }
+.rbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; } .ractions { display: flex; gap: 6px; flex-wrap: wrap; }
+.rcrumb { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font: 600 17px var(--font-display); } .rcrumb span { color: var(--mute); }
+.rcrumb button { border: 0; background: transparent; color: var(--ink); padding: 2px 4px; border-radius: 6px; cursor: pointer; font: inherit; } .rcrumb button:hover { background: var(--surface-2); }
+.rwhat { margin: 0 0 6px; } .rdiract { display: flex; gap: 16px; margin: 0 0 8px; font-size: 13px; }
+.rask { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
+.rask label { font-weight: 600; color: var(--ink); } .rask input { flex: 1 1 220px; } .rask .note { flex-basis: 100%; margin: 0; }
+.rlist { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.rrow { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(0, 1.5fr) 84px; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink-2); padding: 9px 14px; cursor: pointer; }
+.rrow:last-child { border-bottom: 0; } .rrow:hover { background: var(--surface-2); } .rrow.on { background: var(--sel); }
+.rn { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; } .rw { color: var(--mute); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .rs { text-align: right; color: var(--mute); font-size: 13px; }
+.rrow.gone .rn { text-decoration: line-through; color: var(--mute); font-weight: 400; } .rempty { padding: 16px 14px; margin: 0; }
+.ric.dir { width: 15px; height: 11px; background: var(--mute); border-radius: 2px 3px 2px 2px; flex: none; }
+.rst { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; margin-right: 6px; } .rst.add { background: var(--faster); } .rst.mod { background: var(--health-warn); } .rst.del { background: var(--slower); }
+.rfile h2 { font-size: 22px; overflow-wrap: anywhere; } .rpath { color: var(--mute); font-size: 13px; margin: 2px 0 8px; overflow-wrap: anywhere; } .rrole { color: var(--ink); font-weight: 600; margin: 0 0 4px; }
+.rfile .acts { margin: 12px 0; } .rfile .acts a.btn { text-decoration: none; } .rtext { max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 12px; } .rimg { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; margin-top: 8px; }
+#rEdit { width: 100%; min-height: 46vh; resize: vertical; background: var(--surface-2); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12.5px/1.5 "Cascadia Mono", "SF Mono", ui-monospace, Consolas, monospace; margin-top: 10px; } #rEdit:focus { border-color: var(--accent); outline: none; }
+.rcsv { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; } .rcsv td { padding: 4px 9px; font-size: 12.5px; } .rcsv thead td { color: var(--ink); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+.rlog { list-style: none; margin: 8px 0 14px; padding: 0; } .rlog li { padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--ink); } .rlog li .note { display: block; } .rlog a { color: var(--ink); }
+/* the bar of waiting changes: the page's own colours turned round, so it is the one thing that stands out */
+.rdock { background: var(--ink); color: var(--surface); padding: 10px 22px; } .rdock.idle { background: var(--surface); color: var(--mute); border-top: 1px solid var(--line); font-size: 13px; }
+.rdockrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rcount { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px 4px; font: 600 17px var(--font-display); display: flex; align-items: baseline; gap: 6px; white-space: nowrap; } .rcount b { font-size: 24px; } .rcount .note { color: inherit; opacity: .7; font: 400 13px var(--font-ui); text-decoration: underline; margin-left: 4px; }
+#rMsg { flex: 1 1 260px; background: transparent; color: inherit; border: 1.5px solid var(--mute); } #rMsg:focus { border-color: var(--surface); outline: none; }
+.rdock .btn.ghost { color: inherit; border-color: var(--mute); } .rdock .btn.ghost:hover { background: transparent; border-color: var(--surface); } .rdock .link { color: inherit; }
+.rpend { list-style: none; margin: 0 0 8px; padding: 0 0 8px; border-bottom: 1px solid var(--mute); max-height: 28vh; overflow: auto; } .rpend li { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; } .rpend li > span { overflow-wrap: anywhere; } .rpend .note { color: inherit; opacity: .7; }
+
 /* ---------- narrower windows ---------- */
 @media (max-width: 1280px) {
   #brand span { display: none; }
@@ -648,7 +695,9 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 @media (max-width: 1080px) {
   #chips .chip em, #chips .chip span.num { display: none; }
   #clr { display: none !important; }
-  .setgrid, .setgrid.even, .custgrid { grid-template-columns: 1fr; }
+  .setgrid, .setgrid.even, .custgrid, .acctgrid { grid-template-columns: 1fr; }
+  #accountName { display: none; }
+  .rbody { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .rtree { display: none; }
 }
 /* phone: the Versions tab stacks; the replay asks for a wider screen */
 @media (max-width: 820px) {
@@ -661,8 +710,10 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
   .tiles { grid-template-columns: 1fr 1fr; gap: 10px; } .tile .big { font-size: 26px; } .tile.hero .big { font-size: 30px; }
   .xcol { display: none; } th, td { padding: 8px; } #vt td.w { min-width: 150px; }
   #pm.on { display: block; } #mapwrap { height: 62vh; } #mini, #leg, #inputs, #sectorLive, #lapDeltaBar, .win:not([data-id="hud"]) { display: none !important; }
-  #pe, #pt, #ps, #ph { padding: 16px 14px; overflow: visible; }
+  #pe, #pt, #ps, #ph, #pa { padding: 16px 14px; overflow: visible; }
   .helpgrid { grid-template-columns: 1fr; } .helpnav { position: static; }
+  .repo { height: auto; display: block; } .rbody { display: block; } .rside { border-left: 0; border-top: 1px solid var(--line); } .rrow { grid-template-columns: minmax(0, 1fr) 70px; } .rrow .rw { display: none; }
+  .rdock { position: sticky; bottom: 0; }
   #bar { position: sticky; bottom: 0; flex-wrap: wrap; } #pos { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

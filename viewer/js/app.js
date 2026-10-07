@@ -242,7 +242,7 @@
   /* ---------- tabs ---------- */
   function showBar() { $('bar').classList.toggle('on', !!S.R && (S.tab === 'pm' || S.tab === 'pt')); }
   function showTab(id) {
-    if (!S.ds && id !== 'ps' && id !== 'ph') id = 'pe';   /* nothing loaded: only the status page, Settings and Help exist */
+    if (!S.ds && id !== 'ps' && id !== 'ph' && id !== 'pa') id = 'pe';   /* nothing loaded: only the status page, Settings, Help and the account exist */
     S.tab = id;
     document.querySelectorAll('.tab').forEach(q => { const on = q.dataset.t === id; q.classList.toggle('on', on); q.setAttribute('aria-current', on ? 'page' : 'false'); });
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === id));
@@ -253,6 +253,8 @@
     if (id === 'pm') RV.map.size();
     if (id === 'ps') RV.settings.render();
     if (id === 'ph') RV.help.render();
+    if (id === 'pr') RV.repo.render();
+    if (id === 'pa') RV.account.render();
   }
   RV.showTab = showTab;
 
@@ -349,8 +351,9 @@
   /* ---------- start-up ---------- */
   RV.boot = function () {
     RV.applyTheme();
-    RV.apiKeys.onChange(() => { if (S.tab === 'ps' && S.setTab === 'data') RV.settings.render(); });
+    RV.apiKeys.onChange(() => { if (S.tab === 'ps' && S.setTab === 'data') RV.settings.render(); RV.account.changed(); });
     RV.apiKeys.checkAll();
+    RV.account.changed();
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (RV.prefs.theme === 'system') RV.applyTheme(); });
 
     /* options in the address, e.g. #tab=pm&run=v1.05&cmp=v1.01,v0.96&frame=1539&mode=adv&list=gain */
@@ -402,13 +405,13 @@
     addEventListener('resize', () => { RV.map.size(); S.chartsDirty = true; S.progDirty = true; });
 
     paintView();
-    showTab(H.help || H.tab === 'ph' ? 'ph' : H.tab === 'ps' ? 'ps' : 'pe');
+    showTab(H.help || H.tab === 'ph' ? 'ph' : H.tab === 'ps' ? 'ps' : H.tab === 'pa' ? 'pa' : 'pe');
     setPlaying(RV.prefs.autoplay && !H.pause && !H.frame);
     loadAtStart({
       run: H.run, cmp: H.cmp, detail: H.detail,
       then() { if (H.frame) go(+H.frame - 1); },
     }).then(() => {
-      if (S.ds && H.tab && H.tab !== 'ps' && H.tab !== 'ph' && !H.help) showTab(H.tab);
+      if (S.ds && H.tab && H.tab !== 'ps' && H.tab !== 'ph' && H.tab !== 'pa' && !H.help) showTab(H.tab);
       /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
       if (S.ds && !RV.prefs.tutorialDone && !location.hash.slice(1)) RV.tutorial.start(true);
       /* opened as a local file and nothing loaded: offer the folder picker right on the status page */

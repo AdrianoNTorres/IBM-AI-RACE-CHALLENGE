@@ -19,12 +19,14 @@
         'Sign in to GitHub and open Settings, Developer settings, Personal access tokens, Fine-grained tokens (the link below goes there).',
         'Press “Generate new token”. Give it a name and an expiry date.',
         'Under Repository access choose “Only select repositories” and pick the repository with your runs.',
-        'Under Permissions, Repository permissions, set “Contents” to “Read-only”. Nothing else is needed.',
+        'Under Permissions, Repository permissions, set “Contents” to “Read and write”. Nothing else is needed. (“Read-only” is enough if you only want to read a private repository.)',
         'Press “Generate token”, copy the token (it starts with github_pat_) and paste it here.',
       ],
       features: [
         { id: 'private', name: 'Reading a private repository', why: 'GitHub gives the files of a private repository only to a request that carries a token of someone allowed to read it.' },
         { id: 'limit', name: 'Checking a source more than 60 times an hour', why: 'without a token GitHub answers at most 60 questions an hour from one network (which run files exist, why a repository could not be read).' },
+        { id: 'write', name: 'Saving versions and files to the repository', why: 'GitHub accepts a change only from a request that carries a token allowed to write to the repository.' },
+        { id: 'sync', name: 'The same settings on every device', why: 'they are kept in a file in the repository, which only a token allowed to write can save.' },
       ],
       /* resolves to true if the service accepts the key, false if it refuses it; throws if it could not be asked */
       async check(key) {
@@ -38,7 +40,10 @@
   const byId = id => SERVICES.find(s => s.id === id);
   const state = {};                     /* service id to 'ok' | 'bad' | 'unknown' (could not be checked) | 'checking' */
   const store = () => (RV.prefs.apiKeys && typeof RV.prefs.apiKeys === 'object' ? RV.prefs.apiKeys : (RV.prefs.apiKeys = {}));
-  const get = id => store()[id] || '';
+  /* A key the reader did not want kept on this device lives in the tab's own storage and is gone when the tab closes. */
+  const SKEY = 'rv_keys_session';
+  const sess = () => { try { return JSON.parse(sessionStorage.getItem(SKEY) || '{}') || {}; } catch (e) { return {}; } };
+  const get = id => sess()[id] || store()[id] || '';
   let onChange = function () {};
 
   /* asks the service whether the stored key works; run when the page starts and whenever the key changes */
@@ -50,7 +55,16 @@
     try { res = (await s.check(key)) ? 'ok' : 'bad'; } catch (e) { res = 'unknown'; }
     if (get(id) === key) { state[id] = res; onChange(); }
   }
-  function set(id, key) { key = String(key || '').trim(); if (key) store()[id] = key; else delete store()[id]; RV.savePrefs(); return check(id); }
+  /* sessionOnly: keep the key for this tab only, not on the device */
+  function set(id, key, sessionOnly) {
+    key = String(key || '').trim();
+    const s = sess();
+    delete s[id]; delete store()[id];
+    if (key) { if (sessionOnly) s[id] = key; else store()[id] = key; }
+    try { sessionStorage.setItem(SKEY, JSON.stringify(s)); } catch (e) { /* not kept */ }
+    RV.savePrefs();
+    return check(id);
+  }
   /* 'none' (no key), 'ok', 'bad' (the service refused it), 'unknown' (not checked: offline), 'checking' */
   const status = id => (get(id) ? state[id] || 'unknown' : 'none');
   /* a feature cannot be used: its service has no key, or has one the service refused */
@@ -126,7 +140,7 @@
   }
 
   RV.apiKeys = {
-    SERVICES: SERVICES, get: get, set: set, clear: id => set(id, ''), status: status, blocked: blocked, masked: masked, prompt: prompt, check: check,
+    SERVICES: SERVICES, get: get, set: set, kept: id => !!store()[id], clear: id => set(id, ''), status: status, blocked: blocked, masked: masked, prompt: prompt, check: check,
     /* checks every stored key (the page calls this once when it starts) */
     checkAll() { for (const s of SERVICES) if (get(s.id)) check(s.id); },
     /* fn is called whenever a key or its status changes, so pages can redraw what depends on it */

@@ -1,13 +1,13 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 15 (2026-10-07). **Next: the GitHub login the user asked for (see "What is left"), then Phase 16.**
+**Last updated:** after Phase 15.1, the GitHub login and the Repository page (2026-10-07). **Next: Phase 16.**
 
 ---
 
 ## Start here
 
-Phases 1 to 15 are built, tested, tagged (`phase-1` ... `phase-15`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: a **login with GitHub** that commits entered versions to the repository (asked for by the user during Phase 15; proposed, not yet agreed in detail), **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
+Phases 1 to 15 are built, tested, tagged (`phase-1` ... `phase-15`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. Phase 15.1 (tag `phase-15.1`) added the login with a GitHub token, the Repository page and publishing. What is left: **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
 
 Read, in this order: this section; "What is left"; the phase you are about to build in `RACE_RUNNER_TASKS_ORDERED.md`; `tools/viewer-test/README.md`. Read the sections on finished phases only when you touch that code.
 
@@ -19,8 +19,9 @@ Read, in this order: this section; "What is left"; the phase you are about to bu
 4. **Commit, tag, push after each phase** on the branch `experimental_hosting`: `git push origin experimental_hosting phase-N`. A push republishes the site (Actions, "Publish the run viewer"). **No Claude attribution** in commits or tags: before pushing, `git log --format='%an %ae%n%B' origin/experimental_hosting..HEAD | grep -ic "claude\|anthropic\|co-authored"` must print 0. Never commit `runs/*.csv` that are untracked (the user's manual laps), `.vscode/`, or the modified `.gitignore`.
 5. **Change the `?v=` tag in `viewer/index.html`** (all script and stylesheet links) whenever a file changes, or browsers mix old and new files and the user sees a half-updated page.
 6. **Say plainly what was and was not checked**, and what the user should look at. Report a test that failed, with the reason, also when the reason is the test.
-7. Every colour is a token (`css/app.css` + `RV.theme.TOKENS`); every map drawing is a layer (`RV.map.addLayer`); every box over the map is a panel (`RV.map.addPanel`) and therefore a window; every setting is in `RV.prefs` or `RV.prefs.ui`. A feature that needs a private key goes through `js/keys.js`. Do not build a second way of doing any of these.
-8. The site stays static (GitHub Pages, no server, no build step, classic scripts on the one global `RV`). Anything from outside must be free and reachable by other users later; nothing of the owner's is embedded.
+7. **Before any front-end code, invoke the skill `frontend-design`** (user, 2026-10-07: every session, no exceptions). If the Skill tool does not know the name, its text is on disk under `~/.claude/plugins/synced/**/frontend-design/SKILL.md`: read it, follow it (design plan, review, code, self-critique from screenshots) and say so. On this site the existing tokens and typefaces are the brief.
+8. Every colour is a token (`css/app.css` + `RV.theme.TOKENS`); every map drawing is a layer (`RV.map.addLayer`); every box over the map is a panel (`RV.map.addPanel`) and therefore a window; every setting is in `RV.prefs` or `RV.prefs.ui`. A feature that needs a private key goes through `js/keys.js`. Do not build a second way of doing any of these.
+9. The site stays static (GitHub Pages, no server, no build step, classic scripts on the one global `RV`). Anything from outside must be free and reachable by other users later; nothing of the owner's is embedded.
 
 ### Where the build differs from the specification (on purpose)
 
@@ -115,6 +116,9 @@ Static multi-file page under `viewer/`. No build step; loads directly in a brows
 | `viewer/js/validate.js` | The one validator of entered and imported versions and recordings: valid / warning / blocked |
 | `viewer/js/local.js` | Versions kept in this browser (IndexedDB), their changelog text, the zip export |
 | `viewer/js/entry.js` | The "Add versions" window: one version, import files, the versions kept in this browser |
+| `viewer/js/gh.js` | The GitHub API beyond reading a source: who is logged in, branches, the file tree, commits (Git Data API) |
+| `viewer/js/account.js` | The Account page: log in with a token, log out, settings saved to and loaded from GitHub |
+| `viewer/js/repo.js` | The Repository page: folders, files, one file; waiting changes and Commit; publishing entered versions |
 | `viewer/RACE_RUNNER_TASKS_ORDERED.md` | The specification of all eighteen phases |
 | `tools/viewer-test/` | The browser test harness (`server.js`, `h.js`, `smoke.js`, README) |
 | `viewer/css/app.css` | All CSS, fully token-based (light/dark themes) |
@@ -182,6 +186,18 @@ Versions entered by hand and imported (Versions, "+ Add versions"; also Settings
 - `RV.entry.setRecording(name, text)` and `RV.entry.addImport([{name, text}])` do what the file chooser does: the tests use them, since a headless browser has no file dialog. **Not tested: the real file chooser and dropping files on the window; the download itself** (the zip's bytes were read back from the page and verified with Python's `zipfile`).
 - Help, Data format has a tab "Entered by hand"; the Versions table and the details panel show the badge "Local".
 
+### Phase 15.1 (COMPLETE) — tag: `phase-15.1`
+Login, the Repository page and publishing (asked for by the user during Phase 15; scope agreed 2026-10-07: option A, the reader's own token; commits go straight to the chosen branch; settings travel through the repository; "secure and private as much as possible, keys never in the repository"). Check: `node tools/viewer-test/github.js` (a stand-in for the GitHub API in the page; one read of the real repository without a login).
+- **Why a token and not a "Sign in with GitHub" button:** the OAuth exchange needs a server that holds a secret; the site is static. The user chose the token.
+- **Login** (`js/account.js`, the page `#pa`, top right): the token goes through `RV.apiKeys` (`js/keys.js`, service `github`, features `write` and `sync` added). "Stay logged in on this device" off keeps it in `sessionStorage` (`rv_keys_session`) instead of the settings. `RV.gh.me()` names the account in the top bar.
+- **Security:** `index.html` has a Content-Security-Policy: the page may load from itself and connect only to itself, api.github.com and raw.githubusercontent.com (images also from avatars.githubusercontent.com), so nothing it displays can send a stored key elsewhere. **A new outside address must be added there or the browser blocks it.** The token is sent only in the Authorization header to api.github.com. The settings file never holds `apiKeys`, `uid` or `source` (`RV.account.SYNC` lists what travels).
+- **Settings on every device:** "Save my settings to GitHub" writes `settings/<login>.json` on the branch `run-viewer-data` (made as a branch without history if missing: `RV.gh.saveAlone`); "Load" replaces the settings and reloads the page. By hand, not automatic: every save is a commit.
+- **Reading when logged in:** `data.js` `read` asks the API first when a token is stored (always the latest commit; raw.githubusercontent.com may be minutes old), and falls back to the raw address.
+- **Repository page** (`js/repo.js`, `#pr`, a main tab): branch select, new branch, "Show this branch in the viewer" (sets the source link), folders / files of a folder / one file. Each file says what it is to the viewer (`role()`): the versions and their number, "Recording of v1.06, 1:13:14", "A recording no version names". Preview: a recording is checked with `RV.validate.recording` and shown as a table; a changelog lists its versions; text; images. Anyone can look (GitHub allows 60 requests an hour without a login); changing needs the login.
+- **Changes wait** in `RV.repo.state.pending` (put / del / move / entries) and are shown in the dark bar at the bottom; **Commit** makes one commit (`RV.gh.commit`: blobs, a tree on the branch's own, a commit, the branch moved without force). A file edited in the page carries the content id it had (`base`); if the branch has another by commit time, nothing is written and the page says so. Entries of published versions are added to the changelog as it is at commit time (`withEntries`, before the closing "Last updated" line), so they never conflict.
+- **Publishing** (`RV.repo.publish(recs)`, the button "Publish the ticked to GitHub" in Add versions, In this browser): the entry goes to `docs/CHANGELOG.md` and the recording to `runs/`, the only places the viewer reads; after the commit, if that branch is the one the viewer shows, the copies in the browser are deleted and the source is read again.
+- **Not tested: any write to the real GitHub** (the tests write to the stand-in only), a real token, a private repository, the real file chooser, drag and drop. **Not built:** pull requests, diffs, history of a file beyond its last commit, resolving a conflict in the page (it links to GitHub instead); the last commit of a file is shown only when logged in, for the file that is open.
+
 ## Pre-Phase-9 audit (2026-10-07)
 
 Phases 1-8 were checked in a headless browser against the working tree (106 versions, 100 recordings). Where this section and the phase notes above differ, this section is current.
@@ -228,10 +244,6 @@ Phases 1-8 were checked in a headless browser against the working tree (106 vers
 ---
 
 ## What is left
-
-### Login with GitHub, so that entered versions reach every device (asked for by the user during Phase 15)
-
-The user wants a login page with GitHub as the recommended login, so that an entered version is uploaded to the repository directly instead of exported and pasted. Told to the user: a static site cannot do a password login or the usual "Sign in with GitHub" button by itself (the OAuth exchange needs a server that holds a secret, and GitHub's device flow does not answer a browser); what works without a server is the reader's own GitHub token with write access (the key system of `js/keys.js` already stores one), and a real OAuth button needs a small free relay (for example a Cloudflare Worker) that the owner would host. **Not decided: which of the two, and whether "Publish" commits to the branch or opens a pull request. Ask before building.** The pieces are ready: `RV.local.entryText(rec)` is the changelog entry, `RV.local.csv(key)` the recording, `ds.localStale` handles the copy left in the browser once the repository has the version. Publishing means: read docs/CHANGELOG.md through the API, insert the entries before the closing "Last updated" line, put the CSVs under runs/, as one commit (Git Data API: blobs, tree, commit, update ref).
 
 ### Phase 16: multi-track windows
 

@@ -237,17 +237,25 @@
     const token = () => (RV.apiKeys ? RV.apiKeys.get('github') : '');
     const auth = extra => { const t = token(); return t ? { headers: Object.assign({ Authorization: 'Bearer ' + t }, extra || {}) } : (extra ? { headers: extra } : undefined); };
     async function read(branch, dir, path, what) {
+      /* Logged in: straight from the API, which always has the latest commit (raw.githubusercontent.com may serve a
+         file some minutes old, so a change just saved from the page would not show). If the API cannot be asked,
+         the file is read the usual way. */
+      const fresh = !!token() && RV.apiKeys.status('github') !== 'bad';
+      if (fresh) { try { return await viaApi(branch, dir, path, what, null); } catch (e) { if (e.code === 'missing') throw e; } }
       let miss;
       try { return await (await http(raw(branch, dir, path), what)).text(); } catch (e) {
         /* no token, or one GitHub has refused: the file is simply missing, as it is for everyone */
-        if (e.code !== 'missing' || !token() || RV.apiKeys.status('github') === 'bad') throw e;
+        if (fresh || e.code !== 'missing' || !token() || RV.apiKeys.status('github') === 'bad') throw e;
         miss = e;
       }
+      return viaApi(branch, dir, path, what, miss);
+    }
+    async function viaApi(branch, dir, path, what, miss) {
       let res;
       try { res = await fetch(api + '/contents/' + enc(dir + path) + (branch !== 'HEAD' ? '?ref=' + encodeURIComponent(branch) : ''), auth({ Accept: 'application/vnd.github.raw+json' })); }
       catch (e) { throw new RVError('offline', what + ' could not be loaded: the request to GitHub did not get through.', 'Check the network connection.'); }
       if (res.status === 404) throw new RVError('missing', what + ' was not found.');
-      if (res.status === 401) throw miss;                 /* a token that no longer works must not break a public repository */
+      if (res.status === 401) throw miss || new RVError('auth', 'GitHub refused the token.');                /* a token that no longer works must not break a public repository */
       if (!res.ok) throw new RVError(res.status === 403 || res.status === 429 ? 'rate' : 'http', what + ' could not be loaded from GitHub (HTTP ' + res.status + ').', 'Try again in a moment.');
       return res.text();
     }

@@ -153,7 +153,7 @@
       F = blank(); file = null; edit = null; touched = false; sure = false; working = false;
       close();
       await refresh(rec.id);
-      RV.toast(rec.id + (was ? ' was changed.' : ' was added. It is kept in this browser only: export it to put it into the repository.'));
+      RV.toast(rec.id + (was ? ' was changed.' : ' was added. It is kept in this browser only: publish or export it to put it into the repository.'));
     } catch (e) { working = false; const x = RV.explain(e); RV.toast(x.msg + (x.hint ? ' ' + x.hint : ''), 'err'); if (dlg) paintForm(); }
   }
 
@@ -285,6 +285,7 @@
         '<td class="num">' + (r.lap != null ? RV.fmtLap(r.lap) : 'none') + '</td><td class="l note">' + (r.csvName ? esc(r.csvName) + ', ' + RV.fmtInt(r.csvSize / 1000) + ' kB' : 'none') + '</td><td class="l note">' + fmtDate(r.added) + '</td>' +
         '<td><button type="button" class="link ledit" data-k="' + esc(r.key) + '">Change</button></td></tr>').join('') + '</tbody></table></div>' +
       '<div class="tour-acts"><button type="button" class="btn prim" id="lExpSel"' + (picked.size ? '' : ' disabled') + '>Export the ' + picked.size + ' ticked</button><button type="button" class="btn" id="lExpAll">Export all ' + mine.length + '</button>' +
+      '<button type="button" class="btn" id="lPub"' + (picked.size ? '' : ' disabled') + ' title="Puts them into the repository on GitHub, where every device and every visitor sees them. You review the files and commit on the Repository page.">Publish the ' + picked.size + ' ticked to GitHub</button>' +
       '<button type="button" class="btn" id="lDel"' + (picked.size ? '' : ' disabled') + '>' + (askDelete ? 'Really delete ' + picked.size + '? Click again' : 'Delete the ticked') + '</button><button type="button" class="btn ghost" id="aCancel">Close</button></div>';
     return h;
   }
@@ -304,6 +305,8 @@
     dlg.querySelectorAll('.ledit').forEach(b => { b.onclick = () => startEdit(mine.find(r => r.key === b.dataset.k)); });
     $('lExpSel').onclick = () => exportRecs(mine.filter(r => picked.has(r.key)));
     $('lExpAll').onclick = () => exportRecs(mine);
+    /* versions the repository already has are not published again */
+    $('lPub').onclick = () => { const stale = new Set(S.ds.localStale || []), recs = mine.filter(r => picked.has(r.key) && !stale.has(r.id)); close(); if (recs.length) RV.repo.publish(recs); else RV.toast('The repository has those versions already.'); };
     $('lDel').onclick = async () => {
       if (!askDelete) { askDelete = true; render(); return; }
       const keys = Array.from(picked), n = keys.length;
