@@ -1,4 +1,5 @@
-/* Run viewer: analysis of the run in focus against the reference lap (the fastest lap recorded, RV.map.fastest).
+/* Run viewer: analysis of the run in focus against the reference lap: the fastest lap recorded (RV.map.fastest),
+   or, when the run in focus is that lap, the next fastest lap that is loaded.
    - Racing-line accuracy: how close the car's line is to the reference lap's line, as a percentage, and a path
      on the map coloured from green (on the line) to red (furthest from it).
    - Sector health: green, yellow or red for each sector, from the time lost in it.
@@ -36,7 +37,14 @@
      position, no reference yet). self: R is the reference lap itself. */
   function of(R) {
     if (!R || !R.x || !S.ds || !S.ds.trk) return null;
-    const ref = RV.map.fastest();
+    let ref = RV.map.fastest(), what = 'the fastest lap';
+    if (ref === R) {
+      /* The fastest lap has nothing faster to be measured against, so it is measured against the next fastest lap
+         that is loaded: it still loses time to that one in places. Its previous best is read in the background for this. */
+      RV.needRef(R.name);
+      ref = null; what = 'the next fastest lap';
+      for (const r of S.ds.loaded.values()) if (r !== R && r.x && r.sum && r.sum.lap != null && (!ref || r.sum.lap < ref.sum.lap)) ref = r;
+    }
     if (!ref || !ref.x) return null;
     if (R._an && R._an.ref === ref) return R._an;
     const hw = S.ds.trk.hw, n = R.n, dev = new Float32Array(n), self = ref === R;
@@ -68,7 +76,7 @@
     }
     const top = zones.filter(z => z.loss >= K.zoneLoss).sort((a, b) => b.loss - a.loss).slice(0, K.zones).sort((a, b) => a.d0 - b.d0);
     top.forEach((z, k) => { z.n = k + 1; z.sev = z.loss >= K.zoneBad ? 'bad' : 'warn'; z.from = Math.max(0, z.d0 - K.lead); z.why = explain(R, ref, z, hw); });
-    return (R._an = { ref: ref, self: self, line: line, health: health, zones: top });
+    return (R._an = { ref: ref, what: what, self: self, line: line, health: health, zones: top });
   }
 
   /* What differs between the two laps in a problem area: sentences, the most telling first. */
@@ -120,7 +128,7 @@
     dlg = RV.el('div', 'keydlg', '<div class="keycard" role="dialog" aria-modal="true" aria-labelledby="anTitle"><h2 id="anTitle"><i class="hdot h-' + z.sev + '"></i>Problem area ' + z.n + '</h2>' +
       '<p class="lead"><b>' + lossTxt(z.loss) + '</b> lost to ' + esc(A.ref.name) + ' between ' + RV.fmtInt(z.d0) + ' and ' + RV.fmtInt(z.d1) + ' m.</p>' +
       '<h4>What ' + esc(S.R.name) + ' does differently</h4><ul class="helpul">' + z.why.map(w => '<li>' + w + '</li>').join('') + '</ul>' +
-      '<p class="note">Compared with ' + esc(A.ref.name) + ', the fastest lap recorded, over ' + RV.fmtInt(z.from) + '–' + RV.fmtInt(z.d1) + ' m (the area and the ' + K.lead + ' m before it). Select both versions to see their lines side by side.</p>' +
+      '<p class="note">Compared with ' + esc(A.ref.name) + ', ' + A.what + ', over ' + RV.fmtInt(z.from) + '–' + RV.fmtInt(z.d1) + ' m (the area and the ' + K.lead + ' m before it). Select both versions to see their lines side by side.</p>' +
       '<div class="tour-acts"><button class="btn prim" id="anLoop">Play it on a loop</button><button class="btn" id="anTrack">Show it on the track</button><button class="btn ghost" id="anClose">Close</button></div></div>');
     document.body.appendChild(dlg);
     addEventListener('keydown', popKey, true);
@@ -136,7 +144,7 @@
   let hits = [];                        /* where the pins were drawn in the last frame: [x, y, zone] */
   RV.map.addLayer({
     id: 'lineacc', g: 'Analysis', label: 'Racing-line accuracy', on: false, alpha: 1, w: 4,
-    d: 'The driven line coloured by how far it is from the line of the fastest lap: green on it, red furthest from it.',
+    d: 'The driven line coloured by how far it is from the line of the reference lap: green on it, red furthest from it. The reference is the fastest lap; for the fastest lap itself, the next fastest.',
     draw(ctx, z) {
       const R = S.R, A = of(R);
       if (!A || A.self) return;
@@ -154,8 +162,8 @@
     },
   });
   RV.map.addLayer({
-    id: 'bestline', g: 'Analysis', label: 'Line of the fastest lap', on: false, alpha: 0.9, w: 1.5,
-    d: 'The line the fastest recorded lap drove, as a thin dashed path to compare with.',
+    id: 'bestline', g: 'Analysis', label: 'Line of the reference lap', on: false, alpha: 0.9, w: 1.5,
+    d: 'The line the reference lap drove (the fastest lap; for the fastest lap itself, the next fastest), as a thin dashed path to compare with.',
     draw(ctx, z) {
       const A = of(S.R);
       if (!A || A.self) return;
@@ -167,7 +175,7 @@
   });
   RV.map.addLayer({
     id: 'pins', g: 'Analysis', label: 'Problem pins', on: true, alpha: 1,
-    d: 'A pin where the car in focus loses the most time to the fastest lap: yellow, or red for the worst. Click a pin to play that stretch on a loop.',
+    d: 'A pin where the car in focus loses the most time to the reference lap (the fastest lap; for the fastest lap itself, the next fastest): yellow, or red for the worst. Click a pin to play that stretch on a loop.',
     screen(ctx, w2s) {
       hits = [];
       const R = S.R, A = of(R);
@@ -196,11 +204,11 @@
   /* ---------- in the side panel (Sectors): health of each sector, the problem areas, the line ---------- */
   function sideCard() {
     const R = S.R, A = of(R), box = RV.el('div', 'ancard');
-    if (!A) { box.innerHTML = '<h4>Where the time goes</h4><p class="note">Waiting for the fastest lap’s recording, which this is measured against.</p>'; return box; }
+    if (!A) { box.innerHTML = '<h4>Where the time goes</h4><p class="note">Waiting for the recording of the lap this is measured against (the fastest lap; for the fastest lap itself, the next fastest). If none arrives, open another version: any loaded lap will do.</p>'; return box; }
     if (A.self) { box.innerHTML = '<h4>Where the time goes</h4><p class="note"><i class="hdot h-ok"></i>' + esc(R.name) + ' is the fastest lap recorded, so there is nothing to measure it against. Select another version to see where it loses time to this one.</p>'; return box; }
-    box.innerHTML = '<h4>Where the time goes <span class="note">against ' + esc(A.ref.name) + ', the fastest lap</span></h4>' +
+    box.innerHTML = '<h4>Where the time goes <span class="note">against ' + esc(A.ref.name) + ', ' + A.what + '</span></h4>' +
       (A.health ? '<div class="hrow3">' + A.health.map((h, k) => h ? '<div class="h-' + h.sev + '" title="' + WORD[h.sev] + '"><span><i class="hdot h-' + h.sev + '"></i>S' + (k + 1) + '</span><b class="num">' + RV.sgn(h.delta, 2) + ' s</b><small>' + WORD[h.sev] + '</small></div>' : '<div><span>S' + (k + 1) + '</span><b>–</b></div>').join('') + '</div>' : '') +
-      '<p class="anline"><span>Racing-line accuracy</span><b class="num">' + A.line.pct.toFixed(0) + ' %</b><small>on average ' + A.line.mean.toFixed(2) + ' m from the fastest lap’s line, at most ' + A.line.max.toFixed(1) + ' m (at ' + RV.fmtInt(A.line.maxAt) + ' m); ' + A.line.on.toFixed(0) + ' % of the lap within ' + K.lineOn + ' m</small></p>' +
+      '<p class="anline"><span>Racing-line accuracy</span><b class="num">' + A.line.pct.toFixed(0) + ' %</b><small>on average ' + A.line.mean.toFixed(2) + ' m from that lap’s line, at most ' + A.line.max.toFixed(1) + ' m (at ' + RV.fmtInt(A.line.maxAt) + ' m); ' + A.line.on.toFixed(0) + ' % of the lap within ' + K.lineOn + ' m</small></p>' +
       (A.zones.length ? '<div class="anzones">' + A.zones.map(z => '<div class="anzone"><i class="hdot h-' + z.sev + '"></i><div><b>' + z.n + '. ' + RV.fmtInt(z.d0) + '–' + RV.fmtInt(z.d1) + ' m</b> <span class="num slower">' + lossTxt(z.loss) + '</span><small>' + z.why[0] + '</small></div>' +
           '<button class="btn sm" data-loop="' + z.n + '">Loop</button><button class="btn sm" data-why="' + z.n + '">Why</button></div>').join('') + '</div>'
         : '<p class="note">No stretch of the lap loses ' + K.zoneLoss + ' s or more.</p>') +

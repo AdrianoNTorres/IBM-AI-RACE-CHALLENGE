@@ -860,7 +860,7 @@
       add('Plan allows', R.al[i] > 350 || !R.al[i] ? 'no limit' : R.al[i].toFixed(0) + ' km/h');
       add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
       const A = RV.analysis && RV.analysis.of(R);
-      if (A && !A.self) add('Line accuracy', A.line.pct.toFixed(0) + ' % \u00b7 ' + A.line.dev[i].toFixed(1) + ' m off', 'How close the line is to the line of ' + esc(A.ref.name) + ', the fastest lap: over the whole lap, and here');
+      if (A && !A.self) add('Line accuracy', A.line.pct.toFixed(0) + ' % \u00b7 ' + A.line.dev[i].toFixed(1) + ' m off', 'How close the line is to the line of ' + esc(A.ref.name) + ', ' + A.what + ': over the whole lap, and here');
       if (R.beams) { let mn = 1e9, mx = -1; for (let k = 0; k < 19; k++) { const d = R.b[i * 19 + k]; if (d >= 0) { mn = Math.min(mn, d); mx = Math.max(mx, d); } } add('Beams', mx < 0 ? 'off track' : mn.toFixed(0) + ' to ' + mx.toFixed(0) + ' m'); }
     }
     for (const m of (OVER[0].solo ? [] : S.CM)) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
