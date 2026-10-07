@@ -71,7 +71,7 @@
     document.documentElement.dataset.theme = RV.themeNow();
     const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
     const P = RV.pal;
-    for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower',
+    for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower', 'v-best', 'v-kept', 'v-rej',
       'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line',
       'speed-slow', 'speed-mid', 'speed-fast', 'brake-none', 'brake-full']) P[k] = v('--' + k);
     P['warn'] = v('--warn-ink');
@@ -82,7 +82,7 @@
   };
 
   /* ---------- colour scales (the road is dark in both themes, so one scale serves both) ----------
-     Neither scale runs from red to green: speed goes blue, violet, pink, orange, yellow (slow to fast);
+     Speed goes red, orange, yellow, light green, green (slow to fast), bright enough to read on the dark road;
      beam length goes pink, yellow, cyan (close to far). Both also get lighter along the way. */
   function ramp(stops) {
     return function (f) {
@@ -91,7 +91,7 @@
       return [0, 1, 2].map(n => Math.round(a[n] + (b[n] - a[n]) * u));
     };
   }
-  const SPEED = [[78, 110, 255], [178, 92, 255], [255, 92, 168], [255, 158, 44], [255, 232, 84]];
+  const SPEED = [[255, 64, 56], [255, 140, 44], [255, 222, 60], [150, 226, 84], [44, 214, 110]];
   const BEAM = [[255, 70, 118], [255, 208, 66], [60, 226, 210]];
   const speedRGB = ramp(SPEED), beamRGB = ramp(BEAM);
   RV.speedCol = f => 'rgb(' + speedRGB(f).join(',') + ')';
@@ -99,6 +99,10 @@
   /* Scales whose colours are theme tokens: the speed chart (red slow, green fast) and braking on the map
      (blue none, red full). f runs from 0 to 1. */
   function hexRGB(c) {
+    c = (c || '').trim();
+    /* browsers normalise CSS custom-property values to rgb(...) — handle both formats */
+    const rgb = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/.exec(c);
+    if (rgb) return [+rgb[1], +rgb[2], +rgb[3]];
     c = c.replace('#', '');
     if (c.length === 3) c = c.split('').map(h => h + h).join('');
     return [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16));
@@ -113,17 +117,14 @@
                  -1 = low is green (brake, lap delta where negative = faster)
      Returns a CSS rgb() string.
 
-     RV.deltaColor(delta, maxDelta)
-       delta > 0 = slower (red), delta < 0 = faster (green), 0 = white.
-       The diverging white-centred scale is used for the lap delta bar (Phase 6).
-       maxDelta: the delta at which the colour reaches full saturation (default 5 s).
+     RV.deltaColor(delta)
+       delta < 0 = faster (solid green), delta > 0 = slower (solid red), within 5 ms of 0 = null (no colour).
 
      RV.gearColor(gear)
        Returns a CSS rgb() colour for gears -1 through 6.
   */
   const GREEN_RGB = [14, 159, 79];    /* --in-throttle light */
   const RED_RGB   = [217, 45, 32];    /* --in-brake light */
-  const WHITE_RGB = [255, 255, 255];
   function lerpRGB(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
   RV.colorScale = function (value, min, max, direction) {
     const f = RV.clamp((value - min) / (max - min || 1), 0, 1);
@@ -131,12 +132,10 @@
     const rgb = lerpRGB(RED_RGB, GREEN_RGB, t);
     return 'rgb(' + rgb.join(',') + ')';
   };
-  RV.deltaColor = function (delta, maxDelta) {
-    maxDelta = maxDelta || 5;
-    const t = RV.clamp(Math.abs(delta) / maxDelta, 0, 1);
-    const base = delta < 0 ? GREEN_RGB : delta > 0 ? RED_RGB : WHITE_RGB;
-    const rgb = lerpRGB(WHITE_RGB, base, t);
-    return 'rgb(' + rgb.join(',') + ')';
+  RV.deltaColor = function (delta) {
+    /* solid green = faster, solid red = slower, null = dead even (within 5 ms) → transparent */
+    if (Math.abs(delta) < 0.005) return null;
+    return 'rgb(' + (delta < 0 ? GREEN_RGB : RED_RGB).join(',') + ')';
   };
   /* Sequential palette for gears: -1 (reverse) through 6 */
   const GEAR_COLORS = [

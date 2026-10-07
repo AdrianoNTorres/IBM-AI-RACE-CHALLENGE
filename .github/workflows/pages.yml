@@ -1,0 +1,35 @@
+# Publishes the run viewer (the viewer/ folder) on GitHub Pages.
+# The site is static: no build step, the folder is uploaded as it is.
+# Needs, once, in the repository settings: Pages > Source = "GitHub Actions", and
+# Environments > github-pages > Deployment branches must allow the branch named below.
+name: Publish the run viewer
+
+on:
+  push:
+    branches: [experimental_hosting]   # change to main when the viewer moves there
+    paths: ['viewer/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: viewer
+      - id: deployment
+        uses: actions/deploy-pages@v4

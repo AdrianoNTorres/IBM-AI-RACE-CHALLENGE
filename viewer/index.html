@@ -14,7 +14,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=20261007g">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
@@ -51,7 +51,7 @@
       <canvas id="c" tabindex="0" aria-label="Replay of the lap on the track map. Drag to pan, wheel to zoom."></canvas>
       <div id="overlay"><div id="hud"></div><canvas id="mini" width="190" height="190"></canvas><div id="sectorLive" hidden></div><div id="lapDeltaBar" hidden></div></div>
       <div id="leg"></div>
-      <div id="inputs"><canvas id="wheel" aria-label="Steering wheel, turning with the car's steering"></canvas><div id="pedBars" aria-label="Throttle and brake bars"><div id="barBrake" class="pedbar bar-brake" title="Brake"></div><div id="barThrottle" class="pedbar bar-throttle" title="Throttle"></div></div><div class="ped"><canvas id="pedals" aria-label="Throttle and brake over the last seconds"></canvas><div id="pedkey"></div></div></div>
+      <div id="inputs" aria-label="Steering, brake and throttle of the cars shown"></div>
       <div id="mapmsg"></div>
     </div>
     <button id="sideToggle" aria-label="Toggle side panel" title="Show/hide side panel">&#8250;</button>
@@ -80,17 +80,17 @@
 <div id="toast" role="alert"></div>
 <input id="dirInput" type="file" webkitdirectory multiple hidden>
 
-<script src="js/core.js"></script>
-<script src="js/track.js"></script>
-<script src="js/data.js"></script>
-<script src="js/app.js"></script>
-<script src="js/sectors.js"></script>
-<script src="js/versions.js"></script>
-<script src="js/map.js"></script>
-<script src="js/inputs.js"></script>
-<script src="js/telemetry.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/tutorial.js"></script>
+<script src="js/core.js?v=20261007g"></script>
+<script src="js/track.js?v=20261007g"></script>
+<script src="js/data.js?v=20261007g"></script>
+<script src="js/app.js?v=20261007g"></script>
+<script src="js/sectors.js?v=20261007g"></script>
+<script src="js/versions.js?v=20261007g"></script>
+<script src="js/map.js?v=20261007g"></script>
+<script src="js/inputs.js?v=20261007g"></script>
+<script src="js/telemetry.js?v=20261007g"></script>
+<script src="js/settings.js?v=20261007g"></script>
+<script src="js/tutorial.js?v=20261007g"></script>
 <script>RV.boot();</script>
 </body>
 </html>

@@ -10,7 +10,7 @@
      all: keep every car in view (sz, scx, scy: its smoothed zoom and centre; maxAll: its closest zoom) */
   const view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
   /* fit: the whole track is kept in view (the start state); it ends when the user moves, zooms or follows */
-  const opt = { line: 'upto', lineW: 3, colour: 'speed' };     /* line: how much of the driven line is drawn; colour: by speed or by brake */
+  const opt = { line: 'upto', lineW: 3, colour: 'speed', allInputs: true };     /* line: how much of the driven line is drawn; colour: by speed or by brake; allInputs: wheel and pedals of the compared cars too */
   let near = { x: 0, y: 0, r2: 1e18 };                         /* the part of the track that can be on screen this frame */
   const buf = document.createElement('canvas'), bg = buf.getContext('2d'), miniBuf = document.createElement('canvas');
   let bufKey = '', miniKey = '', secNow = '', tourSaved = null;
@@ -18,6 +18,7 @@
   let lastCam = null;                   /* base point, centre, angle and zoom of the last drawn frame */
   let cam = null;                       /* world-to-screen of the last drawn frame, for hit-testing clicks */
   let zoomInput = null, carCells = [];
+  let hadCmp = false, hashCam = false;  /* runs were being compared at the last selection; the address set the camera */
 
   const trk = () => S.ds.trk;
   const onMap = () => !!S.R && !!S.R.x;                 /* the run in focus has a position on the track in use */
@@ -67,29 +68,18 @@
     return stepCols;
   }
   /* the driven line of the car in focus: consecutive pieces of the same colour step are stroked together */
-  const LOOP_DIM = 0.18;                               /* opacity of the driven line outside a looped section */
   function drawSpeedLine(ctx, r, z, w) {
     const q = lineRange(r, S.i), bk = colourSteps(r), cols = colours(), st = stepFor(z), end = q[1] + 1;
     ctx.lineWidth = w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const lp = S.loop;
-    const inLoop = lp ? (k => r.d[k] >= lp[0] && r.d[k] <= lp[1]) : null;
-    /* draw two passes when a loop is active: faded outside, full inside */
-    const passes = lp ? [false, true] : [null];
-    for (const pass of passes) {
-      if (pass === false) ctx.globalAlpha *= LOOP_DIM;
-      else if (pass === true) ctx.globalAlpha = Math.min(1, ctx.globalAlpha / LOOP_DIM);
-      let cur = -1, pen = false;
-      for (let k = q[0]; k <= q[1]; k += st) {
-        if (pass !== null && inLoop(k) === pass) { if (pen) { ctx.stroke(); pen = false; } continue; }
-        if (!inView(r.x[k], r.y[k])) { if (pen) { ctx.stroke(); pen = false; } continue; }
-        const b = bk[k];
-        if (!pen || b !== cur) { if (pen) ctx.stroke(); ctx.beginPath(); ctx.moveTo(r.x[k], r.y[k]); ctx.strokeStyle = cols[b]; cur = b; pen = true; }
-        const k2 = Math.min(k + st, end);
-        ctx.lineTo(r.x[k2], r.y[k2]);
-      }
-      if (pen) ctx.stroke();
-      if (pass === false) ctx.globalAlpha /= LOOP_DIM;  /* restore before the next pass */
+    let cur = -1, pen = false;
+    for (let k = q[0]; k <= q[1]; k += st) {
+      if (!inView(r.x[k], r.y[k])) { if (pen) { ctx.stroke(); pen = false; } continue; }
+      const b = bk[k];
+      if (!pen || b !== cur) { if (pen) ctx.stroke(); ctx.beginPath(); ctx.moveTo(r.x[k], r.y[k]); ctx.strokeStyle = cols[b]; cur = b; pen = true; }
+      const k2 = Math.min(k + st, end);
+      ctx.lineTo(r.x[k2], r.y[k2]);
     }
+    if (pen) ctx.stroke();
   }
   /* the track's outline as ready-made paths, built once per track */
   function trackPaths() {
@@ -111,9 +101,9 @@
   /* car1-ow1 from above: 4.8 m long, front axle 1.6 m ahead of the centre, rear axle 1.35 m behind, front wheels 0.70 m and
      rear wheels 0.75 m either side, tyres 0.30 m wide. The front wheels turn with the recorded steering (full lock 21 degrees).
      Never drawn smaller than about 16 px. */
-  function drawCar(ctx, r, k, fill, z, userScale) {
+  function drawCar(ctx, p, fill, z, userScale) {           /* p: [x, y, yaw, steering], see poseAt */
     const sc = Math.max(1, 16 / (4.8 * z)) * (userScale || 1), lw = 0.05, P = RV.pal;
-    ctx.save(); ctx.translate(r.x[k], r.y[k]); ctx.rotate(r.yaw[k]); ctx.scale(sc, sc);
+    ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(p[2]); ctx.scale(sc, sc);
     ctx.strokeStyle = P['road-mark']; ctx.lineWidth = 0.06; ctx.beginPath();
     for (const w of [[1.6, 0.70], [1.6, -0.70], [-1.35, 0.75], [-1.35, -0.75]]) {
       ctx.moveTo(w[0] + 0.12, w[1] > 0 ? 0.2 : -0.2); ctx.lineTo(w[0], w[1]);
@@ -124,7 +114,7 @@
       ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = P.tyre; ctx.strokeStyle = P['road-mark']; ctx.lineWidth = lw;
       ctx.beginPath(); ctx.rect(-len / 2, -0.15, len, 0.30); ctx.fill(); ctx.stroke(); ctx.restore();
     };
-    const sa = (r.st[k] || 0) * 21 * Math.PI / 180;
+    const sa = (p[3] || 0) * 21 * Math.PI / 180;
     wheel(1.6, 0.70, 0.60, sa); wheel(1.6, -0.70, 0.60, sa); wheel(-1.35, 0.75, 0.63, 0); wheel(-1.35, -0.75, 0.63, 0);
     ctx.fillStyle = fill; ctx.strokeStyle = P['car-line']; ctx.lineWidth = lw;
     ctx.beginPath(); ctx.rect(2.0, -0.85, 0.36, 1.70); ctx.fill(); ctx.stroke();              /* front wing */
@@ -135,13 +125,32 @@
     ctx.fillStyle = '#f4f2ec'; ctx.beginPath(); ctx.arc(0.05, 0, 0.15, 0, 7); ctx.fill();
     ctx.restore();
   }
+  /* Where a run's car is, frac of the way from step k to step k + 1: [x, y, yaw, steering].
+     frac is 0 except while the replay runs at 1× or slower, where it makes the motion smooth (S.camFrac). */
+  function poseAt(r, k, frac) {
+    if (!(frac > 0) || k >= r.n - 1) return [r.x[k], r.y[k], r.yaw[k], r.st[k]];
+    const k1 = k + 1;
+    let da = r.yaw[k1] - r.yaw[k];                        /* the short way round */
+    if (da > Math.PI) da -= 2 * Math.PI; else if (da < -Math.PI) da += 2 * Math.PI;
+    return [r.x[k] + (r.x[k1] - r.x[k]) * frac, r.y[k] + (r.y[k1] - r.y[k]) * frac, r.yaw[k] + da * frac, r.st[k] + (r.st[k1] - r.st[k]) * frac];
+  }
+  /* a compared car, moved between its steps by as much as the car in focus is between its own */
+  function ghostPose(r) {
+    const R = S.R, i = S.i, f = S.camFrac;
+    if (!(f > 0) || i >= R.n - 1) return poseAt(r, RV.ghostIdx(r), 0);
+    const mine = RV.prefs.sync === 't' ? R.t : R.d, theirs = RV.prefs.sync === 't' ? r.t : r.d;
+    const v = mine[i] + (mine[i + 1] - mine[i]) * f, k = RV.bsearch(theirs, v), span = k < r.n - 1 ? theirs[k + 1] - theirs[k] : 0;
+    return poseAt(r, k, span > 0 ? RV.clamp((v - theirs[k]) / span, 0, 1) : 0);
+  }
+  let fp = [0, 0, 0, 0];                                  /* pose of the car in focus in the frame being drawn */
+  /* the beams read at step i, drawn from where the car in focus is drawn so they stay attached to it */
   function beamEnds(r, i, each) {
     const o = i * 19, A = RV.TRACK_ANGLES;
     for (let k = 0; k < 19; k++) {
       const d = r.b[o + k];
       if (d < 0) continue;
-      const a = r.yaw[i] - A[k] * Math.PI / 180;
-      each(d, r.x[i] + d * Math.cos(a), r.y[i] + d * Math.sin(a), d < 199.5);
+      const a = fp[2] - A[k] * Math.PI / 180;
+      each(d, fp[0] + d * Math.cos(a), fp[1] + d * Math.sin(a), d < 199.5);
     }
   }
 
@@ -163,8 +172,8 @@
       ctx.strokeStyle = RV.pal['road']; ctx.stroke(trackPaths().finish); ctx.setLineDash([]);
     }, screen(ctx, w2s) {
       if (view.z < 1) return;
+      ctx.font = '600 11px ' + RV.pal.font;               /* before measuring: the width depends on it */
       const T = trk(), p = w2s(T.left[0][0], T.left[0][1]), s = 'Start / Finish', w = ctx.measureText(s).width;
-      ctx.font = '600 11px ' + RV.pal.font;
       ctx.fillStyle = RV.pal['road-edge']; ctx.beginPath(); ctx.roundRect(p[0] + 6, p[1] - 9, w + 12, 18, 4); ctx.fill();
       ctx.fillStyle = RV.pal['road']; ctx.fillText(s, p[0] + 12, p[1] + 3);
     } },
@@ -189,9 +198,9 @@
         ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 12, p[1] + 4);
       });
     } },
-    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (blue slowest, yellow fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
+    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (red slowest, green fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
     { id: 'car', g: 'Car and path', label: 'Car', d: 'The car in focus: car1-ow1, the open-wheel car the driver runs, drawn to scale. Its front wheels turn with the recorded steering.', on: true, alpha: 1,
-      draw(ctx, z) { drawCar(ctx, S.R, S.i, RV.colMap(S.sel[0]), z, S.carScale[S.sel[0]]); } },
+      draw(ctx, z) { drawCar(ctx, fp, RV.colMap(S.sel[0]), z, S.carScale[S.sel[0]]); } },
     { id: 'slowcorner', g: 'Car and path', label: 'Slowest corner', d: 'A pin marking the slowest corner of the selected run.', on: true, alpha: 1, draw(ctx, z) {
       const R = S.R; if (!R || !R.sum || !R.sum.slow || !R.x) return;
       const k = R.sum.slow_at || 0;
@@ -202,13 +211,13 @@
     }, screen(ctx, w2s) {
       const R = S.R; if (!R || !R.sum || !R.sum.slow || !R.x || view.z < 0.8) return;
       const k = R.sum.slow_at || 0, p = w2s(R.x[k], R.y[k]);
-      const s = R.sum.slow.toFixed(0) + ' km/h', w = ctx.measureText(s).width;
       ctx.font = '600 11px ' + RV.pal.fontNum;
+      const s = R.sum.slow.toFixed(0) + ' km/h', w = ctx.measureText(s).width;
       ctx.fillStyle = RV.pal.best; ctx.beginPath(); ctx.roundRect(p[0] + 12, p[1] - 9, w + 10, 18, 4); ctx.fill();
       ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 17, p[1] + 3);
     } },
     { id: 'speed', g: 'Car and path', label: 'Speed label', d: 'The current speed, written next to the car.', on: true, alpha: 1, draw() {}, screen(ctx, w2s) {
-      const R = S.R, p = w2s(R.x[S.i], R.y[S.i]), s = R.v[S.i].toFixed(0) + ' km/h';
+      const R = S.R, p = w2s(fp[0], fp[1]), s = R.v[S.i].toFixed(0) + ' km/h';
       ctx.font = '600 14px ' + RV.pal.fontNum;
       const w = ctx.measureText(s).width, o = 12 + 1.3 * view.z;
       ctx.fillStyle = 'rgba(13,15,20,.88)'; ctx.beginPath(); ctx.roundRect(p[0] + o, p[1] - 11, w + 14, 22, 5); ctx.fill();
@@ -216,7 +225,7 @@
     } },
     { id: 'beams', g: 'Sensors', label: 'Track beams', d: 'The 19 distance sensors. Each line runs from the car to the track edge it measures; pink is close, cyan is far, faint means nothing within 200 m.', on: true, alpha: 0.95, draw(ctx, z) {
       const R = S.R; if (!R.beams) return;
-      beamEnds(R, S.i, (d, ex, ey, hit) => { ctx.beginPath(); ctx.moveTo(R.x[S.i], R.y[S.i]); ctx.lineTo(ex, ey); ctx.lineWidth = (hit ? 1.6 : 1) / z; ctx.strokeStyle = RV.beamCol(d, hit ? 1 : 0.3); ctx.stroke(); });
+      beamEnds(R, S.i, (d, ex, ey, hit) => { ctx.beginPath(); ctx.moveTo(fp[0], fp[1]); ctx.lineTo(ex, ey); ctx.lineWidth = (hit ? 1.6 : 1) / z; ctx.strokeStyle = RV.beamCol(d, hit ? 1 : 0.3); ctx.stroke(); });
     } },
     { id: 'hits', g: 'Sensors', label: 'Beam end points', d: 'A dot where each beam meets the track edge.', on: true, alpha: 1, draw(ctx, z) {
       const R = S.R; if (!R.beams) return;
@@ -241,7 +250,7 @@
       for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (opt.lineW * 0.6 + 2) / z, opt.lineW * 0.6 / z, RV.pal['car-line'], RV.colMap(m.id));
     } },
     { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run\u2019s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
-      for (const m of others()) drawCar(ctx, m.r, RV.ghostIdx(m.r), RV.colMap(m.id), z, S.carScale[m.id]);
+      for (const m of others()) drawCar(ctx, ghostPose(m.r), RV.colMap(m.id), z, S.carScale[m.id]);
     } },
   ];
   const BEAMS_TIP = '19 distance sensors pointing outward from the car nose';
@@ -253,11 +262,12 @@
   const OVER = [
     { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true },
     { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true },
-    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, bottom left.', on: true },
-    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, and its throttle and brake over the last seconds, bottom right.', on: true },
-    { id: 'sectorLive', label: 'Live sector table', d: 'Current sector times and deltas vs. the reference lap.', on: true },
-    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Live gap vs. the reference lap, shown as a coloured bar.', on: true },
+    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, top right.', on: true },
+    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, its brake and throttle bars, and both over the last seconds, bottom right.', on: true },
+    { id: 'sectorLive', label: 'Live sector table', d: 'The sector times of the car in focus as it passes each sector, against the fastest lap recorded. Under the overview map.', on: true },
+    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true },
   ];
+  const ALL_IN = ['Wheel and pedals of every car', 'A smaller wheel, bars and pedal graph for each compared car, above those of the car in focus. Off: the car in focus only.'];
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
   /* ---------- side panel: the same three sections in both views; the detailed view adds controls inside them ---------- */
@@ -305,9 +315,12 @@
   }
   function viewSection(s, sm) {
     const many = S.CM.length > 0;
-    s.appendChild(toggleRow('Follow car', sm ? 'Keeps the car in the middle of the view.' : 'Keeps the car in focus in the same place on screen. Switches off by itself when you drag the map.', view.follow, v => { setFollow(v); buildSide(); }));
+    s.appendChild(toggleRow('Follow car', sm ? 'Keeps the car in the middle of the view.' : 'Keeps the car in focus in the same place on screen. Switches off by itself when you drag the map.', view.follow, v => { setFollow(v); if (!v) view.all = false; buildSide(); }));
     s.appendChild(toggleRow('Car points up', sm ? 'Turns the map so the car always drives toward the top.' : 'Rotates the map so the car in focus always drives toward the top. Turn off for a fixed map.', view.rot, setRot));
-    if (many) s.appendChild(toggleRow('Keep all cars in view', 'Moves and zooms the map so every selected car stays on screen.', view.all, setAll));
+    /* always listed, so it can be found; it needs a comparison to do anything */
+    const all = toggleRow('Keep all cars in view', many ? 'Moves and zooms the map so every selected car stays on screen. Switches “Follow car” on with it.' : 'Needs two or more cars: select several versions on the Versions tab to compare them.', many && view.all, setAll);
+    if (!many) { all.classList.add('off'); all.querySelector('input').disabled = true; }
+    s.appendChild(all);
     if (many && view.all) s.appendChild(maxZoomRow('How far the view may zoom in when the cars are close together. The mouse wheel and the zoom keys are off in this mode.'));
     else if (!sm) {
       const zr = el('div', 'lr', '<span></span><div><div class="ln">Zoom</div><div class="ld">Also the mouse wheel, or the + and − keys.</div></div>');
@@ -323,20 +336,19 @@
       o.appendChild(segs([['t', 'Same lap time'], ['d', 'Same distance']], RV.prefs.sync, v => { RV.prefs.sync = v; RV.savePrefs(); }, 'Where the other cars are placed'));
       s.appendChild(o);
     }
-    /* per-car size sliders */
-    if (!sm) {
+    /* per-car size sliders: shown in both basic and detailed view */
+    {
       const sc = el('div', 'opt');
       sc.innerHTML = '<div class="cap">Car size (1 = true scale)</div>';
       const allIds = [S.sel[0]].concat(S.CM.map(m => m.id));
       for (const id of allIds) {
         const cur = S.carScale[id] || 1;
-        const row = el('div', 'lr');
-        row.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex:1"><i class="sw" style="background:' + RV.col(id) + '"></i><span class="ln" style="flex:1">' + esc(id) + '</span></div>';
+        const row = el('div', 'carsize', '<i class="sw" style="background:' + RV.col(id) + '"></i><b>' + esc(id) + '</b>' +
+          '<input type="range" min="0.3" max="4" step="0.1" value="' + cur.toFixed(1) + '" aria-label="Car size for ' + esc(id) + '"><span class="num">' + cur.toFixed(1) + '×</span>');
+        row.querySelector('input').oninput = e => { S.carScale[id] = +e.target.value; e.target.nextSibling.textContent = (+e.target.value).toFixed(1) + '×'; };
         const resetBtn = el('button', 'btn sm', 'Reset');
         resetBtn.onclick = () => { delete S.carScale[id]; buildSide(); };
-        const slRow = el('div', 'lo', '<small>Scale</small><input type="range" min="0.3" max="4" step="0.1" value="' + cur.toFixed(1) + '" aria-label="Car size for ' + esc(id) + '"><span class="num">' + cur.toFixed(1) + '×</span>');
-        slRow.querySelector('input').oninput = e => { S.carScale[id] = +e.target.value; e.target.nextSibling.textContent = (+e.target.value).toFixed(1) + '×'; };
-        row.appendChild(slRow); row.appendChild(resetBtn); sc.appendChild(row);
+        row.appendChild(resetBtn); sc.appendChild(row);
       }
       const resetAll = el('button', 'btn wide', 'Reset all car sizes');
       resetAll.onclick = () => { S.carScale = {}; buildSide(); };
@@ -353,6 +365,7 @@
       s.appendChild(toggleRow('Distance marks', 'A label every 100 m along the track.', LY.marks.on, v => { LY.marks.on = v; }));
       if (many) s.appendChild(toggleRow('The other cars', 'The cars and paths of the other selected versions.', LY.ghost.on, v => { LY.ghost.on = LY.lineB.on = v; }));
       s.appendChild(toggleRow('Wheel and pedals', 'The steering wheel and the throttle and brake graph, bottom right.', OVER[3].on, v => { OVER[3].on = v; panels(); }));
+      if (many) s.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; }));
       return;
     }
     /* detailed: one group open at a time */
@@ -367,7 +380,13 @@
       const body = el('div', 'accbody');
       s.appendChild(body);
       const count = () => { head.lastChild.textContent = items.filter(L => L.on).length + ' of ' + items.length + ' on'; };
-      if (G === 'Panels on the map') { for (const L of OVER) body.appendChild(toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); })); continue; }
+      if (G === 'Panels on the map') {
+        for (const L of OVER) {
+          body.appendChild(toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); }));
+          if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; }));
+        }
+        continue;
+      }
       for (const L of items) {
         const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; count(); });
         if (L.id === 'beams') r.title = BEAMS_TIP;
@@ -382,7 +401,7 @@
       }
     }
     const rb = el('button', 'btn wide', 'Restore the default layers');
-    rb.onclick = () => { LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; }); opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; viewDefaults(); legend(); panels(); buildSide(); };
+    rb.onclick = () => { LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; }); opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; opt.allInputs = true; viewDefaults(); legend(); panels(); buildSide(); };
     s.appendChild(rb);
   }
   /* sector times on the Track tab: where the car is now, and the table of every opened version */
@@ -407,7 +426,7 @@
   function helpSection(s, sm) {
     const R = S.R, many = S.CM.length > 0;
     s.appendChild(el('div', 'guide',
-      '<h4>What you are looking at</h4><p>The car replays the recorded lap of the selected version. The coloured path is the line it drove: blue where it was slowest, yellow where it was fastest.</p>' +
+      '<h4>What you are looking at</h4><p>The car replays the recorded lap of the selected version. The coloured path is the line it drove: red where it was slowest, green where it was fastest.</p>' +
       '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
       '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, or its name in the top bar, to put it in focus.' : '') + '</p>' +
@@ -421,7 +440,7 @@
     if (S.CM.length) s.appendChild(carsTable());
     /* how the driven line is coloured: always at hand, in both views */
     const pc = el('div', 'pathcol', '<span>Path colour</span>');
-    pc.appendChild(segs([['speed', 'Speed'], ['brake', 'Brake']], opt.colour, v => { opt.colour = v; legend(); }, 'Colour the driven path by'));
+    pc.appendChild(segs([['speed', 'Speed'], ['brake', 'Brake']], opt.colour, v => { opt.colour = v; stepColsKey = ''; if (S.R) delete S.R._bk; legend(); }, 'Colour the driven path by'));
     s.appendChild(pc);
     const tabs = el('div', 'seg full subtabs');
     tabs.setAttribute('role', 'tablist');
@@ -471,8 +490,9 @@
   function size() { const r = window.devicePixelRatio || 1; if (!c.clientWidth) return; c.width = c.clientWidth * r; c.height = c.clientHeight * r; }
   function base() { const W = c.clientWidth, H = c.clientHeight; return [W / 2, (view.follow && view.rot) ? H * 0.64 : H / 2]; }
   function carsNow() {
-    const R = S.R;
-    return [{ id: S.sel[0], x: R.x[S.i], y: R.y[S.i] }].concat(others().map(m => { const k = RV.ghostIdx(m.r); return { id: m.id, x: m.r.x[k], y: m.r.y[k] }; }));
+    /* every car where it is drawn: smoothed between steps, the compared cars as well as the one in focus */
+    const p = poseAt(S.R, S.i, S.camFrac);
+    return [{ id: S.sel[0], x: p[0], y: p[1] }].concat(others().map(m => { const q = ghostPose(m.r); return { id: m.id, x: q[0], y: q[1] }; }));
   }
   /* centre and zoom that keep every selected car on screen, in the frame rotated by a; smoothed so it does not jump */
   function frameAll(a, W, H) {
@@ -500,10 +520,11 @@
     buildSide();
   }
   function setRot(v) { view.rot = v; view.ang = 0; if (v) view.fit = false; }
-  function setAll(v) { view.all = v; view.sInit = false; view.ox = view.oy = 0; buildSide(); }
+  /* keeping every car in view is a way of following, so switching it on switches "Follow car" on with it */
+  function setAll(v) { if (v && !view.follow) setFollow(true); view.all = v; view.sInit = false; view.ox = view.oy = 0; buildSide(); }
   function setFollow(v) { if (v) { view.ang = 0; view.fit = false; if (view.z < 1) view.z = 3.2; } view.follow = v; if (!v && onMap()) { view.cx = S.R.x[S.i]; view.cy = S.R.y[S.i]; } view.ox = view.oy = 0; }
   function resetView() { view.follow = true; view.rot = true; view.fit = false; view.all = false; view.z = 3.2; view.ox = view.oy = 0; buildSide(); }
-  /* the whole track, centred in the part of the map that the readout on the left does not cover */
+  /* the whole track, centred in the part of the map that the panels on the left do not cover */
   function applyFit(W, H) {
     const B = trk().box, left = (W > 900 && OVER[0].on) ? 250 : 0;
     view.cx = (B[0] + B[1]) / 2; view.cy = (B[2] + B[3]) / 2; view.ang = 0; view.ox = left / 2; view.oy = 0;
@@ -512,21 +533,6 @@
   function fitView() { view.follow = false; view.rot = false; view.all = false; view.fit = true; buildSide(); }
 
   /* ---------- the frame ---------- */
-  /* Linearly interpolate a world position using camFrac (smoothed camera at ≤1× speed).
-     Returns the interpolated [x, y, yaw] for the camera centre and rotation. */
-  function smoothCar(R, i, frac) {
-    if (frac <= 0 || i >= R.n - 1) return [R.x[i], R.y[i], R.yaw[i]];
-    const i1 = i + 1;
-    const x = R.x[i] + (R.x[i1] - R.x[i]) * frac;
-    const y = R.y[i] + (R.y[i1] - R.y[i]) * frac;
-    /* shortest-path yaw lerp */
-    let da = R.yaw[i1] - R.yaw[i];
-    if (da > Math.PI) da -= 2 * Math.PI;
-    else if (da < -Math.PI) da += 2 * Math.PI;
-    const yaw = R.yaw[i] + da * frac;
-    return [x, y, yaw];
-  }
-
   function draw() {
     const P = RV.pal, r = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight, R = S.R, i = S.i;
     if (!W) return;
@@ -543,8 +549,8 @@
     if (!onMap()) return;
     if (view.fit && !view.follow) applyFit(W, H);
     const many = others().length > 0;
-    /* smooth camera: interpolate position and yaw between steps at ≤1× playback speed */
-    const sc = smoothCar(R, i, S.camFrac);
+    /* smooth motion: at 1× and slower the car, its beams and the camera move between the recorded steps */
+    const sc = fp = poseAt(R, i, S.camFrac);
     const a = view.rot ? Math.PI / 2 - sc[2] : view.ang;
     let b = base(), ce = view.follow ? [sc[0], sc[1]] : [view.cx, view.cy];
     if (view.follow && view.all && many) { const f = frameAll(a, W, H); ce = f[0]; view.z = f[1]; b = [W / 2, H / 2]; }
@@ -576,6 +582,33 @@
       g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(buf, 0, 0);
     }
     paint(g, MOVING);
+    /* loop focus dimming: if a loop is active, dim everything outside the loop track region */
+    if (S.loop && trk()) {
+      const lp = S.loop, T = trk(), hw = T.hw;
+      const step = Math.max(2, Math.floor(2 / z));          /* sample every few metres */
+      /* build a road-strip polygon for the loop range: left edge forward, right edge backward */
+      const leftPts = [], rightPts = [];
+      for (let d = lp[0]; d <= lp[1] + step; d += step) {
+        const dd = Math.min(d, lp[1]);
+        const p = RV.track.pose(T, dd), sn2 = Math.sin(p[2]), cs2 = Math.cos(p[2]);
+        leftPts.push(w2s(p[0] - hw * sn2, p[1] + hw * cs2));
+        rightPts.push(w2s(p[0] + hw * sn2, p[1] - hw * cs2));
+      }
+      if (leftPts.length >= 2) {
+        /* even-odd path: outer rect punches the loop strip out of the dim overlay */
+        g.setTransform(r, 0, 0, r, 0, 0);
+        g.save();
+        g.beginPath();
+        g.rect(0, 0, W, H);                                 /* outer rect covers the whole canvas */
+        g.moveTo(leftPts[0][0], leftPts[0][1]);
+        for (const p of leftPts) g.lineTo(p[0], p[1]);
+        for (let k = rightPts.length - 1; k >= 0; k--) g.lineTo(rightPts[k][0], rightPts[k][1]);
+        g.closePath();
+        g.fillStyle = 'rgba(0,0,0,0.55)';
+        g.fill('evenodd');
+        g.restore();
+      }
+    }
     const sn = secNow !== null && document.getElementById('secNow');
     if (sn && R.sec) {                                    /* the Sectors section of the side panel: where the car is now */
       const cu = trk().sectors.cuts, k = R.d[i] < cu[0] ? 0 : R.d[i] < cu[1] ? 1 : 2, t0 = k === 0 ? 0 : k === 1 ? R.sec[0] : (R.sec[0] != null && R.sec[1] != null ? R.sec[0] + R.sec[1] : null);
@@ -589,7 +622,7 @@
       if (q.sp !== sp) { q.spd.textContent = sp; q.sp = sp; }
     }
     if (zoomInput && document.activeElement !== zoomInput) { const lv = Math.log(z).toFixed(2); if (zoomInput.value !== lv) { zoomInput.value = lv; zoomInput.nextSibling.textContent = zoomInput._fmt(+lv); } }
-    if (OVER[3].on) RV.inputs.draw(R, i);
+    if (OVER[3].on) RV.inputs.draw([{ id: S.sel[0], r: R, i: i }].concat(opt.allInputs ? S.CM.map(m => ({ id: m.id, r: m.r, i: RV.ghostIdx(m.r) })) : []));
     if (OVER[1].on) drawMini();
     if (OVER[0].on) drawHud(sm, gapTxt);
     if (OVER[4].on) drawSectorLive();
@@ -597,6 +630,7 @@
   }
   function drawMini() {
     const R = S.R, B = trk().box, P = RV.pal, r = window.devicePixelRatio || 1, cw = mini.clientWidth, chh = mini.clientHeight;
+    if (!cw) return;                                      /* hidden, as on a phone-width window */
     if (mini.width !== Math.round(cw * r)) { mini.width = Math.round(cw * r); mini.height = Math.round(chh * r); }
     const ms = Math.min((cw - 20) / (B[1] - B[0]), (chh - 20) / (B[3] - B[2]));
     const place = ctx => { ctx.setTransform(r, 0, 0, r, 0, 0); ctx.translate(cw / 2, chh / 2); ctx.scale(ms, -ms); ctx.translate(-(B[0] + B[1]) / 2, -(B[2] + B[3]) / 2); };
@@ -605,30 +639,39 @@
       miniBuf.width = mini.width; miniBuf.height = mini.height;
       const mb = miniBuf.getContext('2d');
       const T = trk();
-      place(mb); mb.lineWidth = 2.4 / ms; mb.strokeStyle = P.mute; mb.lineJoin = 'round'; mb.stroke(trackPaths().centre);
-      /* finish line */
-      mb.lineWidth = 2 / ms; mb.strokeStyle = P['road-edge']; mb.stroke(trackPaths().finish);
-      /* sector lines (detailed view only) */
-      if (!RV.simple() && T.sectors) {
-        mb.lineWidth = 1.5 / ms; mb.strokeStyle = P.best;
+      /* background */
+      mb.setTransform(1, 0, 0, 1, 0, 0);
+      mb.fillStyle = P['map-bg']; mb.fillRect(0, 0, mini.width, mini.height);
+      place(mb);
+      /* road surface */
+      mb.fillStyle = P.road; mb.fill(trackPaths().road, 'evenodd');
+      /* road edges */
+      mb.lineWidth = 1 / ms; mb.strokeStyle = P['road-edge']; mb.lineJoin = 'round';
+      mb.stroke(trackPaths().left); mb.stroke(trackPaths().right);
+      /* sector lines — thick, always shown */
+      if (T.sectors) {
+        mb.lineWidth = 3.5 / ms; mb.strokeStyle = P.best; mb.lineCap = 'round';
         for (const m of T.sectors.lines) { mb.beginPath(); mb.moveTo(m[0], m[1]); mb.lineTo(m[2], m[3]); mb.stroke(); }
+        mb.lineCap = 'butt';
       }
+      /* finish line — thick accent line, drawn last so it's on top */
+      mb.lineWidth = 3.5 / ms; mb.strokeStyle = P.accent; mb.lineCap = 'round';
+      mb.stroke(trackPaths().finish);
+      mb.lineCap = 'butt';
       miniKey = key;
     }
     mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, mini.width, mini.height); mg.drawImage(miniBuf, 0, 0);
     place(mg);
-    for (const m of others()) { const k = RV.ghostIdx(m.r); mg.beginPath(); mg.arc(m.r.x[k], m.r.y[k], 4.5 / ms, 0, 7); mg.fillStyle = RV.col(m.id); mg.fill(); }
-    mg.beginPath(); mg.arc(R.x[S.i], R.y[S.i], 5.5 / ms, 0, 7); mg.fillStyle = RV.col(S.sel[0]); mg.fill(); mg.lineWidth = 1.5 / ms; mg.strokeStyle = P.surface; mg.stroke();
+    for (const m of others()) { const q = ghostPose(m.r); mg.beginPath(); mg.arc(q[0], q[1], 4.5 / ms, 0, 7); mg.fillStyle = RV.col(m.id); mg.fill(); }
+    mg.beginPath(); mg.arc(fp[0], fp[1], 5.5 / ms, 0, 7); mg.fillStyle = RV.col(S.sel[0]); mg.fill(); mg.lineWidth = 1.5 / ms; mg.strokeStyle = P.surface; mg.stroke();
   }
   function drawHud(sm, gapTxt) {
     const R = S.R, i = S.i, kv = [];
     const add = (k, v, tip) => kv.push('<dt' + (tip ? ' title="' + tip + '"' : '') + '>' + k + '</dt><dd class="num">' + v + '</dd>');
-    add('Lap time', R.t[i].toFixed(2) + ' s');
-    if (!sm && R.sec && trk().sectors) { const cu = trk().sectors.cuts, d = R.d[i]; add('Sector', d < cu[0] ? 'S1' : d < cu[1] ? 'S2' : 'S3'); }
     add('Distance', R.s[i].toFixed(0) + ' m');
     if (!sm) {
-      add('Gear', R.g[i]); add('Plan allows', R.al[i] > 350 || !R.al[i] ? 'no limit' : R.al[i].toFixed(0) + ' km/h');
-      add('Throttle', R.th[i].toFixed(2)); add('Brake', R.br[i].toFixed(2)); add('Steering', R.st[i].toFixed(2)); add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
+      add('Plan allows', R.al[i] > 350 || !R.al[i] ? 'no limit' : R.al[i].toFixed(0) + ' km/h');
+      add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
       if (R.beams) { let mn = 1e9, mx = -1; for (let k = 0; k < 19; k++) { const d = R.b[i * 19 + k]; if (d >= 0) { mn = Math.min(mn, d); mx = Math.max(mx, d); } } add('Beams', mx < 0 ? 'off track' : mn.toFixed(0) + ' to ' + mx.toFixed(0) + ' m'); }
     }
     for (const m of S.CM) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
@@ -636,95 +679,104 @@
     const html = '<div class="big num">' + R.v[i].toFixed(0) + '<small>km/h</small></div><div class="who"><i class="sw" style="background:' + RV.col(S.sel[0]) + '"></i>' + esc(R.name) + '</div><div class="hud-doing">' + doing + '</div><dl class="kv">' + kv.join('') + '</dl>';
     if (html !== hudHtml) { $('hud').innerHTML = html; hudHtml = html; }
   }
-  /* ---------- sector live table ---------- */
-  /* Returns reference sector times [s1, s2, s3] or null.
-     Priority: mean of loaded compared runs > bestBefore of the focused version. */
-  function refSectors() {
-    if (!S.ds || !trk() || !trk().sectors) return null;
-    if (S.CM.length > 0) {
-      const loaded = S.CM.filter(m => m.r && m.r.sec);
-      if (loaded.length > 0) {
-        const mean = [0, 0, 0];
-        for (const m of loaded) { mean[0] += m.r.sec[0] || 0; mean[1] += m.r.sec[1] || 0; mean[2] += m.r.sec[2] || 0; }
-        return mean.map(v => v / loaded.length);
-      }
-    }
-    const v = S.ds.versions && S.ds.versions.find(vv => vv.id === S.sel[0]);
-    if (v && v.bestBeforeId && S.ds.byId && S.ds.byId[v.bestBeforeId] && S.ds.byId[v.bestBeforeId].sec)
-      return S.ds.byId[v.bestBeforeId].sec;
-    return null;
+  /* ---------- the reference lap of the sector table and the delta bar ----------
+     Always the fastest lap ever recorded: the fastest lap time among the versions that have a recording
+     (S.ds.fastId), whether or not that version is selected. Its recording is read in the background the first
+     time it is needed; until it arrives, the fastest lap among the runs already loaded stands in. A loaded
+     recording that is faster still (a manual lap) takes its place. The car in focus wins a tie. */
+  function fastestRun() {
+    const ds = S.ds, v = ds.fastId && ds.byId[ds.fastId];
+    if (v && v.file && !v.bad && !v.sum && !v.fastTried) { v.fastTried = true; ds.loadRun(v.id).catch(() => {}); }
+    let best = null, bestLap = Infinity;
+    const consider = run => { if (run && run.sum && run.sum.lap != null && run.sum.lap < bestLap) { bestLap = run.sum.lap; best = run; } };
+    consider(S.R);
+    for (const m of S.CM) consider(m.r);
+    for (const run of ds.loaded.values()) consider(run);
+    return best;
   }
 
   function drawSectorLive() {
     const R = S.R, T = trk();
     if (!R || !R.sec || !T || !T.sectors) { slvHtml = ''; $('sectorLive').hidden = true; return; }
     const cu = T.sectors.cuts, d = R.d[S.i], t = R.t[S.i];
-    const ref = refSectors();
+    const fast = fastestRun(), ref = fast && fast.sec ? fast.sec : R.sec;    /* the sector times of the fastest lap */
+    /* Which sector the car is currently in (0/1/2) based on replay position */
     const curSec = d < cu[0] ? 0 : d < cu[1] ? 1 : 2;
-    /* cumulative start times for each sector */
-    const secStart = [0, R.sec[0], (R.sec[0] != null && R.sec[1] != null) ? R.sec[0] + R.sec[1] : null];
-    let html = '<table><thead><tr><th class="l">Sector</th><th>Time</th><th>\u0394 Ref</th></tr></thead><tbody>';
+    /* Cumulative lap-time at the start of each sector, computed from replay position.
+       Sector k is "crossed" only if the car has already passed its end boundary in the replay. */
+    const secCrossed = [d >= cu[0], d >= cu[1], false];  /* S1 done once past cut[0], S2 past cut[1], S3 never "done" mid-lap */
+    /* S3 is done only if the lap is complete (lastLapTime row was captured) */
+    secCrossed[2] = R.sum && R.sum.lap != null && d >= cu[1] && R.sec[2] != null && t >= (R.sec[0] || 0) + (R.sec[1] || 0) + (R.sec[2] || 0) - 0.1;
+    /* Cumulative time at sector start for the live timer */
+    const secStart = [
+      0,
+      secCrossed[0] ? R.sec[0] : null,
+      (secCrossed[0] && secCrossed[1] && R.sec[0] != null && R.sec[1] != null) ? R.sec[0] + R.sec[1] : null,
+    ];
+    let html = '<div class="ldb-ref">\u0394 to ' + esc(fast && fast.sec ? fast.name : R.name) + ', the fastest lap recorded</div><table><thead><tr><th class="l">S</th><th>Time</th><th>\u0394</th></tr></thead><tbody>';
     for (let k = 0; k < 3; k++) {
-      const done = R.sec[k] != null;
-      const live = !done && k === curSec;
-      let secTime = done ? R.sec[k] : (live && secStart[k] != null ? Math.max(0, t - secStart[k]) : null);
+      const crossed = secCrossed[k];
+      const live = !crossed && k === curSec;
+      const future = !crossed && !live;
+      /* Time: use recorded final time once crossed; live running time while active; blank if not yet reached */
+      let secTime = null;
+      if (crossed) secTime = R.sec[k];
+      else if (live && secStart[k] != null) secTime = Math.max(0, t - secStart[k]);
       const refT = ref ? ref[k] : null;
-      const delta = (secTime != null && refT != null) ? (secTime - refT) : null;
+      /* Delta shown only when the sector is fully crossed (final time known) */
+      const delta = (crossed && secTime != null && refT != null) ? (secTime - refT) : null;
       const timeTxt = secTime != null ? secTime.toFixed(2) + ' s' : '\u2014';
-      const deltaTxt = delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(2) + ' s' : '\u2014';
-      const deltaBg = delta != null && Math.abs(delta) > 0.01 ? 'background:' + RV.deltaColor(delta, 2) + ';color:#fff' : (delta != null ? 'background:' + RV.deltaColor(delta, 2) : '');
+      const deltaTxt = delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(2) : '\u2014';
+      const dcol = delta != null ? RV.deltaColor(delta) : null;
+      const deltaStyle = dcol ? 'background:' + dcol + ';color:#fff' : '';
+      const rowDim = future ? ' slv-future' : '';
       const timeCls = 'slv-time' + (live ? ' slv-live' : '');
-      html += '<tr><td class="l num">S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
-        + '<td class="slv-delta" style="' + deltaBg + '">' + deltaTxt + '</td></tr>';
+      html += '<tr class="' + rowDim + '"><td class="l num">S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
+        + '<td class="slv-delta" style="' + deltaStyle + '">' + deltaTxt + '</td></tr>';
     }
+    /* Lap total row */
+    const lapDone = secCrossed[2];
+    const lapTime = lapDone ? R.sum.lap : t;                /* final if done, running if not */
+    const refLap = ref && ref.every(x => x != null) ? ref[0] + ref[1] + ref[2] : null;
+    const lapDelta = (lapDone && lapTime != null && refLap != null) ? (lapTime - refLap) : null;
+    const lapTimeTxt = lapTime != null ? RV.fmtLap(lapTime) : '\u2014';
+    const lapDeltaTxt = lapDelta != null ? (lapDelta > 0 ? '+' : '') + lapDelta.toFixed(2) : '\u2014';
+    const lapDcol = lapDelta != null ? RV.deltaColor(lapDelta) : null;
+    const lapDeltaStyle = lapDcol ? 'background:' + lapDcol + ';color:#fff' : '';
+    const lapRowCls = lapDone ? '' : ' slv-lap-live';
+    html += '<tr class="slv-lap' + lapRowCls + '"><td class="l num">Lap</td>'
+      + '<td class="slv-time' + (lapDone ? '' : ' slv-live') + '">' + lapTimeTxt + '</td>'
+      + '<td class="slv-delta" style="' + lapDeltaStyle + '">' + lapDeltaTxt + '</td></tr>';
     html += '</tbody></table>';
     if (html !== slvHtml) { $('sectorLive').innerHTML = html; slvHtml = html; }
+    $('sectorLive').hidden = false;
   }
 
   /* ---------- lap delta bar ---------- */
-  function lapDeltaForCar(r) {
-    const R = S.R;
-    const ref = refSectors();
-    if (ref) {
-      /* compare this car's current running time vs. reference total */
-      const refTotal = ref[0] + ref[1] + ref[2];
-      return r.t[S.i] - refTotal;
-    }
-    /* no external ref: compare each car against the focused car at the same track distance */
-    if (r === R) return 0;
-    return r.t[RV.idxAtD(r, R.d[S.i])] - R.t[S.i];
+  /* a run's lap clock at lap distance d, read between the two steps around it */
+  function timeAtD(r, d) {
+    const j = RV.idxAtD(r, d);
+    if (j >= r.n - 1) return r.t[r.n - 1];
+    const d0 = r.d[j], d1 = r.d[j + 1];
+    return d1 > d0 && d > d0 ? r.t[j] + (r.t[j + 1] - r.t[j]) * (d - d0) / (d1 - d0) : r.t[j];
   }
-
   function drawDeltaBar() {
-    const R = S.R;
-    if (!R) { ldbHtml = ''; $('lapDeltaBar').hidden = true; return; }
-    const MAX_D = 5;
-    const cars = [{ id: S.sel[0], r: R, foc: true }].concat(S.CM.filter(m => m.r && m.r.t).map(m => ({ id: m.id, r: m.r, foc: false })));
-    const rows = cars.map(c => ({ id: c.id, r: c.r, foc: c.foc, delta: lapDeltaForCar(c.r) }));
-    const focRow = rows[0];
-    const rest = rows.slice(1).sort((a, b) => a.delta - b.delta);
-    const sorted = [focRow, ...rest];
-    let html = '';
-    for (const row of sorted) {
-      const delta = row.delta;
-      const col = RV.deltaColor(delta, MAX_D);
-      let fillStyle;
-      if (delta <= 0) {
-        const pct = Math.min(50, Math.abs(delta) / MAX_D * 50);
-        fillStyle = 'left:' + (50 - pct).toFixed(1) + '%;right:50%;background:' + col;
-      } else {
-        const pct = Math.min(50, delta / MAX_D * 50);
-        fillStyle = 'left:50%;right:' + (50 - pct).toFixed(1) + '%;background:' + col;
-      }
-      const deltaTxt = (delta > 0 ? '+' : '') + delta.toFixed(2) + ' s';
-      html += '<div class="ldb-row' + (row.foc ? ' focused' : '') + '">'
-        + '<div class="ldb-label"><i class="sw" style="background:' + RV.col(row.id) + ';width:8px;height:8px;border-radius:2px;margin-right:4px"></i>'
-        + esc(row.id) + ' <span style="font-variant-numeric:tabular-nums">' + esc(deltaTxt) + '</span></div>'
-        + '<div class="ldb-track"><div class="ldb-fill" style="' + fillStyle + '"></div>'
-        + '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--line)"></div></div>'
-        + '</div>';
+    const R = S.R, ref = R && fastestRun();
+    if (!ref) { ldbHtml = ''; $('lapDeltaBar').hidden = true; return; }
+    const end = ref.d[ref.n - 1], d = Math.min(R.d[S.i], end), tRef = timeAtD(ref, d);   /* not past the reference's last row: rows logged after the line do not count */
+    const delta = r => r === ref ? 0 : (r === R && d < end ? R.t[S.i] : timeAtD(r, d)) - tRef;
+    /* the car in focus first, then the others from the one furthest ahead */
+    const rows = [{ id: S.sel[0], foc: true, delta: delta(R) }].concat(
+      S.CM.map(m => ({ id: m.id, foc: false, delta: delta(m.r) })).sort((x, y) => x.delta - y.delta));
+    let html = '<div class="ldb-ref">\u0394 to ' + esc(ref.name) + ', the fastest lap recorded</div>';
+    for (const row of rows) {
+      const col = RV.deltaColor(row.delta), txt = (Math.abs(row.delta) < 0.005 ? '' : row.delta > 0 ? '+' : '\u2212') + Math.abs(row.delta).toFixed(2) + ' s';
+      html += '<div class="ldb-row' + (row.foc ? ' focused' : '') + '"><span class="ldb-label"><i class="sw" style="background:' + RV.col(row.id) + '"></i>' +
+        '<span class="ldb-name">' + esc(row.id) + '</span></span><div class="ldb-track">' + (col ? '<div class="ldb-fill" style="background:' + col + '"></div>' : '') +
+        '<span class="ldb-delta num">' + txt + '</span></div></div>';
     }
     if (html !== ldbHtml) { $('lapDeltaBar').innerHTML = html; ldbHtml = html; }
+    $('lapDeltaBar').hidden = false;
   }
 
   function legend() {
@@ -786,14 +838,18 @@
 
   RV.map = {
     draw: draw, size: size, legend: legend, buildSide: buildSide, key: key,
+    /* called when the selection has been applied */
     resetAuto() {
       view.sInit = false;
-      /* default to whole-track view when a comparison run is added */
-      if (S.CM && S.CM.length > 0) fitView();
+      /* the whole track when a comparison starts; not on every later change of the selection (a new car in
+         focus, one car removed), and not over a camera the address asked for */
+      const cmp = S.CM.length > 0;
+      if (cmp && !hadCmp && !hashCam) fitView();
+      hadCmp = cmp; hashCam = false;
     },
     /* the address can ask for the camera that follows the car (follow, zoom, all, fixed); otherwise the whole track is shown */
     fromHash(H) {
-      if (H.follow || H.zoom || H.all || H.fixed) { view.follow = true; view.rot = !H.fixed; view.fit = false; }
+      if (H.follow || H.zoom || H.all || H.fixed) { view.follow = true; view.rot = !H.fixed; view.fit = false; hashCam = true; }
       if (H.all) view.all = true;
       if (H.zoom) view.z = +H.zoom;
     },
@@ -805,5 +861,7 @@
       buildSide();
     },
     LAYERS: LAYERS,
+    /* where every selected car is drawn now: [{id, x, y}] in track coordinates (used by tests) */
+    carsNow: () => (onMap() ? carsNow() : []),
   };
 })();

@@ -13,8 +13,8 @@
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
     camFrac: 0,                      /* fractional progress 0..1 between step i and i+1 (smoothing at ≤1×) */
     hold: { dir: 0, start: 0, rate: 0 },
-    tab: 'pv', listMode: 'all', keptOnly: true, detailId: null,
-    sideTab: 'view', layerGroup: 'Track', teleTab: 'charts', guideTab: 'layout', setTab: 'prefs',
+    tab: 'pv', listMode: 'all', keptOnly: true, keptAll: false, detailId: null,
+    sideTab: 'layers', layerGroup: 'Sensors', teleTab: 'charts', guideTab: 'layout', setTab: 'prefs',
     hoverD: null, chartsDirty: true, progDirty: true, loadTok: 0,
     loop: null, loopDraft: null,     /* a section of the lap played on a loop: [from, to] in metres of lap distance; the one being dragged */
     vmin: 0, vmax: 1,                /* speed range of the run in focus, for the colour scale */
@@ -116,6 +116,7 @@
       if (!S.sel.length) { S.R = null; S.CM = []; chips(); RV.map.buildSide(); RV.tele.build(); }
       return;
     }
+    ok.forEach(id => { delete ds.byId[id].bulk; });       /* selected: from now on it is an opened version */
     if (ok.length !== ids.length) setSel(ok, ok[0]);
     const had = !!S.R, R = S.R = runs[S.sel[0]];
     S.CM = S.sel.slice(1).map(id => ({ r: runs[id], id: id }));
@@ -161,7 +162,11 @@
     if (tt >= S.t) { while (S.i < n - 1 && R.t[S.i + 1] <= tt) S.i++; } else { while (S.i > 0 && R.t[S.i] > tt) S.i--; }
     S.t = tt;
   }
-  function setPlaying(p) { S.playing = p; $('play').textContent = p ? 'Pause' : 'Play'; if (!p) S.camFrac = 0; }
+  function setPlaying(p) {
+    /* if restarting from the last frame, jump back to the start */
+    if (p && S.R && S.i >= S.R.n - 1) go(0);
+    S.playing = p; $('play').textContent = p ? 'Pause' : 'Play'; if (!p) S.camFrac = 0;
+  }
   function hold(dir) { if (!S.R) return; setPlaying(false); go(S.i + dir); S.camFrac = 0; S.hold.dir = dir; S.hold.start = performance.now(); }
   function release() { S.hold.dir = 0; S.hold.rate = 0; }
   /* Loops the replay over a section of the lap (null: no loop). */
@@ -196,7 +201,8 @@
       if (end != null && S.t <= end && tt > end) {
         go(RV.idxAtD(R, S.loop[0]));                   /* loop boundary: snap */
       } else if (tt >= R.t[n - 1]) {
-        S.i = 0; S.t = R.t[0]; S.camFrac = 0;
+        S.i = n - 1; S.t = R.t[n - 1]; S.camFrac = 0;
+        setPlaying(false);                                  /* pause at the finish so sector data is readable */
       } else {
         seekT(tt);
         /* camera smoothing: at ≤1× speed compute fractional progress within the current step interval */
@@ -358,7 +364,9 @@
         e.preventDefault();
         if (!e.repeat) hold(e.key === 'ArrowRight' ? 1 : -1);
       } else if (e.key === ' ') {
-        if (tg.tagName === 'BUTTON' || tg.tagName === 'SELECT' || tg.type === 'checkbox') return;   /* space presses the focused control */
+        /* space presses the focused control; the tab of the page already open has nothing to do, so there it is the replay key */
+        const openTab = tg.classList && tg.classList.contains('tab') && tg.classList.contains('on');
+        if ((tg.tagName === 'BUTTON' && !openTab) || tg.tagName === 'SELECT' || tg.type === 'checkbox') return;
         e.preventDefault(); setPlaying(!S.playing);
       } else if (e.key === 'Home') go(0);
       else if (e.key === 'Escape' && S.loop) setLoop(null);

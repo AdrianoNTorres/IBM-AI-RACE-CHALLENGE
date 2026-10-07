@@ -46,9 +46,13 @@
     let base = null;
     for (const [vid, e] of full) {
       const f = e.f, sm = simple && simple.get(vid) ? simple.get(vid) : { title: '', f: {} };
-      const m = /runs\/(run_\d+_\d+\.csv)/.exec(e.body);
+      /* The version's own recording is the one its Observed field names. Other fields may name an earlier
+         version's run (the analysis a change started from), so the rest of the entry is only a fallback. */
+      const RUN = /runs\/(run_\d+_\d+\.csv)/;
+      const m = RUN.exec(f['Observed'] || '') || RUN.exec(e.body);
       const kept = (f['Decision'] || '').indexOf('✅') >= 0;
-      const enableChange = /enabling\s+change/i.test(f['Decision'] || '');
+      /* "Kept — enabling change: …" is one; a decision that only mentions the words ("not an enabling change") is not */
+      const enableChange = /^\W*\w+\s*[—–-]\s*(an\s+)?enabling\s+change/i.test(f['Decision'] || '');
       const lap = lapSeconds(f['Lap time']);
       const v = {
         id: vid, title: clean(e.title), lap: lap, top: kmh(f['Top speed']), slow: kmh(f['Min speed']),
@@ -369,7 +373,8 @@
     if (simple && !simple.size) simple = null;
 
     step('Reading the track');
-    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map() };
+    /* runs: the load of each run, by id (a promise); loaded: the runs that have arrived, for code that cannot wait */
+    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map(), loaded: new Map() };
     let own = null;
     try { own = await src.readText('track.xml'); } catch (e) { if (e.code !== 'missing') throw e; }
     if (own != null) {
@@ -420,13 +425,23 @@
           if (e.code === 'csv') { v.bad = e.message; throw new RVError('csv', id + ': ' + e.message.charAt(0).toLowerCase() + e.message.slice(1), e.hint); }
           throw e;
         }
+        if (ds.runs.get(id) !== job) return run;               /* unloaded meanwhile: the version stays unloaded */
         v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
         if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
+        if (ds.runs.get(id) === job) ds.loaded.set(id, run);   /* not if it was unloaded while it was being read */
         return run;
       })();
       ds.runs.set(id, job);
-      job.catch(() => ds.runs.delete(id));
+      job.catch(() => { if (ds.runs.get(id) === job) ds.runs.delete(id); });
       return job;
+    };
+    /* Forgets a loaded run to free its memory; loadRun reads it again. False if it was not loaded. */
+    ds.unloadRun = function (id) {
+      const v = ds.byId[id];
+      if (!v || !v.sum) return false;
+      v.sum = null; v.sec = null; v.beams = null; delete v.refTried; delete v.fastTried; delete v.bulk;
+      ds.runs.delete(id); ds.loaded.delete(id);
+      return true;
     };
     return ds;
   }

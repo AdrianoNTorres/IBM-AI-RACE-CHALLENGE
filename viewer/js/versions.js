@@ -7,13 +7,14 @@
   let V = [], LV = [];                 /* all versions; those with a lap time (the chart's points) */
   let pr = [-0.5, 0.5], progHover = -1;
   let anchorId = null, dragSel = null;
+  let bulk = null, bulkMsg = '';       /* loading every recording: {ds, done, total, failed} while it runs; the last outcome */
 
   const LISTS = [['all', 'All versions'], ['fast', 'Fastest laps'], ['gain', 'Biggest gains'], ['loss', 'Biggest losses'], ['top', 'Top speeds']];
   /* chart classes: [palette key, filled dot?, meaning] */
   const CLS = {
-    kb: ['best', true, 'Kept, new best lap'], ks: ['kept', true, 'Kept, not a new best lap'],
+    kb: ['v-best', true, 'Kept, new best lap'], ks: ['v-kept', true, 'Kept, not a new best lap'],
     ke: ['warn', true, 'Kept, enabling change'],
-    rf: ['best', false, 'Rejected, although its single lap was faster'], rs: ['mute', false, 'Rejected, slower or equal'],
+    rf: ['v-rej', false, 'Rejected, although its single lap was faster'], rs: ['v-rej', true, 'Rejected, slower or equal'],
     re: ['mute', false, 'Rejected, enabling change'],
   };
 
@@ -31,12 +32,16 @@
       v.bestAfter = best;
     }
     S.ds.bestId = bestId;
+    /* the fastest lap ever recorded, kept or rejected: the reference of the live sector table and the delta bar */
+    const rec = LV.filter(v => v.file);
+    S.ds.fastId = rec.length ? rec.reduce((a, b) => (b.lap < a.lap ? b : a)).id : null;
+    bulk = null; bulkMsg = '';
     pr = [-0.5, LV.length - 0.5];
   }
 
   function listRows() {
     if (S.listMode === 'extra') return S.ds.extras;
-    if (S.listMode === 'all') return V.slice().reverse();
+    if (S.listMode === 'all') return (S.keptAll ? V.filter(v => v.kept) : V).slice().reverse();
     let a = V;
     if (S.keptOnly) a = a.filter(v => v.kept);
     if (S.listMode === 'fast') return a.filter(v => v.lap).sort((x, y) => x.lap - y.lap).slice(0, 10);
@@ -70,7 +75,7 @@
     if (!RV.simple() && sv.length >= 2) {
       const who = [0, 1, 2].map(k => sv.reduce((a, b) => (b.sec[k] < a.sec[k] ? b : a)));
       theo = t('Best theoretical', fmtLap(who.reduce((s, b, k) => s + b.sec[k], 0)),
-        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + ' \u00b7 from the ' + sv.length + ' versions opened so far');
+        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + ' \u00b7 from the ' + sv.length + ' recordings loaded so far');
     }
     return '<div class="tiles' + (theo ? ' five' : '') + '">' +
       t('Best lap', fmtLap(best.lap), esc(best.id) + ', the fastest kept version', 'hero') +
@@ -82,7 +87,7 @@
   /* Detailed view: the sector times of every version whose recording has been opened, kept or not. */
   function sectorGrid() {
     if (RV.simple() || RV.sectors.opened().length < 2) return '';
-    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">Only versions whose recording has been opened are listed. ' + RV.sectors.NOTE + '</span></div>' + RV.sectors.table(false) + '</div>';
+    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">Only versions that have been opened (selected or compared) are listed; \u201cLoad all versions\u201d adds none. ' + RV.sectors.NOTE + '</span></div>' + RV.sectors.table(false) + '</div>';
   }
 
   function render() {
@@ -103,11 +108,12 @@
       '<p class="note">' + (sm ? 'Each dot is one version; lower is faster. Point at a dot to compare it with the best lap before it. Use the mouse wheel over the chart to zoom in on the later versions.'
         : 'Hover: difference to the best kept lap before each version. Wheel zooms the version axis, drag pans, double-click resets, click opens the details.') + '</p></div>' +
       '<div id="vbar"><div class="seg wrap" id="lists" role="group" aria-label="Which versions to list">' + lists.map(l => '<button data-l="' + l[0] + '" class="' + (l[0] === mode ? 'on' : '') + '" aria-pressed="' + (l[0] === mode) + '">' + l[1] + '</button>').join('') + '</div>' +
-      (rank ? '<label class="check"><input type="checkbox" id="ko" ' + (S.keptOnly ? 'checked' : '') + '> Kept versions only</label>' : '') + '</div>' +
+      (extra ? '' : '<label class="check"><input type="checkbox" id="ko" ' + ((rank ? S.keptOnly : S.keptAll) ? 'checked' : '') + '> Kept versions only</label>') + '</div>' +
       '<p class="note">' + notes[mode] + (notes[mode] ? ' ' : '') +
       (sm ? 'Click a version to select it. To compare several, drag across them, or hold Shift and click to select everything in between, or hold Ctrl and click to add or remove one.'
         : 'Click selects one run. Drag or Shift-click selects a range, Ctrl-click adds or removes one (up to ' + RV.MAX_RUNS + ' runs). The run clicked first is in focus.') + '</p>';
-    h += '<div id="bulkBar" class="acts" style="margin:8px 0 4px"><button class="btn sm" id="bulkLoad">Load all versions</button><button class="btn sm" id="bulkUnload">Unload non-selected</button><span id="bulkStatus" class="note" style="margin-left:6px"></span></div>';
+    h += '<div id="bulkBar" class="acts" style="margin:8px 0 4px"><button class="btn sm" id="bulkLoad" title="Read the recording of every version: quicker to open afterwards, and all of them count for the best theoretical lap. They are not added to the sector table.">Load all versions</button>' +
+      '<button class="btn sm" id="bulkUnload" title="Free the memory of every recording that is not selected">Unload non-selected</button><span id="bulkStatus" class="note" role="status" style="margin-left:6px"></span></div>';
     h += '<div class="tablewrap"><table id="vt"><thead><tr>' + (rank ? '<th>#</th>' : '') + '<th class="l">' + (extra ? 'Recording' : 'Version') + '</th>' +
       (extra ? '<th>Size</th>' : '<th class="l">' + (sm ? 'What it changed' : 'Change') + '</th>') + '<th>Lap time</th>' +
       (extra ? '' : '<th title="Lap time difference vs the best lap at that point in development">' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
@@ -126,45 +132,57 @@
     box.scrollTop = keep;
     if (focusRow) { const tr = box.querySelector('#vt tbody tr[data-id="' + CSS.escape(focusRow) + '"]'); if (tr) tr.focus({ preventScroll: true }); }
     box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; render(); }; });
-    if ($('ko')) $('ko').onchange = e => { S.keptOnly = e.target.checked; render(); };
+    /* the full list starts with every version; the rankings start with the kept ones */
+    if ($('ko')) $('ko').onchange = e => { if (S.listMode === 'all') S.keptAll = e.target.checked; else S.keptOnly = e.target.checked; render(); };
     RV.sectors.wire(box);
     paintRows(); setupProg(); renderDetail();
     wireBulk();
   }
 
+  /* The table is rebuilt while recordings arrive, so the progress is kept here and painted into whatever
+     bar is on the page now. */
+  function paintBulk() {
+    const st = $('bulkStatus');
+    if (!st) return;
+    st.textContent = bulk ? bulk.done + ' / ' + bulk.total + ' loaded \u2026' : bulkMsg;
+    $('bulkLoad').disabled = $('bulkUnload').disabled = !!bulk;
+  }
   function wireBulk() {
-    const loadBtn = $('bulkLoad'), unloadBtn = $('bulkUnload'), status = $('bulkStatus');
-    if (!loadBtn) return;
-    loadBtn.onclick = async () => {
-      const ds = S.ds;
-      const pending = ds.versions.filter(v => v.file && !v.bad && !v.sum);
-      if (!pending.length) { status.textContent = 'All versions already loaded.'; return; }
-      loadBtn.disabled = true; unloadBtn.disabled = true;
-      let done = 0;
-      status.textContent = '0 / ' + pending.length + ' loaded…';
-      for (const v of pending) {
-        try { await ds.loadRun(v.id); } catch (e) { /* skip bad loads silently */ }
-        done++;
-        if (status) status.textContent = done + ' / ' + pending.length + ' loaded…';
-      }
-      loadBtn.disabled = false; unloadBtn.disabled = false;
-      status.textContent = done + ' version' + (done === 1 ? '' : 's') + ' loaded.';
-      RV.versions.render();
-    };
-    unloadBtn.onclick = () => {
-      const ds = S.ds;
-      let count = 0;
-      for (const v of ds.versions) {
-        if (S.applied.includes(v.id)) continue;
-        if (v.sum) {
-          delete v.sum; delete v.sec; delete v.beams;
-          ds.runs.delete(v.id);
-          count++;
+    if (!$('bulkLoad')) return;
+    $('bulkLoad').onclick = async () => {
+      if (bulk) return;
+      const ds = S.ds, pending = ds.versions.filter(v => v.file && !v.bad && !v.sum);
+      if (!pending.length) { bulkMsg = 'Every recording is already loaded.'; paintBulk(); return; }
+      const job = bulk = { ds: ds, done: 0, total: pending.length, failed: 0 };
+      paintBulk();
+      /* four at a time: quicker than one by one, and gentle on the host */
+      const next = async () => {
+        while (pending.length && bulk === job) {
+          const v = pending.shift();
+          v.bulk = true;                                  /* loaded in bulk, not opened: kept out of the sector table */
+          try { await ds.loadRun(v.id); } catch (e) { job.failed++; }
+          job.done++;
+          if (bulk === job) paintBulk();
         }
-      }
-      RV.toast(count ? count + ' version' + (count === 1 ? '' : 's') + ' unloaded.' : 'Nothing to unload.');
-      RV.versions.render();
+      };
+      await Promise.all([next(), next(), next(), next()]);
+      if (bulk !== job) return;                           /* another data set was opened meanwhile */
+      bulk = null;
+      const ok = job.done - job.failed;
+      bulkMsg = ok + ' recording' + (ok === 1 ? '' : 's') + ' loaded' + (job.failed ? ', ' + job.failed + ' could not be read' : '') + '.';
+      RV.versions.render(); RV.map.buildSide();
     };
+    $('bulkUnload').onclick = () => {
+      if (bulk) return;
+      /* kept: the runs on screen, the previous best of the run in focus, and the fastest lap (the map's reference) */
+      const ds = S.ds, keep = S.sel.concat(S.applied, [RV.refIdFor(S.sel[0]), ds.fastId]);
+      let count = 0;
+      for (const v of ds.versions.concat(ds.extras)) if (!keep.includes(v.id) && ds.unloadRun(v.id)) count++;
+      bulkMsg = '';
+      RV.toast(count ? count + ' recording' + (count === 1 ? '' : 's') + ' unloaded.' : 'Nothing to unload.');
+      RV.versions.render(); RV.map.buildSide();
+    };
+    paintBulk();
   }
   function paintRows() {
     document.querySelectorAll('#vt tbody tr').forEach(tr => {

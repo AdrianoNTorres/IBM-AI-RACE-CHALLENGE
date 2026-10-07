@@ -92,7 +92,7 @@
       '<tr><td>Top speed, Min speed</td><td>start with <code>NNN km/h</code></td><td>the Top and Slowest corner columns</td></tr>' +
       '<tr><td>Damage</td><td>any text</td><td>shown in the details</td></tr>' +
       '<tr><td>Decision</td><td>contains ✅ if the version was kept</td><td>Kept or Rejected; gains are measured against the last kept version</td></tr>' +
-      '<tr><td>Run CSV</td><td>the first <code>runs/run_&lt;digits&gt;_&lt;digits&gt;.csv</code> anywhere in the entry</td><td>the recording that is replayed</td></tr>' +
+      '<tr><td>Run CSV</td><td>the first <code>runs/run_&lt;digits&gt;_&lt;digits&gt;.csv</code> in the Observed field; if that names none, the first anywhere in the entry</td><td>the recording that is replayed</td></tr>' +
       '<tr><td>What changed, Why, Observed, Learned</td><td>any text</td><td>the technical record in the details panel</td></tr></table>' +
       '<p>The file must hold at least one such entry, or the source is refused. An entry without a lap time is listed but left out of the chart.</p>'],
     csv: ['Run CSVs',
@@ -152,9 +152,9 @@
         '<tr><td>Versions table</td><td>' + k('\u2191') + ' ' + k('\u2193') + ', ' + k('Enter') + ', ' + k('Space') + '</td><td>move between rows, select the row, add it to or remove it from the comparison</td></tr>' +
         '<tr><td>Lap-time chart</td><td>' + k('\u2190') + ' ' + k('\u2192') + ', ' + k('+') + ' ' + k('\u2212') + ', ' + k('0') + '</td><td>step through the versions, zoom, reset</td></tr>' +
         '<tr><td>Anywhere</td><td>' + k('Tab') + '</td><td>move to the next control</td></tr></table>') +
-      card('Reading the colours', '<ul class="helpul"><li><b>Path on the map:</b> blue where the car was slowest, yellow where it was fastest. In the detailed view it can show braking instead.</li>' +
+      card('Reading the colours', '<ul class="helpul"><li><b>Path on the map:</b> red where the car was slowest, green where it was fastest. In the detailed view it can show braking instead.</li>' +
         '<li><b>Sensor beams:</b> pink means the edge of the road is close, cyan means it is far.</li>' +
-        '<li><b>Lap-time chart:</b> filled purple = kept and a new best lap; filled green = kept; purple ring = rejected although its lap was faster; grey ring = rejected.</li>' +
+        '<li><b>Lap-time chart:</b> filled green = kept and a new best lap; filled blue = kept, not a new best; filled yellow = kept as an enabling change; red ring = rejected although its lap was faster; filled red = rejected, slower or equal; grey ring = rejected enabling change.</li>' +
         '<li><b>Time differences:</b> a minus sign, or \u201cfaster\u201d, means time gained.</li></ul>') +
       card('Using your own data', '<p>The site can show any project laid out the same way: a public GitHub repository, or a folder on this computer. Choose it under Settings, Data source. The source is checked first, and the page says what it found.</p>' +
         '<div class="acts"><button class="btn" id="hFormat">Show the data format</button></div>' +

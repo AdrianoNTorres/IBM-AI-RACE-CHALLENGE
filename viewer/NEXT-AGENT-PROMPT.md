@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 8
+**Last updated:** after the pre-Phase-9 audit (2026-10-07)
 
 ---
 
@@ -80,6 +80,36 @@ Global namespace: `globalThis.RV`. All modules attach to it.
 ---
 
 ---
+
+## Pre-Phase-9 audit (2026-10-07)
+
+Phases 1-8 were checked in a headless browser against the working tree (106 versions, 100 recordings). Where this section and the phase notes above differ, this section is current.
+
+**Must be done before hosting**
+
+1. `viewer/js/sectors.js` and `viewer/js/tutorial.js` have never been committed, but the committed `index.html` loads them. As pushed, the page throws on start. Commit them with the rest of the working tree.
+2. `RV.DEFAULT_LINK` and `RV.TRACK_URL` (`js/core.js`) point at the branch `experimental_hosting`. Point them at the branch the site is published from.
+3. GitHub Pages serves a branch root or `/docs`; the site is in `viewer/`. Publish it with a Pages workflow that uploads `viewer/` (all its paths are relative, so a sub-path works).
+
+**Fixed in the audit**
+
+- A version's recording is now the CSV its Observed field names. Before, 42 versions (v0.43-v0.85) replayed the previous version's lap, because their Why field names that run first.
+- Enabling-change badge: only a Decision that starts "Kept/Rejected - enabling change". Six versions that only mention the words lost the badge (7 remain).
+- Lap delta bar: read from the reference run itself (`ds.loaded`, exact times). Before, the fastest lap showed up to +/-2.8 s against itself.
+- Live sector table and delta bar are on a dark panel under the overview map (`#overlay`, which wraps into a second column in a low window); the colour keys moved to the top right. Before, they overlapped the colour keys, were unreadable in the light theme, and their Panels switches did not hide them.
+- Both always compare with the fastest lap ever recorded (`S.ds.fastId` from `versions.js` `prepare`, `fastestRun` in `map.js`), loaded in the background, also while runs are compared (user, 2026-10-07). The focus car's delta bar is 20% larger.
+- Wheel and pedals: one row per car (`inputs.js` builds `.incar` rows; the old ids `#wheel`, `#pedals`, `#barBrake`, `#barThrottle` are gone), the car in focus large, compared cars small; option `opt.allInputs` under Layers (user, 2026-10-07).
+- Telemetry charts: value-coloured lines only with one run; solid per-car colours while comparing; the gear chart is a step line without the filled areas (user, 2026-10-07).
+- Smoothing (`S.camFrac`) applies to every car, the beams, the speed label and the overview dots (`poseAt`, `ghostPose` in `map.js`).
+- The whole-track view is applied when a comparison starts, not on every selection change, and not over a camera asked for in the address.
+- Bulk load: progress and result survive a re-render; four at a time. Unload goes through `ds.unloadRun` and the reference recording loads again afterwards.
+- Space is play/pause right after clicking a tab; the range field follows zoom and pan; the car-size rows are laid out; label widths are measured with the right font; a phone-width window no longer throws on every frame (`drawMini`).
+
+**Differences from the phase notes above (earlier redesigns, kept)**
+
+- `RV.deltaColor(delta)` returns solid green, solid red or null; the bar is filled whole, not from the centre.
+- Loop dimming is a dark overlay outside the looped stretch of road (in `draw`), not a two-pass line.
+- The replay pauses at the finish; the HUD no longer lists lap time, sector, gear and pedals.
 
 ## Phase 9 (hosting) checkpoint — verify all of these before starting Phase 9
 

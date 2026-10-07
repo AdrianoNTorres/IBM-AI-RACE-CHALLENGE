@@ -6,7 +6,7 @@
 
   /* k: run field; s: also shown in the basic view; c: the caption under the chart */
   const CH = [
-    { k: 'v', ti: 'Speed', u: 'km/h', s: 1, c: 'Speed (km/h) \u2014 red = slow, green = fast; dips show braking zones and corners' },
+    { k: 'v', ti: 'Speed', u: 'km/h', s: 1, c: 'Speed (km/h) \u2014 dips show braking zones and corners' },
     { k: 'th', ti: 'Throttle', u: '0 to 1', s: 1, c: 'Throttle input (0\u20131) \u2014 1 is full power' },
     { k: 'br', ti: 'Brake', u: '0 to 1', s: 1, c: 'Brake input (0\u20131) \u2014 1 is maximum braking' },
     { k: 'st', ti: 'Steering', u: '', c: 'Steering (+1 full left to \u22121 full right) \u2014 large swings may signal instability' },
@@ -22,6 +22,7 @@
   let xr = [-12, 1], gapS = null, lastCur = -1, lastTotal = 0;
   let sectGap = 100;                   /* configurable section gap (metres) */
   const SECT_GAPS = [25, 50, 100, 200, 500];
+  let sectGapCustom = false;           /* true when a manually-typed value is in use */
 
   const runs = () => [{ r: S.R, id: S.sel[0] }].concat(S.CM);
   const sw = id => '<i class="sw" style="background:' + RV.col(id) + '"></i>';
@@ -67,7 +68,7 @@
 
     /* detailed view: charts and the section table share the space, one at a time */
     if (sm) S.teleTab = 'charts';
-    else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">' + sectGap + ' m sections</button></div>';
+    else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">' + sectGap + '\u202fm sections</button></div>';
 
     if (S.teleTab === 'charts') {
       /* step range input */
@@ -76,7 +77,7 @@
         '<label class="lbl" for="teleRange">Range (m)</label><div class="inrow sm"><input type="text" id="teleRange" spellcheck="false" style="width:120px" placeholder="0\u2013' + Math.round(R.total) + '" value="' + Math.round(xr[0]) + '\u2013' + Math.round(xr[1]) + '"><button class="btn sm" id="teleReset">Full lap</button></div></div>';
       for (const q of CH) {
         if ((q.gap && !many) || (sm && !q.s)) continue;
-        const lgd = q.k !== 'v' ? '' : '<span class="clg"><i class="gsw"></i>Speed (red = slow, green = fast)</span>' + (hasPlan(R) ? '<span class="clg"><i class="dsw"></i>Planned</span>' : '');
+        const lgd = q.k !== 'v' ? '' : (many ? '' : '<span class="clg"><i class="gsw"></i>Speed (red = slow, green = fast)</span>') + (hasPlan(R) ? '<span class="clg"><i class="dsw"></i>Planned</span>' : '');
         h += '<div class="card chart"><div class="cardhead"><h3>' + q.ti + (q.u ? ' <span class="unit">' + q.u + '</span>' : '') + '</h3>' + lgd + '</div><canvas data-k="' + q.k + '" aria-label="' + q.ti + ' along the lap"></canvas><p class="chart-caption">' + q.c + '</p>' + (q.gap ? '' : statsBar(R, q)) + '</div>';
       }
     } else h += sectionsTable();
@@ -102,8 +103,18 @@
     });
     box.querySelectorAll('#sect .sortb').forEach(b => { b.onclick = () => { sectSort = { k: b.dataset.k, dir: sectSort.k === b.dataset.k ? -sectSort.dir : 1 }; build(); const again = document.querySelector('#sect .sortb[data-k="' + b.dataset.k + '"]'); if (again) again.focus(); }; });
     if ($('sectExport')) $('sectExport').onclick = exportSections;
-    /* section gap buttons */
-    box.querySelectorAll('[data-g]').forEach(b => { b.onclick = () => { sectGap = +b.dataset.g; build(); }; });
+    /* section gap preset buttons */
+    box.querySelectorAll('[data-g]').forEach(b => { b.onclick = () => { sectGap = +b.dataset.g; sectGapCustom = false; build(); }; });
+    /* custom gap input */
+    if ($('sectGapApply')) {
+      const applyCustom = () => {
+        const v = parseInt($('sectGapInput').value, 10);
+        if (v >= 5 && v <= 5000) { sectGap = v; sectGapCustom = !SECT_GAPS.includes(v); build(); }
+        else { $('sectGapInput').focus(); }
+      };
+      $('sectGapApply').onclick = applyCustom;
+      $('sectGapInput').onkeydown = e => { if (e.key === 'Enter') applyCustom(); };
+    }
     box.querySelectorAll('canvas').forEach(wireChart);
     S.chartsDirty = true;
   }
@@ -111,12 +122,13 @@
   /* ---------- configurable sections: one object per section, shown as a sortable table and exported as CSV ---------- */
   function sectionData() {
     const R = S.R, rows = [], gap = sectGap;
-    /* always include 0 and the end of the track even if not exact multiples */
+    /* build section start points, then add R.total - 8 as the terminal so the last section is always included */
+    const TERM = R.total - 8;
     const starts = [];
-    for (let m = 0; m < R.total - gap * 0.5; m += gap) starts.push(m);
-    if (starts[starts.length - 1] < R.total - 8) starts.push(Math.floor(R.total));
+    for (let m = 0; m < TERM - gap * 0.5; m += gap) starts.push(m);
+    starts.push(TERM);                 /* terminal: last section runs to the end of the usable lap data */
     for (let si = 0; si < starts.length - 1; si++) {
-      const m = starts[si], e = Math.min(starts[si + 1], R.total - 8), a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
+      const m = starts[si], e = starts[si + 1], a0 = RV.idxAtD(R, m), a1 = RV.idxAtD(R, e);
       if (a1 <= a0) continue;
       let lo = 1e9, hi = 0, bm = 0, tm = 0, g0 = 99, g1 = -99;
       for (let k = a0; k <= a1; k++) { lo = Math.min(lo, R.v[k]); hi = Math.max(hi, R.v[k]); bm = Math.max(bm, R.br[k]); tm = Math.max(tm, Math.abs(R.tp[k])); g0 = Math.min(g0, R.g[k]); g1 = Math.max(g1, R.g[k]); }
@@ -139,7 +151,9 @@
     if (col.k !== sectSort.k) sectSort = { k: 'm', dir: 1 };
     sectShown = sectionData().sort((a, b) => (col.f(a) - col.f(b)) * sectSort.dir || a.m - b.m);
     let h = '<div class="tblbar"><p class="note">Times are for the run in focus; the columns for compared runs show their difference to it. Click a row to move the car there, a column heading to sort by it.</p>' +
-      '<label class="lbl">Section gap: <div class="seg" role="group" aria-label="Section gap">' + SECT_GAPS.map(g => '<button class="' + (g === sectGap ? 'on' : '') + '" data-g="' + g + '">' + g + ' m</button>').join('') + '</div></label>' +
+      '<div class="sect-gap-ctrl"><label class="lbl" style="margin:0">Section gap:</label>' +
+      '<div class="seg" role="group" aria-label="Section gap">' + SECT_GAPS.map(g => '<button class="' + (!sectGapCustom && g === sectGap ? 'on' : '') + '" data-g="' + g + '">' + g + ' m</button>').join('') + '</div>' +
+      '<div class="inrow sm" style="gap:4px;margin:0"><input type="text" id="sectGapInput" style="width:72px" placeholder="m" value="' + (sectGapCustom ? sectGap : '') + '" aria-label="Custom section gap in metres"><button class="btn sm" id="sectGapApply">Apply</button></div></div>' +
       '<button class="btn sm" id="sectExport" title="Download these rows, in this order, as a CSV file">Export CSV</button></div><div class="card"><div class="tablewrap"><table id="sect"><thead><tr>' +
       sectCols.map(c => { const on = c.k === sectSort.k; return '<th class="' + (c.l ? 'l' : '') + '" aria-sort="' + (on ? (sectSort.dir > 0 ? 'ascending' : 'descending') : 'none') + '"><button class="sortb' + (on ? ' on' : '') + '" data-k="' + c.k + '" title="Sort by this column">' + c.ti + '<span class="arr">' + (on ? (sectSort.dir > 0 ? '\u2191' : '\u2193') : '\u2191\u2193') + '</span></button></th>'; }).join('') + '</tr></thead><tbody>';
     for (const r of sectShown) h += '<tr data-m="' + r.m + '" tabindex="0">' + sectCols.map(c => '<td class="' + (c.l ? 'l ' : '') + 'num ' + (c.cls ? c.cls(r) : '') + '">' + c.s(r) + '</td>').join('') + '</tr>';
@@ -278,6 +292,8 @@
     const dirty = S.chartsDirty;
     S.chartsDirty = false; lastCur = i; scrolled = false;
     const r = window.devicePixelRatio || 1, P = RV.pal, sm = RV.simple(), port = $('pt').getBoundingClientRect();
+    const ri = $('teleRange');                           /* the range field follows the wheel zoom and the pan */
+    if (dirty && ri && document.activeElement !== ri) { const s = Math.round(Math.max(0, xr[0])) + '–' + Math.round(xr[1]); if (ri.value !== s) ri.value = s; }
     document.querySelectorAll('#pt canvas').forEach(cv => {
       const W = cv.clientWidth, H = cv.clientHeight;
       if (!W) return;
@@ -340,26 +356,11 @@
       x.setLineDash([]);
       for (let n = series.length - 1; n >= 0; n--) {
         const se = series[n], k0 = RV.bsearch(se.s, xr[0]), k1 = Math.min(se.s.length - 1, RV.bsearch(se.s, xr[1]) + 1);
-        if (q.k === 'v' && n === 0) { speedLine(x, se, k0, k1, X, Y); continue; }
-        /* gear chart: filled area per gear value, colored with the shared gear palette */
-        if (q.k === 'g' && n === 0) {
-          const y0 = Y(0);
-          let curG = se.v[k0], segStart = X(se.s[k0]);
-          for (let k = k0 + 1; k <= k1; k++) {
-            const g = se.v[k];
-            if (g !== curG || k === k1) {
-              const segEnd = X(se.s[k]);
-              x.fillStyle = RV.gearColor(curG);
-              x.globalAlpha = 0.6;
-              x.fillRect(segStart, Y(curG), segEnd - segStart, y0 - Y(curG));
-              x.globalAlpha = 1;
-              curG = g; segStart = segEnd;
-            }
-          }
-          continue;
-        }
+        /* one run: its line is coloured by value. Compared runs: one solid colour per car, or the lines cannot be told apart */
+        const alone = S.CM.length === 0;
+        if (q.k === 'v' && n === 0 && alone) { speedLine(x, se, k0, k1, X, Y); continue; }
         /* throttle (green=high), brake (green=low), steering/trackPos (green=near 0, red=near ±1) — only for the run in focus */
-        if (n === 0 && (q.k === 'th' || q.k === 'br' || q.k === 'st' || q.k === 'tp')) {
+        if (n === 0 && alone && (q.k === 'th' || q.k === 'br' || q.k === 'st' || q.k === 'tp')) {
           if (q.k === 'th') { coloredLine(x, se, k0, k1, X, Y, 1, 0, 1); continue; }
           if (q.k === 'br') { coloredLine(x, se, k0, k1, X, Y, -1, 0, 1); continue; }
           /* steering and trackPos: abs value drives bucket; original Y used for drawing */
