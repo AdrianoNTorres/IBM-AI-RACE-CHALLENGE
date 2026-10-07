@@ -21,7 +21,14 @@
   const cleanPath = s => String(s || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '').replace(/\/{2,}/g, '/');
   const badPath = p => !p || /(^|\/)\.{1,2}(\/|$)/.test(p) || /[\u0000-\u001f:*?"<>|]/.test(p);
   const fail = e => { const x = RV.explain(e); RV.toast(x.msg + (x.hint ? ' ' + x.hint : ''), 'err'); };
-  function needLogin() { if (G.loggedIn()) return false; RV.toast('Log in with GitHub to change the repository.'); RV.showTab('pa'); return true; }
+  /* GitHub decides who may write, not this page: a request without a token of someone the owner allows is refused
+     there. These two checks only save the reader a refused commit. */
+  const readOnly = () => G.loggedIn() && !!st.info && st.asked === true && !st.info.canWrite;
+  function needLogin() {
+    if (!G.loggedIn()) { RV.toast('Log in with GitHub to change the repository.'); RV.showTab('pa'); return true; }
+    if (readOnly()) { RV.toast('Your GitHub account may only read ' + st.key + '. Only its owner, and people the owner has invited, can change it.', 'err'); return true; }
+    return false;
+  }
 
   /* ---------- the files as they will be: the branch plus the waiting changes ---------- */
   /* path to { path, size, sha, state: '' | 'add' | 'mod' | 'del' } */
@@ -103,7 +110,8 @@
     st.loading = true; st.err = null; paint();
     try {
       const key = t.owner + '/' + t.repo;
-      if (st.key !== key || !st.info) { st.key = key; st.info = null; st.pending = []; st.branch = null; st.dir = ''; st.file = null; st.info = await G.info(); st.branches = await G.branches(); }
+      if (st.key !== key || !st.info) { st.key = key; st.info = null; st.pending = []; st.branch = null; st.dir = ''; st.file = null; st.asked = G.loggedIn(); st.info = await G.info(); st.branches = await G.branches(); }
+      else if (st.asked !== G.loggedIn()) { st.asked = G.loggedIn(); st.info = await G.info(); if (!st.asked) st.pending = []; }   /* logged in or out since: what the account may do is asked again */
       st.branch = branch || st.branch || t.branch || st.info.branch;
       st.tree = await G.tree(st.branch);
       st.fileLog = {}; st.pv = null;
@@ -227,7 +235,7 @@
   }
   function dockHtml() {
     const P = st.pending, n = P.length, on = G.loggedIn();
-    if (!n) return '<div class="rdock idle"><span>' + (on ? 'Nothing is waiting. What you add, change or remove here is collected in this bar and saved to GitHub together when you commit.' : 'You can look at everything. <button class="link" id="rLogin">Log in with GitHub</button> to add, change or remove files.') + '</span></div>';
+    if (!n) return '<div class="rdock idle"><span>' + (readOnly() ? 'You are logged in, but your GitHub account may only read this repository. Only its owner, and people the owner has invited, can change it.' : on ? 'Nothing is waiting. What you add, change or remove here is collected in this bar and saved to GitHub together when you commit.' : 'You can look at everything. <button class="link" id="rLogin">Log in with GitHub</button> to add, change or remove files.') + '</span></div>';
     const line = c => (c.op === 'del' ? mark('del') + esc(c.path) : c.op === 'move' ? mark('mod') + esc(c.from) + ' <span class="note">to</span> ' + esc(c.to) : c.op === 'entries' ? mark('mod') + esc(c.path) + ' <span class="note">gets ' + c.recs.map(r => esc(r.id)).join(', ') + '</span>' : mark(c.base ? 'mod' : 'add') + esc(c.path) + ' <span class="note">' + kb(c.bytes ? c.bytes.length : c.text.length) + '</span>');
     return '<div class="rdock' + (st.openDock ? ' open' : '') + '">' +
       (st.openDock ? '<ul class="rpend">' + P.map((c, k) => '<li><span class="num">' + line(c) + '</span><button class="link" data-undo="' + k + '">Undo</button></li>').join('') + '</ul>' : '') +
@@ -421,8 +429,8 @@
   addEventListener('beforeunload', e => { if (st.pending.length) { e.preventDefault(); e.returnValue = ''; } });
 
   RV.repo = {
-    render() { const t = G.target(); if (t && (!st.tree || st.key !== t.owner + '/' + t.repo) && !st.loading) load(); else paint(); },
-    changed() { if (S.tab === 'pr') paint(); },
+    render() { const t = G.target(); if (t && (!st.tree || st.key !== t.owner + '/' + t.repo || st.asked !== G.loggedIn()) && !st.loading) load(); else paint(); },
+    changed() { if (S.tab !== 'pr') return; if (st.tree && st.asked !== G.loggedIn() && !st.loading) load(); else paint(); },
     publish: publish, addFiles: addFiles, waiting: () => st.pending.length, state: st, withEntries: withEntries, load: load,
   };
 })();

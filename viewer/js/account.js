@@ -41,6 +41,38 @@
   }
 
   /* ---------- settings on every device ---------- */
+  /* The settings file is read from a repository other people may be able to write to, so it is not trusted: only the
+     known settings are taken, each only in its expected shape, and nothing that could carry code or a link. */
+  function clean(p) {
+    const out = {}, str = (v, n) => typeof v === 'string' && v.length <= n && !/[<>]/.test(v), num = (v, lo, hi) => typeof v === 'number' && v >= lo && v <= hi;
+    const colour = v => str(v, 60) && !/[;{}\\]|url\s*\(|expression|@import/i.test(v);
+    if (str(p.theme, 80) && /^(light|dark|system|custom:[\w-]{1,60})$/.test(p.theme)) out.theme = p.theme;
+    if (Array.isArray(p.themes)) out.themes = p.themes.slice(0, 40).filter(t => t && str(t.id, 60) && /^[\w-]+$/.test(t.id) && str(t.name, 60) && t.colors && typeof t.colors === 'object').map(t => {
+      const colors = {};
+      for (const k in t.colors) if (/^[a-z0-9-]{1,40}$/.test(k) && colour(t.colors[k])) colors[k] = t.colors[k];
+      return { id: t.id, name: t.name, base: t.base === 'dark' ? 'dark' : 'light', colors: colors };
+    });
+    if (p.view === 'basic' || p.view === 'detailed') out.view = p.view;
+    if (num(p.speed, 0.1, 4)) out.speed = p.speed;
+    for (const k of ['autoplay', 'autoLoop', 'smooth']) if (typeof p[k] === 'boolean') out[k] = p[k];
+    if (p.sync === 't' || p.sync === 'd') out.sync = p.sync;
+    if (['fit', 'follow', 'up'].includes(p.camera)) out.camera = p.camera;
+    if (num(p.loopDim, 0, 0.9)) out.loopDim = p.loopDim;
+    if (num(p.carSize, 0.3, 4)) out.carSize = p.carSize;
+    if (p.keys && typeof p.keys === 'object') { out.keys = {}; for (const a of RV.KEYS) if (str(p.keys[a.id], 20)) out.keys[a.id] = p.keys[a.id]; }
+    /* the layout: plain values only (numbers, switches, short words), a few levels deep, and not too much of it */
+    const plain = (v, depth) => {
+      if (v === null || typeof v === 'boolean' || (typeof v === 'number' && isFinite(v))) return v;
+      if (typeof v === 'string') return str(v, 80) ? v : undefined;
+      if (depth > 5 || typeof v !== 'object') return undefined;
+      if (Array.isArray(v)) return v.slice(0, 200).map(x => plain(x, depth + 1)).filter(x => x !== undefined);
+      const o = {};
+      for (const k of Object.keys(v).slice(0, 200)) if (/^[\w.:-]{1,60}$/.test(k) && k !== '__proto__' && k !== 'constructor' && k !== 'prototype') { const x = plain(v[k], depth + 1); if (x !== undefined) o[k] = x; }
+      return o;
+    };
+    if (p.ui && typeof p.ui === 'object' && !Array.isArray(p.ui)) out.ui = plain(p.ui, 0);
+    return out;
+  }
   async function saveSettings() {
     if (working || !who) return;
     working = 'save'; render();
@@ -62,7 +94,8 @@
       if (t == null) { remote = null; RV.toast('No settings are saved on GitHub yet. Save them from the device that has them.'); working = ''; render(); return; }
       const data = JSON.parse(t), p = data && data.prefs;
       if (!p || typeof p !== 'object') throw new RV.RVError('format', 'The settings file on GitHub cannot be read.', 'Save the settings again from a device that has them.');
-      for (const k of SYNC) if (p[k] !== undefined) RV.prefs[k] = p[k];
+      const safe = clean(p);
+      for (const k of SYNC) if (safe[k] !== undefined) RV.prefs[k] = safe[k];
       RV.savePrefs();
       location.reload();                                  /* the layout is put back as the page starts */
       return;
