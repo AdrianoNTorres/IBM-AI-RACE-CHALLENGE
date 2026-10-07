@@ -45,6 +45,8 @@
   /* the dark panels over the map (sector table, delta bar) and the speed label beside the car */
   --panel-bg: rgba(13, 15, 20, .82); --panel-ink: #ffffff; --panel-live: #ff8a55; --label-bg: rgba(13, 15, 20, .88); --label-ink: #ffffff;
   --helmet: #f4f2ec;
+  /* the three window buttons of a panel on the map: close, fold, only the car in focus */
+  --win-close: #ff5f57; --win-fold: #febc2e; --win-solo: #28c840;
   --shadow: 0 1px 2px rgba(20, 22, 27, .06), 0 8px 24px -12px rgba(20, 22, 27, .18);
   --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --font-display: Bahnschrift, "DIN Alternate", "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
@@ -298,12 +300,30 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #hud dl.kv { border-bottom: 0; padding: 10px 0 0; margin: 10px 0 0; gap: 2px 14px; font-size: 13px; }
 #mini { width: 190px; height: 190px; }
 .mappanel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 10px 14px; }   /* a panel a feature added (RV.map.addPanel) */
-#leg { position: absolute; right: 14px; top: 14px; padding: 10px 14px; pointer-events: none; font-size: 13px; }
+#leg { padding: 10px 14px; pointer-events: none; font-size: 13px; }
 #leg .cap { color: var(--ink); font-weight: 600; margin-top: 8px; } #leg .cap:first-child { margin-top: 0; }
 .grad { width: 190px; height: 9px; border-radius: 5px; margin: 5px 0 2px; }
 .ends { display: flex; justify-content: space-between; width: 190px; color: var(--mute); font-size: 12px; }
-#inputs { position: absolute; right: 14px; bottom: 14px; padding: 8px 14px 8px 10px; display: flex; flex-direction: column; pointer-events: none; }
+#inputs { padding: 8px 14px 8px 10px; display: flex; flex-direction: column; pointer-events: none; }
 #inputs:empty { display: none; }
+/* Every panel over the map is in a small window: dragged by any part of it, with three buttons that show while the
+   mouse is over it (close, fold into a tab, only the car in focus). Where the page puts a window: the left column
+   (#overlay), the colour keys top right, the wheel and pedals bottom right. A window that was moved (.moved) is
+   placed by the script instead. */
+.win { position: relative; pointer-events: auto; cursor: grab; touch-action: none; }
+.win.dragging { cursor: grabbing; } .win.dragging > * { box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .5); }
+.win[data-id="leg"] { position: absolute; right: 14px; top: 14px; } .win[data-id="inputs"] { position: absolute; right: 14px; bottom: 14px; }
+.win.moved { position: absolute; right: auto; bottom: auto; }
+.win:has(> [hidden]), .win:has(> #inputs:empty) { display: none; }
+.winbar { position: absolute; left: 8px; top: -10px; z-index: 2; display: flex; gap: 6px; padding: 4px 7px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .12s; }
+.win:hover > .winbar, .win:focus-within > .winbar, .win.dragging > .winbar { opacity: 1; pointer-events: auto; }
+.wb { width: 12px; height: 12px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; display: block; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
+.wb.c { background: var(--win-close); } .wb.m { background: var(--win-fold); } .wb.g { background: var(--win-solo); display: none; }
+#mapwrap.cmp .win.cansolo .wb.g { display: block; }                /* only while cars are compared */
+.win.solo .wb.g { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--win-solo); }
+.wintab { display: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; font-weight: 600; font-size: 13px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
+.win.min > .wintab { display: block; } .win.min > :not(.winbar):not(.wintab) { display: none !important; }
 /* one row per car: the car in focus full size, compared cars smaller */
 .incar { display: flex; align-items: center; gap: 12px; padding: 2px 0; }
 .incar + .incar { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px; }
@@ -366,6 +386,7 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 .carsize .sw { margin-right: 0; flex: none; } .carsize b { color: var(--ink); min-width: 46px; }
 .carsize input[type=range] { flex: 1; min-width: 0; } .carsize .num { min-width: 38px; text-align: right; color: var(--ink-2); font-size: 13px; }
 .subtabs { margin-bottom: 12px; }
+#side .subtabs button { padding: 6px 4px; min-width: 0; }      /* five tabs in a narrow panel */
 .cars { margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .cars th { padding: 4px 8px; font-size: 11px; } .cars td { padding: 8px; }
 .cars td i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
@@ -563,7 +584,7 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
   #pv.on { display: block; } #vmain, #vside { overflow: visible; padding: 16px 14px; } #vside { border-left: 0; border-top: 1px solid var(--line); }
   .tiles { grid-template-columns: 1fr 1fr; gap: 10px; } .tile .big { font-size: 26px; } .tile.hero .big { font-size: 30px; }
   .xcol { display: none; } th, td { padding: 8px; } #vt td.w { min-width: 150px; }
-  #pm.on { display: block; } #mapwrap { height: 62vh; } #mini, #leg, #inputs, #sectorLive, #lapDeltaBar { display: none !important; }
+  #pm.on { display: block; } #mapwrap { height: 62vh; } #mini, #leg, #inputs, #sectorLive, #lapDeltaBar, .win:not([data-id="hud"]) { display: none !important; }
   #pe, #pt, #ps, #ph { padding: 16px 14px; overflow: visible; }
   .helpgrid { grid-template-columns: 1fr; } .helpnav { position: static; }
   #bar { position: sticky; bottom: 0; flex-wrap: wrap; } #pos { min-width: 0; }

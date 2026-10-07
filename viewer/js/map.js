@@ -2,7 +2,9 @@
    The overlay framework: everything drawn on the map is a layer (LAYERS), and every box laid over it is a panel
    (OVER). A layer or a panel gets its switch and its opacity slider in the side panel automatically, a layer that
    has a line width (w) a width slider as well, and all three are saved in the browser and put back on the next
-   visit. A new feature adds itself with RV.map.addLayer({...}) or RV.map.addPanel({...}); nothing else is needed. */
+   visit. A new feature adds itself with RV.map.addLayer({...}) or RV.map.addPanel({...}); nothing else is needed.
+   Every panel is also a small window: it can be dragged, folded into a tab, closed, and (where it shows several
+   cars) limited to the car in focus; see "the panels as small windows" below. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$, el = RV.el, esc = RV.esc;
@@ -271,18 +273,18 @@
   function sortLayers() { STATIC = LAYERS.filter(isStatic); MOVING = LAYERS.filter(L => !isStatic(L) && L.id !== 'car').concat(LAYERS.filter(L => L.id === 'car')); }
   sortLayers();
   const OVER = [
-    { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true, alpha: 1 },
-    { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true, alpha: 1 },
-    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, top right.', on: true, alpha: 1 },
-    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, its brake and throttle bars, and both over the last seconds, bottom right.', on: true, alpha: 1 },
+    { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true, alpha: 1, solo: false },
+    { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true, alpha: 1, solo: false },
+    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, top right.', on: true, alpha: 1, solo: false },
+    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, its brake and throttle bars, and both over the last seconds, bottom right.', on: true, alpha: 1, solo: 'opt' },
     { id: 'sectorLive', label: 'Live sector table', d: 'The sector times of the car in focus as it passes each sector, against the fastest lap recorded. Under the overview map.', on: true, alpha: 1 },
-    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true, alpha: 1 },
+    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true, alpha: 1, solo: false },
   ];
   const ALL_IN = ['Wheel and pedals of every car', 'A smaller wheel, bars and pedal graph for each compared car, above those of the car in focus. Off: the car in focus only.'];
   /* What the reader last chose on the map (layers, panels, path options, the side panel open or closed) is kept in
      this browser and put back on the next visit. The defaults (on0, alpha0) are noted before that. */
   function saveUi() {
-    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha, L.pos || null, !!L.min, L.solo === true]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
   }
   /* puts back what was stored for one layer or panel (id), or for all of them */
   function restoreUi(id) {
@@ -300,6 +302,9 @@
       if (!L || (id && q[0] !== id)) continue;
       L.on = !!q[1];
       if (q[2] >= 0.2 && q[2] <= 1) L.alpha = +q[2];
+      L.pos = Array.isArray(q[3]) && q[3].length === 2 && isFinite(q[3][0]) && isFinite(q[3][1]) ? [+q[3][0], +q[3][1]] : null;
+      L.min = !!q[4];
+      if (L.solo === true || L.solo === false) L.solo = !!q[5];
     }
   }
   (function () {
@@ -313,6 +318,87 @@
     if (typeof o.allInputs === 'boolean') opt.allInputs = o.allInputs;
     if (u.closed) $('pm').classList.add('side-closed');
   })();
+  /* ---------- the panels as small windows ----------
+     Every panel over the map sits in a wrapper (.win) that can be dragged anywhere on the map and shows three
+     buttons when the mouse is over it, as on a Mac window: red closes the panel (it comes back under Layers, Panels
+     on the map), yellow folds it into a small tab that opens it again, and green, on the panels that show several
+     cars, limits it to the car in focus. Where a panel was put, folded or limited is saved with the layout.
+     L.pos: [x, y] in the map, or null while the panel is where the page puts it. L.min: folded. L.solo: only the car
+     in focus (for the wheel and pedals that is the option allInputs, so 'opt' stands there). */
+  const mapwrap = $('mapwrap');
+  let winZ = 5, winDrag = null;
+  const winOf = L => $('win-' + L.id);
+  const soloOf = L => (L.solo === 'opt' ? !opt.allInputs : L.solo === true);
+  function paintWin(L) {
+    const w = winOf(L), solo = soloOf(L);
+    w.classList.toggle('min', !!L.min); w.classList.toggle('solo', solo);
+    const g = w.querySelector('.wb.g');
+    if (g) { g.title = solo ? 'Show every car again' : 'Show only the car in focus'; g.setAttribute('aria-label', g.title); g.setAttribute('aria-pressed', solo); }
+    const m = w.querySelector('.wb.m');
+    m.title = L.min ? 'Open ' + L.label : 'Fold ' + L.label + ' into a tab'; m.setAttribute('aria-label', m.title);
+  }
+  /* puts every panel where it belongs: a moved one at its place (kept inside the map), the others back in the page's own layout */
+  function placeWins() {
+    const W = mapwrap.clientWidth, H = mapwrap.clientHeight, over = $('overlay');
+    let back = false;                                      /* a window returns to the left column: its order there is put right */
+    for (const L of OVER) {
+      const w = winOf(L);
+      if (!w) continue;
+      if (L.pos && W) {
+        if (w.parentNode !== mapwrap) mapwrap.appendChild(w);
+        const x = RV.clamp(L.pos[0], 0, Math.max(0, W - w.offsetWidth)), y = RV.clamp(L.pos[1], 10, Math.max(10, H - Math.min(w.offsetHeight, 40)));
+        w.classList.add('moved'); w.style.left = x + 'px'; w.style.top = y + 'px';
+      } else if (!L.pos) {
+        w.classList.remove('moved'); w.style.left = w.style.top = w.style.zIndex = '';
+        if (w.parentNode !== L.home) { L.home.appendChild(w); back = back || L.home === over; }
+      }
+    }
+    if (back) for (const L of OVER) { const w = winOf(L); if (w && !L.pos && L.home === over) over.appendChild(w); }   /* in the order of the list */
+  }
+  function wrapPanel(L) {
+    const pe = $(L.id), w = el('div', 'win' + (L.solo !== undefined ? ' cansolo' : ''),
+      '<div class="winbar"><button class="wb c" title="Close ' + esc(L.label) + '" aria-label="Close ' + esc(L.label) + '"></button><button class="wb m"></button>' + (L.solo !== undefined ? '<button class="wb g"></button>' : '') + '</div>' +
+      '<button class="wintab" title="Open ' + esc(L.label) + '">' + esc(L.label) + '</button>');
+    w.id = 'win-' + L.id; w.dataset.id = L.id;
+    pe.parentNode.insertBefore(w, pe); w.appendChild(pe);
+    L.home = w.parentNode;
+    w.querySelectorAll('.wb').forEach(b => b.addEventListener('pointerdown', e => e.stopPropagation()));
+    w.querySelector('.wb.c').onclick = () => { L.on = false; panels(); saveUi(); if (S.sideTab === 'layers') buildSide(); RV.toast(L.label + ' is off. It comes back under Layers, Panels on the map.'); };
+    w.querySelector('.wb.m').onclick = () => { L.min = !L.min; paintWin(L); placeWins(); saveUi(); };
+    if (w.querySelector('.wb.g')) w.querySelector('.wb.g').onclick = () => {
+      if (L.solo === 'opt') opt.allInputs = !opt.allInputs; else L.solo = !L.solo;
+      paintWin(L); if (L.id === 'leg') legend(); saveUi(); if (S.sideTab === 'layers') buildSide();
+    };
+    /* drag anywhere on the panel; a press on the tab of a folded panel that does not move opens it */
+    w.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      const r = w.getBoundingClientRect(), m = mapwrap.getBoundingClientRect();
+      winDrag = { L: L, sx: e.clientX, sy: e.clientY, ox: r.left - m.left, oy: r.top - m.top, moved: false, tab: !!(e.target.closest && e.target.closest('.wintab')) };
+      /* the window is listened to, not the panel: a panel that leaves the left column is moved in the page, and an element that is moved loses the pointer */
+      addEventListener('pointermove', move); addEventListener('pointerup', end); addEventListener('pointercancel', end);
+      e.preventDefault();
+    });
+    const move = e => {
+      const d = winDrag;
+      if (!d || d.L !== L) return;
+      const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+      if (!d.moved && Math.hypot(dx, dy) < 4) return;
+      d.moved = true; w.classList.add('dragging'); w.style.zIndex = ++winZ;
+      const W = mapwrap.clientWidth, H = mapwrap.clientHeight;
+      L.pos = [RV.clamp(d.ox + dx, 0, Math.max(0, W - w.offsetWidth)), RV.clamp(d.oy + dy, 10, Math.max(10, H - Math.min(w.offsetHeight, 40)))];
+      placeWins();
+    };
+    const end = () => {
+      const d = winDrag;
+      removeEventListener('pointermove', move); removeEventListener('pointerup', end); removeEventListener('pointercancel', end);
+      if (!d || d.L !== L) return;
+      winDrag = null; w.classList.remove('dragging');
+      if (d.moved) saveUi(); else if (d.tab) { L.min = false; paintWin(L); placeWins(); saveUi(); }
+    };
+    paintWin(L);
+  }
+  OVER.forEach(wrapPanel);
+  placeWins();
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
   /* ---------- side panel: the same three sections in both views; the detailed view adds controls inside them ---------- */
@@ -416,7 +502,7 @@
       s.appendChild(toggleRow('Distance marks', 'A label every 100 m along the track.', LY.marks.on, v => { LY.marks.on = v; }));
       if (many) s.appendChild(toggleRow('The other cars', 'The cars and paths of the other selected versions.', LY.ghost.on, v => { LY.ghost.on = LY.lineB.on = v; }));
       s.appendChild(toggleRow('Wheel and pedals', 'The steering wheel and the throttle and brake graph, bottom right.', OVER[3].on, v => { OVER[3].on = v; panels(); }));
-      if (many) s.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; }));
+      if (many) s.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; paintWin(OVER[3]); }));
       return;
     }
     /* detailed: one group open at a time */
@@ -436,7 +522,7 @@
           const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); });
           slider(r, 'Opacity', 0.2, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; panels(); });
           body.appendChild(r);
-          if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; }));
+          if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; paintWin(OVER[3]); }));
         }
         continue;
       }
@@ -483,8 +569,9 @@
   }
   /* every layer, panel and path option back to how the page comes */
   function defaults() {
-    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; });
+    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; L.pos = null; L.min = false; if (L.solo === true) L.solo = false; });
     opt.line = 'upto'; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
+    OVER.forEach(paintWin); placeWins();
     viewDefaults(true); legend(); panels(); buildSide();
   }
   function helpSection(s, sm) {
@@ -511,7 +598,7 @@
     s.appendChild(pc);
     const tabs = el('div', 'seg full subtabs');
     tabs.setAttribute('role', 'tablist');
-    for (const [id, label] of [['view', 'Camera'], ['cars', S.CM.length ? 'Cars (' + (S.CM.length + 1) + ')' : 'Cars'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
+    for (const [id, label] of [['view', 'Camera'], ['cars', 'Cars'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
       const b = el('button', S.sideTab === id ? 'on' : null, label);
       b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', S.sideTab === id);
       b.onclick = () => { S.sideTab = id; RV.uiSet('sideTab', id); buildSide(); };
@@ -527,13 +614,16 @@
   function panels() {
     for (const L of OVER) {
       const show = L.on && onMap();
-      $(L.id).style.opacity = L.alpha < 1 ? L.alpha : '';
+      const w = winOf(L);
+      w.style.opacity = L.alpha < 1 ? L.alpha : '';
+      w.style.display = show ? '' : 'none';                /* the window; inside it the panel may still hide itself */
+      if (L.solo === 'opt') paintWin(L);
       if (L.id === 'sectorLive' || L.id === 'lapDeltaBar') {
         /* these are shown/hidden by their draw functions to account for missing data;
            panels() only hides them when the layer is turned off or no run is loaded */
         if (!show) $(L.id).hidden = true;
       } else {
-        $(L.id).style.display = show ? '' : 'none';
+        $(L.id).style.display = '';
       }
     }
   }
@@ -555,7 +645,7 @@
   }
 
   /* ---------- camera ---------- */
-  function size() { const r = window.devicePixelRatio || 1; if (!c.clientWidth) return; c.width = c.clientWidth * r; c.height = c.clientHeight * r; }
+  function size() { const r = window.devicePixelRatio || 1; if (!c.clientWidth) return; c.width = c.clientWidth * r; c.height = c.clientHeight * r; placeWins(); mapwrap.classList.toggle('cmp', S.CM.length > 0); }
   function base() { const W = c.clientWidth, H = c.clientHeight; return [W / 2, (view.follow && view.rot) ? H * 0.64 : H / 2]; }
   function carsNow() {
     /* every car where it is drawn: smoothed between steps, the compared cars as well as the one in focus */
@@ -731,7 +821,7 @@
     }
     mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, mini.width, mini.height); mg.drawImage(miniBuf, 0, 0);
     place(mg);
-    for (const m of others()) { const q = ghostPose(m.r); mg.beginPath(); mg.arc(q[0], q[1], 4.5 / ms, 0, 7); mg.fillStyle = RV.col(m.id); mg.fill(); }
+    for (const m of (OVER[1].solo ? [] : others())) { const q = ghostPose(m.r); mg.beginPath(); mg.arc(q[0], q[1], 4.5 / ms, 0, 7); mg.fillStyle = RV.col(m.id); mg.fill(); }
     mg.beginPath(); mg.arc(fp[0], fp[1], 5.5 / ms, 0, 7); mg.fillStyle = RV.col(S.sel[0]); mg.fill(); mg.lineWidth = 1.5 / ms; mg.strokeStyle = P.surface; mg.stroke();
   }
   function drawHud(sm, gapTxt) {
@@ -743,7 +833,7 @@
       add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
       if (R.beams) { let mn = 1e9, mx = -1; for (let k = 0; k < 19; k++) { const d = R.b[i * 19 + k]; if (d >= 0) { mn = Math.min(mn, d); mx = Math.max(mx, d); } } add('Beams', mx < 0 ? 'off track' : mn.toFixed(0) + ' to ' + mx.toFixed(0) + ' m'); }
     }
-    for (const m of S.CM) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
+    for (const m of (OVER[0].solo ? [] : S.CM)) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
     const doing = R.br[i] > 0 ? 'Braking' : R.th[i] >= 0.99 ? 'Full throttle' : R.th[i] > 0.05 ? 'Part throttle' : 'Coasting';
     const html = '<div class="big num">' + R.v[i].toFixed(0) + '<small>km/h</small></div><div class="who"><i class="sw" style="background:' + RV.col(S.sel[0]) + '"></i>' + esc(R.name) + '</div><div class="hud-doing">' + doing + '</div><dl class="kv">' + kv.join('') + '</dl>';
     if (html !== hudHtml) { $('hud').innerHTML = html; hudHtml = html; }
@@ -836,7 +926,7 @@
     const delta = r => r === ref ? 0 : (r === R && d < end ? R.t[S.i] : timeAtD(r, d)) - tRef;
     /* the car in focus first, then the others from the one furthest ahead */
     const rows = [{ id: S.sel[0], foc: true, delta: delta(R) }].concat(
-      S.CM.map(m => ({ id: m.id, foc: false, delta: delta(m.r) })).sort((x, y) => x.delta - y.delta));
+      (OVER[5].solo ? [] : S.CM).map(m => ({ id: m.id, foc: false, delta: delta(m.r) })).sort((x, y) => x.delta - y.delta));
     let html = '<div class="ldb-ref">\u0394 to ' + esc(ref.name) + ', the fastest lap recorded</div>';
     for (const row of rows) {
       const col = RV.deltaColor(row.delta), txt = (Math.abs(row.delta) < 0.005 ? '' : row.delta > 0 ? '+' : '\u2212') + Math.abs(row.delta).toFixed(2) + ' s';
@@ -855,7 +945,7 @@
         ? '<div class="cap">' + (sm ? 'Path colour: braking' : 'Driven line: brake') + '</div><div class="grad brakegrad"></div><div class="ends num"><span>none</span><span>brake</span><span>full</span></div>'
         : '<div class="cap">' + (sm ? 'Path colour: speed' : 'Driven line: speed') + '</div><div class="grad" style="background:' + RV.speedGradient + '"></div><div class="ends num"><span>' + S.vmin.toFixed(0) + '</span><span>km/h</span><span>' + S.vmax.toFixed(0) + '</span></div>') +
       (R.beams ? '<div class="cap">' + (sm ? 'Sensor colour: distance to the road edge' : 'Beams: distance to the edge') + '</div><div class="grad" style="background:' + RV.beamGradient + '"></div><div class="ends num"><span>0</span><span>m</span><span>200</span></div>' : '') +
-      (S.CM.length ? '<div class="cap">Compared runs</div>' + S.CM.map(m => '<div><i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id) + '</div>').join('') : '');
+      (S.CM.length && !OVER[2].solo ? '<div class="cap">Compared runs</div>' + S.CM.map(m => '<div><i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id) + '</div>').join('') : '');
   }
 
   /* ---------- pointer and keys ---------- */
@@ -911,6 +1001,7 @@
     /* called when the selection has been applied */
     resetAuto() {
       view.sInit = false;
+      mapwrap.classList.toggle('cmp', S.CM.length > 0);     /* the green button shows only while cars are compared */
       /* the whole track when a comparison starts; not on every later change of the selection (a new car in
          focus, one car removed), and not over a camera the address asked for */
       const cmp = S.CM.length > 0;
@@ -959,7 +1050,7 @@
       if (!$(def.id)) { const e = el('div'); e.id = def.id; e.className = 'mappanel'; $('overlay').appendChild(e); }
       if (def.on == null) def.on = true;
       if (def.alpha == null) def.alpha = 1;
-      OVER.push(def); restoreUi(def.id);
+      OVER.push(def); restoreUi(def.id); wrapPanel(def); placeWins();
       if (S.ds) { panels(); buildSide(); }
       return def;
     },

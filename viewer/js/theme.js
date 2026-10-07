@@ -18,6 +18,7 @@
     T('focus', 'Keyboard focus ring', 'ui'), T('sel', 'Selected table row', 'ui'), T('kept', 'Kept badge', 'ui'),
     T('warn-ink', 'Warnings: text', 'ui'), T('warn-bg', 'Warnings: background', 'ui'), T('ok-bg', 'Success message background', 'ui'),
     T('bad-bg', 'Failure message background', 'ui'), T('err', 'Error message', 'ui'), T('scrim', 'Shade behind dialogs', 'ui'),
+    T('win-close', 'Panel window button: close', 'over'), T('win-fold', 'Panel window button: fold', 'over'), T('win-solo', 'Panel window button: only the car in focus', 'over'),
 
     T('map-bg', 'Map background', 'map'), T('map-ink', 'Distance labels', 'map'), T('road', 'Road surface', 'map'), T('road-edge', 'Track edges and finish line', 'map'),
     T('road-mark', 'Road markings and car details', 'map'), T('best', 'Sector lines and the slowest-corner pin', 'map'), T('tyre', 'Tyres and the steering wheel', 'map'),
