@@ -64,6 +64,7 @@
   function reportHtml(ds) {
     const r = ds.report, li = [];
     li.push('<b>' + r.versions + '</b> version' + (r.versions === 1 ? '' : 's') + ' in docs/CHANGELOG.md');
+    if (r.local) li.push('<b>' + r.local + '</b> more entered by hand, kept in this browser');
     li.push(r.withFile != null ? '<b>' + r.withFile + '</b> of them have a run CSV in runs/' + (r.named > r.withFile ? ' (' + (r.named - r.withFile) + ' more are named in the changelog but the file is missing)' : '')
       : '<b>' + r.named + '</b> of them name a run CSV (whether each file exists was not checked)');
     li.push(r.simple ? 'Simplified changelog: <b>found</b>, so the basic view is available' : 'Simplified changelog: <b>not found</b>, so only the detailed view is available');
@@ -179,7 +180,11 @@
       (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p>' +
       '<p class="note">What a source must contain is described under <button class="link" id="sFormat">Help, Data format</button>.</p></div>';
     const browser = '<div class="card"><div class="cardhead"><h3>This browser</h3></div><div class="field"><div><b>Viewer ID</b><p class="note">A random id made on your first visit. Your settings, keys and layout are saved under it in this browser. It is sent nowhere.</p></div><code class="uid">' + esc(P.uid) + '</code></div></div>';
-    const cols = tab === 'replay' ? [replay, look] : tab === 'data' ? [source, keysHtml()] : [appearance + browser, reset];
+    const nLocal = ds ? ds.local.size + ds.localStale.length : 0;
+    const localCard = '<div class="card"><div class="cardhead"><h3>Versions entered by hand</h3><span class="note">' + (ds ? nLocal + ' kept in this browser for this source' : 'nothing is loaded') + '</span></div>' +
+      '<p class="note">The site only reads its source and cannot write to it. A version you enter or import is therefore stored in this browser\u2019s own database for this site (IndexedDB), on this device: nothing is uploaded, other devices and other visitors do not see it, and clearing the browser\u2019s site data deletes it. Export it to put it into the repository.</p>' +
+      '<div class="acts"><button class="btn" id="sAddVer"' + (ds ? '' : ' disabled') + '>Add versions \u2026</button><button class="btn" id="sMineVer"' + (nLocal ? '' : ' disabled') + '>Export or delete them \u2026</button></div></div>';
+    const cols = tab === 'replay' ? [replay, look] : tab === 'data' ? [source + localCard, keysHtml()] : [appearance + browser, reset];
     const h = '<div class="setwrap"><div class="pagehead"><h1>' + head[0] + '</h1><p class="lead">' + head[1] + '</p></div>' + tabs +
       '<div class="setgrid even"><div class="col">' + cols[0] + '</div><div class="col">' + cols[1] + '</div></div></div>';
     const keep = box.scrollTop, focusLink = document.activeElement && document.activeElement.id === 'sLink';
@@ -208,6 +213,8 @@
     on('sKind', v => { srcKind = v; result = null; render(); });
     if ($('sCustom')) $('sCustom').onclick = () => { S.setTab = 'custom'; render(); box.scrollTop = 0; };
     if ($('sFormat')) $('sFormat').onclick = () => RV.help.open('format');
+    if ($('sAddVer')) $('sAddVer').onclick = () => RV.entry.open('one');
+    if ($('sMineVer')) $('sMineVer').onclick = () => RV.entry.open('mine');
     if ($('sReset')) $('sReset').onclick = () => {
       const was = P.source.link, local = ds && ds.src.kind === 'local';
       RV.resetPrefs(); RV.applyTheme(); $('spd').value = '1'; draft = RV.DEFAULT_LINK; srcKind = 'github'; result = null;

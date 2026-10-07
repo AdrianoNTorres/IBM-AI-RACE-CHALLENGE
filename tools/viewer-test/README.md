@@ -9,6 +9,7 @@ The viewer (`viewer/`) has no build step and no unit tests. It is checked by dri
 | `server.js` | Serves the repository root on `http://127.0.0.1:8765`, without caching. |
 | `h.js` | `open(hash, prefs, opts)` opens the viewer in a fresh browser tab and returns helpers. |
 | `smoke.js` | Opens every page and tab, runs a comparison, the tour and a phone-width window, and fails on any script error. |
+| `phase15.js` | Phase 15: the validator, the "Add versions" window (one version, import, export, change, delete), a reload in between. Empties the browser's database of entered versions before and after. |
 
 `open()` redirects the page's requests to `raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/<branch>/...` to the local server, so the page reads the changelog and the runs **of your working tree**, not what is on GitHub.
 
@@ -49,6 +50,7 @@ const { open } = require('./h.js');
 - `open(hash, prefs, opts)`: `prefs` replaces the stored settings (`rv_prefs`); pass `null` with `opts.keep = true` to reopen the page **with what the last page stored** (for "is it still there after a reload"). `opts.w`, `opts.h`: the window.
 - `p.ev(expr)` returns the value **by copy**. Never return a run or the data set (`RV.S.R`, `RV.S.ds`): they are large and refer to each other. Return numbers, strings and small arrays.
 - The stored settings carry over between scripts unless `prefs` is given. To start clean: `await p.ev('localStorage.clear()')` and open again.
+- Versions entered by hand live in the browser's IndexedDB, which also carries over between scripts (the profile in `.edge/`). A check that adds some must delete them again, as `phase15.js` does.
 - A 404 for `track.xml` in the log is expected (the source has none; the bundled track is used).
 - Useful hooks in the page: `RV.map.carsNow()`, `RV.map.screenOf(x, y)`, `RV.map.LAYERS`, `RV.map.PANELS`, `RV.analysis.of(run)`, `RV.play.go(i)`, `RV.play.set(bool)`, `RV.sel.set([...])` + `RV.sel.apply(fn)`, `RV.showTab(id)`.
 

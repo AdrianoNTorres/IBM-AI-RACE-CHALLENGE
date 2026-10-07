@@ -377,9 +377,13 @@
   async function openSource(src, opts) {
     opts = opts || {};
     const step = opts.onStep || function () {};
+    /* opts.reuse: a data set of the same source that is open now. Its files are not read again and its loaded runs
+       are kept: used when only the versions kept in this browser have changed (js/entry.js). */
+    const re = opts.reuse && opts.reuse.src === src ? opts.reuse : null;
     step('Reading docs/CHANGELOG.md');
     let text;
-    try { text = await src.readChangelog(); } catch (e) {
+    if (re) text = re.raw.full;
+    else try { text = await src.readChangelog(); } catch (e) {
       if (e.code === 'missing') throw new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + src.where() + '.',
         'A source needs a docs/CHANGELOG.md. Help, Data format, describes it.');
       throw e;
@@ -389,15 +393,32 @@
       'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See Help, Data format.');
 
     step('Reading CHANGELOG-simple.md');
-    let simple = null;
-    try { simple = parseChangelog(await src.readText('docs/CHANGELOG-simple.md')); } catch (e) { if (e.code !== 'missing') throw e; }
+    let simple = null, simpleText = re ? re.raw.simple : null;
+    if (!re) try { simpleText = await src.readText('docs/CHANGELOG-simple.md'); } catch (e) { if (e.code !== 'missing') throw e; }
+    if (simpleText != null) simple = parseChangelog(simpleText);
     if (simple && !simple.size) simple = null;
+
+    /* Versions entered by hand in this browser (js/local.js) come after the source's own. One whose name the
+       source has meanwhile (it was exported and committed) is left out and listed in localStale. */
+    const local = new Map(), localStale = [];
+    let mine = [];
+    try { mine = RV.local ? await RV.local.list(RV.local.keyOf(src)) : []; } catch (e) { mine = []; }
+    for (const rec of mine) {
+      if (full.has(rec.id)) { localStale.push(rec.id); continue; }
+      let e = null;
+      try { e = parseChangelog(RV.local.entryText(rec)).get(rec.id); } catch (err) { /* a record that cannot be written as an entry is skipped */ }
+      if (!e) continue;
+      full.set(rec.id, e);
+      if (simple) simple.set(rec.id, e);
+      local.set(rec.id, rec);
+    }
 
     step('Reading the track');
     /* runs: the load of each run, by id (a promise); loaded: the runs that have arrived, for code that cannot wait */
-    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map(), loaded: new Map() };
+    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map(), loaded: new Map(), local: local, localStale: localStale };
     let own = null;
-    try { own = await src.readText('track.xml'); } catch (e) { if (e.code !== 'missing') throw e; }
+    if (re) { ds.trk = re.trk; ds.trkOwn = re.trkOwn; ds.trkNote = re.trkNote; }
+    else try { own = await src.readText('track.xml'); } catch (e) { if (e.code !== 'missing') throw e; }
     if (own != null) {
       try { ds.trk = RV.track.parse(own); ds.trkOwn = true; }
       catch (e) { ds.trkNote = 'The source has a track.xml, but it could not be read as a TORCS track file (' + e.message + ') The bundled Corkscrew map is used instead.'; }
@@ -407,9 +428,13 @@
     }
 
     let files = null;
-    if (src.kind === 'local' || opts.checkFiles) { step('Looking for run CSVs'); files = await src.listRuns(); }
+    if (re) files = re.raw.files;
+    else if (src.kind === 'local' || opts.checkFiles) { step('Looking for run CSVs'); files = await src.listRuns(); }
+    ds.raw = { full: text, simple: simpleText, files: files };
     ds.filesKnown = !!files;
     ds.versions = buildVersions(full, simple, files);
+    /* an entered version's recording is the one stored with it, whatever its texts name */
+    for (const v of ds.versions) { const rec = local.get(v.id); if (rec) { v.local = true; v.named = v.file = rec.csvName || null; } }
     /* recordings in a local folder that no changelog entry names (manual laps) */
     ds.extras = [];
     if (files && src.kind === 'local') {
@@ -423,10 +448,21 @@
     ds.byId = {};
     ds.versions.concat(ds.extras).forEach(v => { ds.byId[v.id] = v; });
     ds.report = {
-      versions: ds.versions.length, named: ds.versions.filter(v => v.named).length,
-      withFile: files ? ds.versions.filter(v => v.file).length : null,
-      simple: ds.hasSimple, ownTrack: ds.trkOwn, extras: ds.extras.length,
+      versions: ds.versions.length - local.size, named: ds.versions.filter(v => v.named && !v.local).length,
+      withFile: files ? ds.versions.filter(v => v.file && !v.local).length : null,
+      simple: ds.hasSimple, ownTrack: ds.trkOwn, extras: ds.extras.length, local: local.size,
     };
+    /* what a loaded run tells about its version */
+    const adopt = function (v, run) {
+      v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
+      if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
+    };
+    if (re) for (const [id, run] of re.loaded) {
+      const v = ds.byId[id], was = re.byId[id];
+      if (!v || !was || v.file !== was.file || !!v.local !== !!was.local || v.local) continue;
+      adopt(v, run); if (was.bulk) v.bulk = true;
+      ds.loaded.set(id, run); ds.runs.set(id, Promise.resolve(run));
+    }
 
     /* A run by id; read and built once, then kept for the session. */
     ds.loadRun = function (id) {
@@ -434,7 +470,11 @@
       const v = ds.byId[id];
       const job = (async function () {
         let csv;
-        try { csv = await src.readText('runs/' + v.file, 'The recording of ' + id + ' (runs/' + v.file + ')'); } catch (e) {
+        if (v.local) {
+          csv = await RV.local.csv(local.get(id).key);
+          if (csv == null) { v.file = null; v.missing = true; throw new RVError('missing', 'The recording stored with ' + id + ' in this browser is gone.'); }
+        }
+        else try { csv = await src.readText('runs/' + v.file, 'The recording of ' + id + ' (runs/' + v.file + ')'); } catch (e) {
           if (e.code === 'missing') {
             v.file = null; v.missing = true;
             throw new RVError('missing', 'The changelog names runs/' + v.named + ' for ' + id + ', but that file is not in ' + src.where() + '.');
@@ -447,8 +487,7 @@
           throw e;
         }
         if (ds.runs.get(id) !== job) return run;               /* unloaded meanwhile: the version stays unloaded */
-        v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
-        if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
+        adopt(v, run);
         if (ds.runs.get(id) === job) ds.loaded.set(id, run);   /* not if it was unloaded while it was being read */
         return run;
       })();

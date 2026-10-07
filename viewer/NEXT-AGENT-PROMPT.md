@@ -1,13 +1,13 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 14 (2026-10-07). **Next: Phase 15.**
+**Last updated:** after Phase 15 (2026-10-07). **Next: the GitHub login the user asked for (see "What is left"), then Phase 16.**
 
 ---
 
 ## Start here
 
-Phases 1 to 14 are built, tested, tagged (`phase-1` ... `phase-14`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: **Phase 15** (manual entry and CSV import), **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
+Phases 1 to 15 are built, tested, tagged (`phase-1` ... `phase-15`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: a **login with GitHub** that commits entered versions to the repository (asked for by the user during Phase 15; proposed, not yet agreed in detail), **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
 
 Read, in this order: this section; "What is left"; the phase you are about to build in `RACE_RUNNER_TASKS_ORDERED.md`; `tools/viewer-test/README.md`. Read the sections on finished phases only when you touch that code.
 
@@ -112,6 +112,9 @@ Static multi-file page under `viewer/`. No build step; loads directly in a brows
 | `viewer/js/theme.js` | Every colour token, the Basic groups, themes, the colour picker, the Customization tab |
 | `viewer/js/analysis.js` | Run in focus against the reference lap: line accuracy, sector health, problem areas, delta to compared cars |
 | `viewer/js/help.js` | The Help page and the data-format guide |
+| `viewer/js/validate.js` | The one validator of entered and imported versions and recordings: valid / warning / blocked |
+| `viewer/js/local.js` | Versions kept in this browser (IndexedDB), their changelog text, the zip export |
+| `viewer/js/entry.js` | The "Add versions" window: one version, import files, the versions kept in this browser |
 | `viewer/RACE_RUNNER_TASKS_ORDERED.md` | The specification of all eighteen phases |
 | `tools/viewer-test/` | The browser test harness (`server.js`, `h.js`, `smoke.js`, README) |
 | `viewer/css/app.css` | All CSS, fully token-based (light/dark themes) |
@@ -170,6 +173,15 @@ Navigation and usability: crowded places were split into tabs, and Help became a
 
 **The full specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`** (added 2026-10-07). Read the phase there before building it. Where the user has since asked for something different on a built phase, the user's later word stands: the delta bar is solid green or red and compares with the fastest recorded lap (not white-centred, not the previous best); the sector table uses the same reference; the gear chart has no filled areas; the colour keys are top right. **Work one phase at a time and stop after each for the user to test** (user, 2026-10-07).
 
+### Phase 15 (COMPLETE) — tag: `phase-15`
+Versions entered by hand and imported (Versions, "+ Add versions"; also Settings, Data). Check: `node tools/viewer-test/phase15.js`.
+- **Storage** (`js/local.js`, agreed with the user): the site cannot write to its source, so entered versions are records in IndexedDB (`rv_local`: store `versions`, one record per version; store `csv`, the recording's text, read only when the run is opened), per source (`RV.local.keyOf(src)`: the repository whatever its branch, or the folder's name). Memory only where the browser gives no database. `data.js` `openSource` reads the records of the source, turns each into changelog text (`RV.local.entryText`) and parses that with the normal parser, so an entered version takes exactly the path of a repository one; it then marks it `v.local` and takes its recording from the store. `ds.local` (id to record) and `ds.localStale` (records whose name the repository has meanwhile: not shown, offered for deletion). `openSource(src, { reuse: ds })` builds the data set again without fetching anything and keeps the loaded runs: used after every add, change or delete (`entry.js` `refresh`).
+- **Validator** (`js/validate.js`, `RV.validate`): `recording(text, trk)`, `version(d, ctx)`, `table(text)`; each returns `{ level: valid | warning | blocked, blocks, warns: [{what, affects}] }` and never throws. It calls `RV.data.buildRun`; it does not restate the format. What is a warning and what blocks is in `OPTIONAL` and the `warn()` / `block()` calls. **Names (user, 2026-10-07): a new version must be newer than the latest one, by its numbers (`cmpId`); after v1.06 both v1.06.1 and v1.07 are fine; an existing name is blocked, an entered version never replaces one.** The slowest corner taken from a recording is rounded and the top speed cut, as the project's changelogs do.
+- **The window** (`js/entry.js`, `RV.entry.open('one' | 'import' | 'mine')`; the `.keydlg` / `.keycard` look, wider). One version: a form; the result is four round icons (`RV.validate.RESULTS`: kept, kept as an enabling change, enabling change rejected, rejected; each knows how its Decision is written); a warning needs the tick "Enter it anyway"; blocked cannot be saved. Import files (user: both kinds): several CSVs at once; a run CSV is a version with that recording, a table (a column `version`; template in the window; `,` `;` or tab) is one row per version and takes the recordings it names from the same choice of files; each row is checked on its own against the versions that exist and the rows above it, with a summary, a tick per incomplete row, blocked rows skipped and left on the list. In this browser: the list, **export of the ticked ones or of all** (user) as a zip written in the page (`docs/CHANGELOG-additions.md`, `runs/*.csv`, `versions.csv` that can be imported again, README), change, delete (asks again).
+- A recording is stored under its own name only if that is a `run_<digits>_<digits>.csv` no version uses; otherwise it gets a name made from the time, so an export can never overwrite a file of the repository.
+- `RV.entry.setRecording(name, text)` and `RV.entry.addImport([{name, text}])` do what the file chooser does: the tests use them, since a headless browser has no file dialog. **Not tested: the real file chooser and dropping files on the window; the download itself** (the zip's bytes were read back from the page and verified with Python's `zipfile`).
+- Help, Data format has a tab "Entered by hand"; the Versions table and the details panel show the badge "Local".
+
 ## Pre-Phase-9 audit (2026-10-07)
 
 Phases 1-8 were checked in a headless browser against the working tree (106 versions, 100 recordings). Where this section and the phase notes above differ, this section is current.
@@ -217,16 +229,9 @@ Phases 1-8 were checked in a headless browser against the working tree (106 vers
 
 ## What is left
 
-### Phase 15: manual run/version entry and import
+### Login with GitHub, so that entered versions reach every device (asked for by the user during Phase 15)
 
-A window for adding a version or a run by hand, and for importing several from a CSV. Read the phase in the specification; the points that are easy to get wrong:
-
-- **Where the entries live.** The site only reads its source (a repository or a folder) and cannot write to it. Entered and imported versions therefore have to be kept in the browser and merged into the data set when it opens. `localStorage` is too small for recordings (a run CSV is close to 1 MB): use IndexedDB for them. Say this to the user before building: an entered version exists in that browser only, unless it is exported. Offer an export (the changelog entry as text and the CSV) so it can be put into the repository.
-- **One validator module** that is used by manual entry and by CSV import, returns valid / warning (with what is missing and which features that affects) / blocked (with the reason), and never throws: wrap the parsing. The existing rules are in `js/data.js` (`parseChangelog`, `buildVersions`, `parseCsv`, `buildRun`, `REQUIRED`, `FIT_TOL`) and described in Help, Data format (`js/help.js`): reuse them, do not restate them.
-- A version without a recording is a **warning** (listed, cannot be replayed, no sectors, no analysis); a recording that lacks a required column, has no rows of a lap, or does not fit the track is **blocked**.
-- Result type is chosen with rounded selectable icons: kept, kept as an enabling change, enabling change later rejected, rejected. `data.js` reads "enabling change" only from a Decision that starts with it.
-- CSV import of several runs: each validated on its own; a summary of valid, warned and blocked; blocked ones skipped with their reasons.
-- New colours are tokens; the window should reuse the dialog look of `.keydlg` / `.keycard` or become the shared window component of Phase 16.
+The user wants a login page with GitHub as the recommended login, so that an entered version is uploaded to the repository directly instead of exported and pasted. Told to the user: a static site cannot do a password login or the usual "Sign in with GitHub" button by itself (the OAuth exchange needs a server that holds a secret, and GitHub's device flow does not answer a browser); what works without a server is the reader's own GitHub token with write access (the key system of `js/keys.js` already stores one), and a real OAuth button needs a small free relay (for example a Cloudflare Worker) that the owner would host. **Not decided: which of the two, and whether "Publish" commits to the branch or opens a pull request. Ask before building.** The pieces are ready: `RV.local.entryText(rec)` is the changelog entry, `RV.local.csv(key)` the recording, `ds.localStale` handles the copy left in the browser once the repository has the version. Publishing means: read docs/CHANGELOG.md through the API, insert the entries before the closing "Last updated" line, put the CSVs under runs/, as one commit (Git Data API: blobs, tree, commit, update ref).
 
 ### Phase 16: multi-track windows
 

@@ -56,6 +56,8 @@
     if (!v.kept && v.enableChange) return '<span class="badge rej dim-badge"><i>&#10005;</i>Enabling change</span>';
     return v.kept ? '<span class="badge kept"><i>&#10003;</i>Kept</span>' : '<span class="badge rej"><i>&#10005;</i>Rejected</span>';
   }
+  /* a version entered by hand: kept in this browser, not in the source (js/entry.js) */
+  const localBadge = v => (v.local ? ' <span class="badge local" title="Entered by hand: kept in this browser only until it is exported">Local</span>' : '');
   function deltaTxt(d) { return RV.simple() ? (d === 0 ? 'the same' : Math.abs(d).toFixed(2) + ' s ' + (d < 0 ? 'faster' : 'slower')) : sgn(d, 2) + ' s'; }
   function deltaCell(d) { return d == null ? '<td></td>' : '<td class="num ' + (d < 0 ? 'faster' : d > 0 ? 'slower' : '') + '">' + deltaTxt(d) + '</td>'; }
   function recording(v) {
@@ -123,7 +125,10 @@
       (sm ? 'Click a version to select it. To compare several, drag across them, or hold Shift and click to select everything in between, or hold Ctrl and click to add or remove one.'
         : 'Click selects one run. Drag or Shift-click selects a range, Ctrl-click adds or removes one (up to ' + RV.MAX_RUNS + ' runs). The run clicked first is in focus.') + '</p>';
     h += '<div id="bulkBar" class="acts" style="margin:8px 0 4px"><button class="btn sm" id="bulkLoad" title="Read the recording of every version: quicker to open afterwards, and all of them count for the best theoretical lap. They are not added to the sector table.">Load all versions</button>' +
-      '<button class="btn sm" id="bulkUnload" title="Free the memory of every recording that is not selected">Unload non-selected</button><span id="bulkStatus" class="note" role="status" style="margin-left:6px"></span></div>';
+      '<button class="btn sm" id="bulkUnload" title="Free the memory of every recording that is not selected">Unload non-selected</button>' +
+      '<button class="btn sm" id="addVer" title="Enter a version by hand, or import several from CSV files. They are kept in this browser until you export them.">+ Add versions \u2026</button>' +
+      (S.ds.local.size || S.ds.localStale.length ? '<button class="link" id="addMine">' + (S.ds.local.size + S.ds.localStale.length) + ' kept in this browser</button>' : '') +
+      '<span id="bulkStatus" class="note" role="status" style="margin-left:6px"></span></div>';
     h += '<div class="tablewrap"><table id="vt"><thead><tr>' + (rank ? '<th>#</th>' : '') + '<th class="l">' + (extra ? 'Recording' : 'Version') + '</th>' +
       (extra ? '<th>Size</th>' : '<th class="l">' + (sm ? 'What it changed' : 'Change') + '</th>') + '<th>Lap time</th>' +
       (extra ? '' : '<th title="Lap time difference vs the best lap at that point in development">' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
@@ -131,7 +136,7 @@
     listRows().forEach((v, k) => {
       const lapTxt = v.lap != null ? fmtLap(v.lap) : (v.sum && !v.sum.complete ? 'stopped at ' + RV.fmtInt(v.sum.stoppedAt) + ' m' : v.extra ? (v.size < 1000 ? 'empty' : 'not opened yet') : 'no lap');
       h += '<tr data-id="' + esc(v.id) + '" tabindex="0" class="' + (v.file && !v.bad ? '' : 'nofile') + '">' + (rank ? '<td class="num">' + (k + 1) + '</td>' : '') +
-        '<td class="l num id">' + esc(v.id) + '</td>' + (extra ? '<td class="num">' + RV.fmtInt(v.size / 1000) + ' kB</td>' : '<td class="l w"><span>' + esc(sm && v.st ? v.st : v.title) + '</span></td>') +
+        '<td class="l num id">' + esc(v.id) + localBadge(v) + '</td>' + (extra ? '<td class="num">' + RV.fmtInt(v.size / 1000) + ' kB</td>' : '<td class="l w"><span>' + esc(sm && v.st ? v.st : v.title) + '</span></td>') +
         '<td class="num lap">' + lapTxt + '</td>' + (extra ? '' : deltaCell(v.dbest)) +
         (sm || extra ? '' : '<td class="num xcol">' + (v.top ? v.top + ' km/h' : '') + '</td><td class="num xcol">' + (v.slow ? v.slow + ' km/h' : '') + '</td>') +
         (extra ? '' : '<td class="l">' + badge(v) + '</td>') + '<td class="l xcol note">' + recording(v) + '</td></tr>';
@@ -159,6 +164,8 @@
   }
   function wireBulk() {
     if (!$('bulkLoad')) return;
+    $('addVer').onclick = () => RV.entry.open('one');
+    if ($('addMine')) $('addMine').onclick = () => RV.entry.open('mine');
     $('bulkLoad').onclick = async () => {
       if (bulk) return;
       const ds = S.ds, pending = ds.versions.filter(v => v.file && !v.bad && !v.sum);
@@ -260,11 +267,13 @@
     const box = $('vside'), v = S.ds.byId[S.detailId];
     if (!v) { box.innerHTML = '<h3>Details</h3><p class="note">Select a version in the table.</p>'; return; }
     const sm = RV.simple(), on = S.sel.includes(v.id), ref = S.sel[0] === v.id, can = !!v.file && !v.bad, sum = v.sum;
-    let h = '<div class="dhead"><span class="vid num">' + esc(v.id) + '</span>' + badge(v) + '</div><p class="dtitle">' + esc(sm && v.st ? v.st : v.title) + '</p>' +
+    let h = '<div class="dhead"><span class="vid num">' + esc(v.id) + '</span>' + badge(v) + localBadge(v) + '</div><p class="dtitle">' + esc(sm && v.st ? v.st : v.title) + '</p>' +
       '<div class="acts"><button class="btn prim" id="dv" ' + (can ? '' : 'disabled') + '>Replay on the track</button><button class="btn" id="dt" ' + (can ? '' : 'disabled') + '>Telemetry</button>' +
       '<button class="btn" id="dc" ' + (can && !(on && S.sel.length === 1) ? '' : 'disabled') + '>' + (on ? 'Remove from comparison' : 'Add to comparison') + '</button>' +
       (on && !ref ? '<button class="btn" id="dr">Put in focus</button>' : '') + '</div>';
+    if (v.local) h += '<p class="note localnote">Entered by hand and kept in this browser only. <button class="link" id="dLocal">Export, change or delete it</button></p>';
     if (v.bad) h += '<p class="warn">' + esc(v.bad) + '</p>';
+    else if (v.missing && v.local) h += '<p class="warn">The recording stored with this version in this browser is gone.</p>';
     else if (v.missing) h += '<p class="warn">The changelog names runs/' + esc(v.named) + ', but that file is not in the source.</p>';
     else if (!v.file) h += '<p class="note">No lap was recorded for this version, so it cannot be replayed.</p>';
     if (sum && !sum.complete) h += '<p class="warn">This recording is not a complete lap: it stops at ' + RV.fmtInt(sum.stoppedAt) + ' m.</p>';
@@ -298,6 +307,7 @@
     $('dt').onclick = () => { const f = () => RV.showTab('pt'); on ? RV.sel.makeRef(v.id, f) : RV.sel.only(v.id, f); };
     $('dc').onclick = () => RV.sel.toggle(v.id);
     if ($('dr')) $('dr').onclick = () => RV.sel.makeRef(v.id);
+    if ($('dLocal')) $('dLocal').onclick = () => RV.entry.open('mine');
   }
 
   /* ---------- the lap-time chart ---------- */

@@ -44,6 +44,18 @@
       '<h4>track.xml</h4><p>The map is computed from a TORCS track file. <b>Supplying it is your job:</b> to see your own track, put the track\u2019s TORCS file (for example <code>tracks/road/&lt;name&gt;/&lt;name&gt;.xml</code> from a TORCS install) at the root of the repository or folder, named <code>track.xml</code>.</p>' +
       '<p>Without it the page uses the Corkscrew track bundled with it. If a run does not fit the track in use (its longest <code>distFromStart</code> differs from the track length by more than ' + RV.data.FIT_TOL + ' m), the Track tab says so instead of drawing the run on a wrong map; Versions and Telemetry still work.</p>' +
       '<h4>Other CSVs in runs/</h4><p>In a local folder, CSVs that no changelog entry names (manual laps) are listed under “Other recordings” on the Versions tab. From GitHub only the recordings named in the changelog are read.</p>'],
+    local: ['Entered by hand',
+      '<p>Versions, <b>Add versions</b> opens a window for entering a version by hand or importing several from CSV files. The site cannot write to its source, so these versions are stored in <b>this browser</b> (its own database for this site, on this device) and carry the badge <b>Local</b>. Nothing is uploaded. Another device or another visitor does not see them, and clearing the browser\u2019s site data deletes them. They belong to the source they were entered under.</p>' +
+      '<h4>What is checked</h4><p>Every version is checked before it is stored, with the rules of the other tabs of this guide.</p>' +
+      '<table class="spec"><tr><th>Outcome</th><th>When</th><th>What happens</th></tr>' +
+      '<tr><td>Ready</td><td>nothing is missing</td><td>it is added</td></tr>' +
+      '<tr><td>Incomplete</td><td>no recording; no lap time; an unfinished lap; a recording without the sensor columns or without <code>allowed</code>; empty fields; a typed lap time that differs from the recording\u2019s</td><td>the window says what is missing and what that affects; it is added once you tick \u201cEnter it anyway\u201d</td></tr>' +
+      '<tr><td>Cannot be entered</td><td>a name that is not <code>v</code> and numbers, that exists already, or that is not newer than the latest version; no title or no result; a lap time or speed that cannot be read; a recording that is empty, lacks a required column, has no rows of a lap or does not fit the track</td><td>it is not stored</td></tr></table>' +
+      '<p>A new name must be higher than the latest version: after <code>v1.06</code>, both <code>v1.06.1</code> and <code>v1.07</code> are fine.</p>' +
+      '<h4>Importing files</h4><p>Several CSV files can be chosen at once. A run CSV becomes a version with that recording. A <b>table</b> has one row per version and these columns (only <code>version</code> is required; the window has a template):</p>' +
+      '<pre>' + RV.validate.TABLE_HEAD.join(', ') + '</pre>' +
+      '<p><code>result</code> is <code>kept</code>, <code>kept-enabling</code>, <code>rej-enabling</code> or <code>rejected</code>. <code>recording</code> names a run CSV chosen together with the table. Each version is checked on its own; those that cannot be entered are skipped and the rest are imported.</p>' +
+      '<h4>Export</h4><p>The tab \u201cIn this browser\u201d of the window exports all of them or only the ticked ones as a zip: <code>docs/CHANGELOG-additions.md</code> (the entries, to paste at the end of the repository\u2019s changelog), the recordings under <code>runs/</code>, and <code>versions.csv</code> (the table, which can be imported in another browser together with the recordings). Once the repository has them, every visitor sees them and the copies in the browser can be deleted.</p>'],
   };
 
   /* 9: the name TORCS carries its explanation */
@@ -96,6 +108,7 @@
         '<dt>A version cannot be replayed</dt><dd>It has no recording: the changelog names no run file for it, or the file is missing from the source.</dd>' +
         '<dt>\u201cThis run does not fit the track map\u201d</dt><dd>The runs were driven on another track than the map in use. The source needs its own track.xml (see the data format).</dd>' +
         '<dt>Basic view cannot be chosen</dt><dd>The source has no simplified changelog (docs/CHANGELOG-simple.md).</dd>' +
+        '<dt>A version I entered is gone</dt><dd>Entered versions are kept in the browser they were entered in, for the source they were entered under. Another browser or device, a private window, or cleared site data does not have them. Export them to put them into the repository (Data format, Entered by hand).</dd>' +
         '<dt>A local folder is gone after a reload</dt><dd>Browsers do not keep access to a folder. Choose it again under Settings, Data.</dd></dl>') +
       card('Links to a particular state', '<p>Options after <code>#</code> in the address open the page in a given state, for example <code>#tab=pm&amp;run=v1.05&amp;cmp=v0.96&amp;mode=detailed</code>. <code>tab</code> is <code>pv</code>, <code>pm</code>, <code>pt</code>, <code>ps</code> or <code>ph</code> (this page); <code>run</code> and <code>cmp</code> name versions; <code>frame</code> pauses on a frame; <code>help</code> opens this page. The README lists them all.</p>') +
       '');
