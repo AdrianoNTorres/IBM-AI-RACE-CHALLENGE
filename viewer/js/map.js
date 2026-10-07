@@ -263,6 +263,7 @@
   /* line widths in screen pixels, for the layers that are lines; a layer without one has no width slider */
   const WIDTHS = { edges: 1.6, centre: 1, finish: 3, marks: 1, sectors: 2.5, line: 3, beams: 1.6, focus: 2, lineB: 1.8 };
   const WMIN = 0.5, WMAX = 8;
+  const SMIN = 0.6, SMAX = 2.5;         /* how small and how large a panel over the map can be made (its scale) */
   /* notes a layer's defaults (on0, alpha0, w0) so "Restore the default layers" can go back to them */
   function enrol(L) { if (L.w == null && WIDTHS[L.id]) L.w = WIDTHS[L.id]; if (L.alpha == null) L.alpha = 1; if (L.on == null) L.on = true; LY[L.id] = L; L.on0 = L.on; L.alpha0 = L.alpha; L.w0 = L.w; }
   LAYERS.forEach(enrol);
@@ -284,7 +285,7 @@
   /* What the reader last chose on the map (layers, panels, path options, the side panel open or closed) is kept in
      this browser and put back on the next visit. The defaults (on0, alpha0) are noted before that. */
   function saveUi() {
-    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha, L.pos || null, !!L.min, L.solo === true]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha, L.pos || null, !!L.min, L.solo === true, L.scale || 1]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
   }
   /* puts back what was stored for one layer or panel (id), or for all of them */
   function restoreUi(id) {
@@ -305,6 +306,7 @@
       L.pos = Array.isArray(q[3]) && q[3].length === 2 && isFinite(q[3][0]) && isFinite(q[3][1]) ? [+q[3][0], +q[3][1]] : null;
       L.min = !!q[4];
       if (L.solo === true || L.solo === false) L.solo = !!q[5];
+      L.scale = q[6] >= SMIN && q[6] <= SMAX ? +q[6] : 1;
     }
   }
   (function () {
@@ -321,19 +323,26 @@
   /* ---------- the panels as small windows ----------
      Every panel over the map sits in a wrapper (.win) that can be dragged anywhere on the map and shows three
      buttons when the mouse is over it, as on a Mac window: red closes the panel (it comes back under Layers, Panels
-     on the map), yellow folds it into a small tab that opens it again, and green, on the panels that show several
-     cars, limits it to the car in focus. Where a panel was put, folded or limited is saved with the layout.
+     on the map), yellow folds it into a small tab that opens it again, and green puts it back in its place at its
+     normal size. While cars are compared, the panels that show several cars have a fourth, blue button that limits
+     them to the car in focus. Where a panel was put, folded or limited is saved with the layout.
      L.pos: [x, y] in the map, or null while the panel is where the page puts it. L.min: folded. L.solo: only the car
      in focus (for the wheel and pedals that is the option allInputs, so 'opt' stands there). */
   const mapwrap = $('mapwrap');
   let winZ = 5, winDrag = null;
   const winOf = L => $('win-' + L.id);
   const soloOf = L => (L.solo === 'opt' ? !opt.allInputs : L.solo === true);
+  /* A panel's size is a scale of the whole panel (L.scale, 1 = as designed): text, bars and canvases grow together.
+     It is set with the grip at the panel's bottom right corner, or with the Size slider under Layers. */
+  function sizeWin(L) {
+    $(L.id).style.zoom = L.scale && L.scale !== 1 ? L.scale : '';
+    if (L.id === 'inputs') RV.inputScale = L.scale || 1;     /* read by inputs.js: its canvases draw that much finer, so they stay sharp */
+  }
   function paintWin(L) {
     const w = winOf(L), solo = soloOf(L);
     w.classList.toggle('min', !!L.min); w.classList.toggle('solo', solo);
-    const g = w.querySelector('.wb.g');
-    if (g) { g.title = solo ? 'Show every car again' : 'Show only the car in focus'; g.setAttribute('aria-label', g.title); g.setAttribute('aria-pressed', solo); }
+    const f = w.querySelector('.wb.f');
+    if (f) { f.title = solo ? 'Show every car again' : 'Show only the car in focus'; f.setAttribute('aria-label', f.title); f.setAttribute('aria-pressed', solo); }
     const m = w.querySelector('.wb.m');
     m.title = L.min ? 'Open ' + L.label : 'Fold ' + L.label + ' into a tab'; m.setAttribute('aria-label', m.title);
   }
@@ -357,15 +366,32 @@
   }
   function wrapPanel(L) {
     const pe = $(L.id), w = el('div', 'win' + (L.solo !== undefined ? ' cansolo' : ''),
-      '<div class="winbar"><button class="wb c" title="Close ' + esc(L.label) + '" aria-label="Close ' + esc(L.label) + '"></button><button class="wb m"></button>' + (L.solo !== undefined ? '<button class="wb g"></button>' : '') + '</div>' +
-      '<button class="wintab" title="Open ' + esc(L.label) + '">' + esc(L.label) + '</button>');
+      '<div class="winbar"><button class="wb c" title="Close ' + esc(L.label) + '" aria-label="Close ' + esc(L.label) + '"></button><button class="wb m"></button><button class="wb g" title="Put ' + esc(L.label) + ' back in its place, at its normal size" aria-label="Put ' + esc(L.label) + ' back in its place, at its normal size"></button>' +
+      (L.solo !== undefined ? '<button class="wb f"></button>' : '') + '</div>' +
+      '<button class="wintab" title="Open ' + esc(L.label) + '">' + esc(L.label) + '</button><span class="wingrip" title="Drag to resize ' + esc(L.label) + '; double-click for its normal size"></span>');
     w.id = 'win-' + L.id; w.dataset.id = L.id;
     pe.parentNode.insertBefore(w, pe); w.appendChild(pe);
     L.home = w.parentNode;
     w.querySelectorAll('.wb').forEach(b => b.addEventListener('pointerdown', e => e.stopPropagation()));
+    /* the grip: dragging it away from the panel's top left corner makes the panel larger, toward it smaller */
+    const grip = w.querySelector('.wingrip');
+    grip.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation(); e.preventDefault();
+      const r = w.getBoundingClientRect(), s0 = L.scale || 1, w0 = Math.max(r.width, 20), h0 = Math.max(r.height, 20), sx = e.clientX, sy = e.clientY;
+      const mv = ev => {
+        const k = Math.max((w0 + ev.clientX - sx) / w0, (h0 + ev.clientY - sy) / h0);
+        L.scale = +RV.clamp(s0 * k, SMIN, SMAX).toFixed(3); w.classList.add('sizing'); sizeWin(L); placeWins();
+      };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); w.classList.remove('sizing'); saveUi(); if (S.sideTab === 'layers') buildSide(); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+    grip.addEventListener('dblclick', e => { e.stopPropagation(); L.scale = 1; sizeWin(L); placeWins(); saveUi(); if (S.sideTab === 'layers') buildSide(); });
+    sizeWin(L);
     w.querySelector('.wb.c').onclick = () => { L.on = false; panels(); saveUi(); if (S.sideTab === 'layers') buildSide(); RV.toast(L.label + ' is off. It comes back under Layers, Panels on the map.'); };
     w.querySelector('.wb.m').onclick = () => { L.min = !L.min; paintWin(L); placeWins(); saveUi(); };
-    if (w.querySelector('.wb.g')) w.querySelector('.wb.g').onclick = () => {
+    w.querySelector('.wb.g').onclick = () => { L.pos = null; L.scale = 1; L.min = false; sizeWin(L); paintWin(L); placeWins(); saveUi(); if (S.sideTab === 'layers') buildSide(); };
+    if (w.querySelector('.wb.f')) w.querySelector('.wb.f').onclick = () => {
       if (L.solo === 'opt') opt.allInputs = !opt.allInputs; else L.solo = !L.solo;
       paintWin(L); if (L.id === 'leg') legend(); saveUi(); if (S.sideTab === 'layers') buildSide();
     };
@@ -521,6 +547,7 @@
         for (const L of OVER) {
           const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); });
           slider(r, 'Opacity', 0.2, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; panels(); });
+          slider(r, 'Size', SMIN, SMAX, 0.05, L.scale || 1, v => Math.round(v * 100) + ' %', v => { L.scale = v; sizeWin(L); placeWins(); });
           body.appendChild(r);
           if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; paintWin(OVER[3]); }));
         }
@@ -569,7 +596,7 @@
   }
   /* every layer, panel and path option back to how the page comes */
   function defaults() {
-    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; L.pos = null; L.min = false; if (L.solo === true) L.solo = false; });
+    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; L.pos = null; L.min = false; L.scale = 1; sizeWin(L); if (L.solo === true) L.solo = false; });
     opt.line = 'upto'; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
     OVER.forEach(paintWin); placeWins();
     viewDefaults(true); legend(); panels(); buildSide();
@@ -788,7 +815,7 @@
     for (let k = 6; k < OVER.length; k++) if (OVER[k].on && OVER[k].draw) OVER[k].draw(R, i);   /* panels added with addPanel */
   }
   function drawMini() {
-    const R = S.R, B = trk().box, P = RV.pal, r = window.devicePixelRatio || 1, cw = mini.clientWidth, chh = mini.clientHeight;
+    const R = S.R, B = trk().box, P = RV.pal, r = (window.devicePixelRatio || 1) * (OVER[1].scale || 1), cw = mini.clientWidth, chh = mini.clientHeight;
     if (!cw) return;                                      /* hidden, as on a phone-width window */
     if (mini.width !== Math.round(cw * r)) { mini.width = Math.round(cw * r); mini.height = Math.round(chh * r); }
     const ms = Math.min((cw - 20) / (B[1] - B[0]), (chh - 20) / (B[3] - B[2]));

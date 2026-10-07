@@ -45,8 +45,8 @@
   /* the dark panels over the map (sector table, delta bar) and the speed label beside the car */
   --panel-bg: rgba(13, 15, 20, .82); --panel-ink: #ffffff; --panel-live: #ff8a55; --label-bg: rgba(13, 15, 20, .88); --label-ink: #ffffff;
   --helmet: #f4f2ec;
-  /* the three window buttons of a panel on the map: close, fold, only the car in focus */
-  --win-close: #ff5f57; --win-fold: #febc2e; --win-solo: #28c840;
+  /* the window buttons of a panel on the map: close, fold, back to its place, and only the car in focus */
+  --win-close: #ff5f57; --win-fold: #febc2e; --win-home: #28c840; --win-one: #3b82f6;
   --shadow: 0 1px 2px rgba(20, 22, 27, .06), 0 8px 24px -12px rgba(20, 22, 27, .18);
   --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --font-display: Bahnschrift, "DIN Alternate", "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
@@ -307,7 +307,7 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #inputs { padding: 8px 14px 8px 10px; display: flex; flex-direction: column; pointer-events: none; }
 #inputs:empty { display: none; }
 /* Every panel over the map is in a small window: dragged by any part of it, with three buttons that show while the
-   mouse is over it (close, fold into a tab, only the car in focus). Where the page puts a window: the left column
+   mouse is over it (close, fold into a tab, back to its place; and only the car in focus, while cars are compared). Where the page puts a window: the left column
    (#overlay), the colour keys top right, the wheel and pedals bottom right. A window that was moved (.moved) is
    placed by the script instead. */
 .win { position: relative; pointer-events: auto; cursor: grab; touch-action: none; }
@@ -319,11 +319,15 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
   box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .12s; }
 .win:hover > .winbar, .win:focus-within > .winbar, .win.dragging > .winbar { opacity: 1; pointer-events: auto; }
 .wb { width: 12px; height: 12px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; display: block; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
-.wb.c { background: var(--win-close); } .wb.m { background: var(--win-fold); } .wb.g { background: var(--win-solo); display: none; }
-#mapwrap.cmp .win.cansolo .wb.g { display: block; }                /* only while cars are compared */
-.win.solo .wb.g { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--win-solo); }
+.wb.c { background: var(--win-close); } .wb.m { background: var(--win-fold); } .wb.g { background: var(--win-home); } .wb.f { background: var(--win-one); display: none; }
+#mapwrap.cmp .win.cansolo .wb.f { display: block; }                /* only the car in focus: offered only while cars are compared */
+.win.solo .wb.f { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--win-one); }
+/* the grip at a panel's bottom right corner: drag to resize */
+.wingrip { position: absolute; right: -5px; bottom: -5px; width: 18px; height: 18px; z-index: 2; cursor: nwse-resize; opacity: 0; transition: opacity .12s; border-radius: 0 0 8px 0;
+  background: linear-gradient(135deg, transparent 0 46%, var(--mute) 46% 56%, transparent 56% 66%, var(--mute) 66% 76%, transparent 76% 86%, var(--mute) 86% 96%, transparent 96%); }
+.win:hover > .wingrip, .win.sizing > .wingrip { opacity: 1; } .win.min > .wingrip { display: none; } .win.sizing { cursor: nwse-resize; }
 .wintab { display: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; font-weight: 600; font-size: 13px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
-.win.min > .wintab { display: block; } .win.min > :not(.winbar):not(.wintab) { display: none !important; }
+.win.min > .wintab { display: block; } .win.min > :not(.winbar):not(.wintab):not(.wingrip) { display: none !important; }
 /* one row per car: the car in focus full size, compared cars smaller */
 .incar { display: flex; align-items: center; gap: 12px; padding: 2px 0; }
 .incar + .incar { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px; }

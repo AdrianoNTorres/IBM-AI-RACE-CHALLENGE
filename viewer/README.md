@@ -100,7 +100,7 @@ The top bar has five pages: Versions, Track, Telemetry, Help and Settings.
 - **Track**'s side panel has Camera, Cars (the selected cars, where compared cars are placed, the size of each), Layers, Sectors and Help.
 - **Telemetry** shows one of Charts along the lap, Summary, Sectors and Sections at a time.
 - **Versions**, in the detailed view, has the sector times of the opened versions on a tab of their own.
-- **The panels on the map are small windows.** Drag any of them to where you want it. With the mouse over a panel three buttons appear at its top left: red closes it (Layers, Panels on the map, brings it back), yellow folds it into a small tab (click the tab to open it), and green, while cars are compared, limits that panel to the car in focus. Where you put them is remembered; "Restore the default layers" puts everything back.
+- **The panels on the map are small windows.** Drag any of them to where you want it. With the mouse over a panel three buttons appear at its top left: red closes it (Layers, Panels on the map, brings it back), yellow folds it into a small tab (click the tab to open it), and green puts it back in its place at its normal size. While cars are compared, a fourth, blue button limits that panel to the car in focus. The grip at a panel's bottom right corner resizes it (double-click the grip for the normal size; Layers has a Size slider too). Where you put them and how large they are is remembered; "Restore the default layers" puts everything back.
 
 Some older paragraphs in this file still say "the Help tab of Settings" or describe the Telemetry page as one long page; the list above is current.
 

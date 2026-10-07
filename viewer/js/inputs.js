@@ -32,7 +32,7 @@
   /* A Formula-style wheel seen from the driver's seat: two grips, a flat-bottomed centre with a display,
      shift lights, dials and buttons. Drawn in a square of 2 x 2 units round its centre. */
   function drawWheel(cv, R, i) {
-    const r = window.devicePixelRatio || 1, size = cv.clientWidth, P = RV.pal;
+    const r = (window.devicePixelRatio || 1) * (RV.inputScale || 1), size = cv.clientWidth, P = RV.pal;
     if (!size) return;
     if (cv.width !== Math.round(size * r)) { cv.width = cv.height = Math.round(size * r); }
     const x = cv.getContext('2d'), u = size / 2;
@@ -62,7 +62,7 @@
   }
 
   function drawPedals(row, R, i, col) {
-    const cv = row.pedals, r = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight, P = RV.pal;
+    const cv = row.pedals, r = (window.devicePixelRatio || 1) * (RV.inputScale || 1), W = cv.clientWidth, H = cv.clientHeight, P = RV.pal;
     if (!W) return;
     if (cv.width !== Math.round(W * r) || cv.height !== Math.round(H * r)) { cv.width = Math.round(W * r); cv.height = Math.round(H * r); }
     const x = cv.getContext('2d');
