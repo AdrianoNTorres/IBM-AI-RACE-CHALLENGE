@@ -20,9 +20,10 @@
   const hasPlan = r => { if (r._plan == null) r._plan = r.al.some(x => x > 0); return r._plan; };
   const PL = 52, PR = 12;              /* left and right margins of a plot */
   let xr = [-12, 1], gapS = null, lastCur = -1, lastTotal = 0;
-  let sectGap = 100;                   /* configurable section gap (metres) */
   const SECT_GAPS = [25, 50, 100, 200, 500];
-  let sectGapCustom = false;           /* true when a manually-typed value is in use */
+  let sectGap = +RV.uiGet('sectGap', 100);        /* section gap (metres), as it was left */
+  if (!(sectGap >= 5 && sectGap <= 5000)) sectGap = 100;
+  let sectGapCustom = !SECT_GAPS.includes(sectGap);   /* true when a manually-typed value is in use */
 
   const runs = () => [{ r: S.R, id: S.sel[0] }].concat(S.CM);
   const sw = id => '<i class="sw" style="background:' + RV.col(id) + '"></i>';
@@ -84,7 +85,7 @@
     const keep = box.scrollTop;
     box.innerHTML = h;
     box.scrollTop = keep;
-    box.querySelectorAll('#ttabs button').forEach(b => { b.setAttribute('aria-selected', b.classList.contains('on')); b.onclick = () => { S.teleTab = b.dataset.t; build(); }; });
+    box.querySelectorAll('#ttabs button').forEach(b => { b.setAttribute('aria-selected', b.classList.contains('on')); b.onclick = () => { S.teleTab = b.dataset.t; RV.uiSet('teleTab', S.teleTab); build(); }; });
     /* step range input */
     if ($('teleRange')) {
       $('teleRange').onchange = e => {
@@ -104,12 +105,12 @@
     box.querySelectorAll('#sect .sortb').forEach(b => { b.onclick = () => { sectSort = { k: b.dataset.k, dir: sectSort.k === b.dataset.k ? -sectSort.dir : 1 }; build(); const again = document.querySelector('#sect .sortb[data-k="' + b.dataset.k + '"]'); if (again) again.focus(); }; });
     if ($('sectExport')) $('sectExport').onclick = exportSections;
     /* section gap preset buttons */
-    box.querySelectorAll('[data-g]').forEach(b => { b.onclick = () => { sectGap = +b.dataset.g; sectGapCustom = false; build(); }; });
+    box.querySelectorAll('[data-g]').forEach(b => { b.onclick = () => { sectGap = +b.dataset.g; sectGapCustom = false; RV.uiSet('sectGap', sectGap); build(); }; });
     /* custom gap input */
     if ($('sectGapApply')) {
       const applyCustom = () => {
         const v = parseInt($('sectGapInput').value, 10);
-        if (v >= 5 && v <= 5000) { sectGap = v; sectGapCustom = !SECT_GAPS.includes(v); build(); }
+        if (v >= 5 && v <= 5000) { sectGap = v; sectGapCustom = !SECT_GAPS.includes(v); RV.uiSet('sectGap', sectGap); build(); }
         else { $('sectGapInput').focus(); }
       };
       $('sectGapApply').onclick = applyCustom;

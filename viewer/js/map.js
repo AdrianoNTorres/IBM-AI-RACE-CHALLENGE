@@ -268,17 +268,34 @@
     { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true },
   ];
   const ALL_IN = ['Wheel and pedals of every car', 'A smaller wheel, bars and pedal graph for each compared car, above those of the car in focus. Off: the car in focus only.'];
+  /* What the reader last chose on the map (layers, panels, path options, the side panel open or closed) is kept in
+     this browser and put back on the next visit. The defaults (on0, alpha0) are noted before that. */
+  function saveUi() {
+    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha]), panels: OVER.map(L => [L.id, L.on]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+  }
+  (function () {
+    const u = RV.uiGet('map', null);
+    if (!u) return;
+    for (const q of u.layers || []) if (LY[q[0]]) { LY[q[0]].on = !!q[1]; if (q[2] >= 0 && q[2] <= 1) LY[q[0]].alpha = +q[2]; }
+    for (const q of u.panels || []) { const L = OVER.find(x => x.id === q[0]); if (L) L.on = !!q[1]; }
+    const o = u.opt || {};
+    if (['full', 'upto', 'near'].includes(o.line)) opt.line = o.line;
+    if (o.lineW >= 1 && o.lineW <= 8) opt.lineW = +o.lineW;
+    if (o.colour === 'speed' || o.colour === 'brake') opt.colour = o.colour;
+    if (typeof o.allInputs === 'boolean') opt.allInputs = o.allInputs;
+    if (u.closed) $('pm').classList.add('side-closed');
+  })();
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
   /* ---------- side panel: the same three sections in both views; the detailed view adds controls inside them ---------- */
   function toggleRow(name, desc, on, fn) {
     const r = el('div', 'lr' + (on ? '' : ' off'), '<label class="tg"><input type="checkbox" ' + (on ? 'checked' : '') + ' aria-label="' + esc(name) + '"><span></span></label><div><div class="ln">' + name + '</div><div class="ld">' + desc + '</div></div>');
-    r.querySelector('input').onchange = e => { r.classList.toggle('off', !e.target.checked); fn(e.target.checked); };
+    r.querySelector('input').onchange = e => { r.classList.toggle('off', !e.target.checked); fn(e.target.checked); saveUi(); };
     return r;
   }
   function slider(row, label, min, max, step, val, fmt, fn) {
     const o = el('div', 'lo', '<small>' + label + '</small><input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" aria-label="' + esc(label || 'Value') + '"><span class="num">' + fmt(val) + '</span>');
-    o.querySelector('input').oninput = e => { o.lastChild.textContent = fmt(+e.target.value); fn(+e.target.value); };
+    o.querySelector('input').oninput = e => { o.lastChild.textContent = fmt(+e.target.value); fn(+e.target.value); saveUi(); };
     row.appendChild(o);
     return o.querySelector('input');
   }
@@ -288,7 +305,7 @@
     for (const it of items) {
       const b = el('button', it[0] === cur ? 'on' : null, it[1]);
       b.setAttribute('aria-pressed', it[0] === cur);
-      b.onclick = () => { s.querySelectorAll('button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', false); }); b.classList.add('on'); b.setAttribute('aria-pressed', true); fn(it[0]); };
+      b.onclick = () => { s.querySelectorAll('button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', false); }); b.classList.add('on'); b.setAttribute('aria-pressed', true); fn(it[0]); saveUi(); };
       s.appendChild(b);
     }
     return s;
@@ -374,7 +391,7 @@
       const open = S.layerGroup === G, items = G === 'Panels on the map' ? OVER : LAYERS.filter(L => L.g === G);
       const head = el('button', 'acc' + (open ? ' open' : ''), '<span>' + G + '</span><small>' + items.filter(L => L.on).length + ' of ' + items.length + ' on</small>');
       head.setAttribute('aria-expanded', open);
-      head.onclick = () => { S.layerGroup = open ? '' : G; buildSide(); };
+      head.onclick = () => { S.layerGroup = open ? '' : G; RV.uiSet('layerGroup', S.layerGroup); buildSide(); };
       s.appendChild(head);
       if (!open) continue;
       const body = el('div', 'accbody');
@@ -401,7 +418,7 @@
       }
     }
     const rb = el('button', 'btn wide', 'Restore the default layers');
-    rb.onclick = () => { LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; }); opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; opt.allInputs = true; viewDefaults(); legend(); panels(); buildSide(); };
+    rb.onclick = defaults;
     s.appendChild(rb);
   }
   /* sector times on the Track tab: where the car is now, and the table of every opened version */
@@ -422,7 +439,18 @@
     RV.sectors.wire(t);
   }
   /* what the two views start with: the basic view shows the car and its path, without the sensor beams and their end points */
-  function viewDefaults() { const on = !RV.simple(); LY.beams.on = LY.hits.on = LY.focus.on = on; }
+  /* force: the view was switched, or the defaults were asked for. Otherwise (a data set opens) a stored choice of layers stands. */
+  function viewDefaults(force) {
+    if (!force && RV.uiGet('map', null)) return;
+    const on = !RV.simple(); LY.beams.on = LY.hits.on = LY.focus.on = on;
+    if (force) saveUi();
+  }
+  /* every layer, panel and path option back to how the page comes */
+  function defaults() {
+    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; });
+    opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
+    viewDefaults(true); legend(); panels(); buildSide();
+  }
   function helpSection(s, sm) {
     const R = S.R, many = S.CM.length > 0;
     s.appendChild(el('div', 'guide',
@@ -430,8 +458,9 @@
       '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
       '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, or its name in the top bar, to put it in focus.' : '') + '</p>' +
-      '<h4>Keys</h4><dl class="keys"><dt><kbd>Space</kbd></dt><dd>play or pause</dd><dt><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
-      '<dt><kbd>+</kbd> <kbd>&minus;</kbd></dt><dd>zoom</dd><dt><kbd>F</kbd></dt><dd>follow the car, or stop following</dd><dt><kbd>Home</kbd></dt><dd>back to the start of the lap</dd></dl>'));
+      '<h4>Keys</h4><dl class="keys"><dt>' + RV.kbd('play') + '</dt><dd>play or pause</dd><dt>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
+      '<dt>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + '</dt><dd>zoom</dd><dt>' + RV.kbd('follow') + '</dt><dd>follow the car, or stop following</dd><dt>' + RV.kbd('home') + '</dt><dd>back to the start of the lap</dd>' +
+      '<dt>' + RV.kbd('endloop') + '</dt><dd>end the loop over a section</dd></dl><p class="note">The keys can be changed under Settings, Controls.</p>'));
   }
   function buildSide() {
     const s = $('side'), sm = RV.simple();
@@ -447,7 +476,7 @@
     for (const [id, label] of [['view', 'Camera'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
       const b = el('button', S.sideTab === id ? 'on' : null, label);
       b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', S.sideTab === id);
-      b.onclick = () => { S.sideTab = id; buildSide(); };
+      b.onclick = () => { S.sideTab = id; RV.uiSet('sideTab', id); buildSide(); };
       tabs.appendChild(b);
     }
     s.appendChild(tabs);
@@ -814,12 +843,13 @@
     if (view.follow) { const b = base(); zoomAt(b[0] + view.ox, b[1] + view.oy, k); } else { const r = c.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, k); }
   }, { passive: false });
   c.addEventListener('dblclick', () => { if (onMap()) resetView(); });
-  function key(e) {
+  /* a replay key that belongs to the map: act is 'zoomin', 'zoomout' or 'follow' (RV.KEYS) */
+  function key(act) {
     if (S.tab !== 'pm' || !onMap()) return;
     const b = base();
-    if (e.key === '+' || e.key === '=') { if (!autoZoom()) zoomAt(b[0] + view.ox, b[1] + view.oy, 1.25); }
-    else if (e.key === '-') { if (!autoZoom()) zoomAt(b[0] + view.ox, b[1] + view.oy, 0.8); }
-    else if (e.key === 'f' || e.key === 'F') { setFollow(!view.follow); buildSide(); }
+    if (act === 'zoomin') { if (!autoZoom()) zoomAt(b[0] + view.ox, b[1] + view.oy, 1.25); }
+    else if (act === 'zoomout') { if (!autoZoom()) zoomAt(b[0] + view.ox, b[1] + view.oy, 0.8); }
+    else if (act === 'follow') { setFollow(!view.follow); if (!view.follow) view.all = false; buildSide(); }
   }
   if (window.ResizeObserver) new ResizeObserver(size).observe(c);
 
@@ -832,7 +862,7 @@
       btn.setAttribute('aria-label', closed ? 'Show side panel' : 'Hide side panel');
       btn.title = closed ? 'Show side panel' : 'Hide side panel';
     }
-    btn.onclick = () => { pm.classList.toggle('side-closed'); updateToggle(); RV.map.size(); };
+    btn.onclick = () => { pm.classList.toggle('side-closed'); updateToggle(); RV.map.size(); saveUi(); };
     updateToggle();
   }());
 
@@ -853,7 +883,7 @@
       if (H.all) view.all = true;
       if (H.zoom) view.z = +H.zoom;
     },
-    viewDefaults: viewDefaults,
+    viewDefaults: viewDefaults, defaults: defaults,
     /* the tutorial talks about the sensor beams, so they are shown while it runs and put back afterwards */
     tourLayers(on) {
       if (on) { if (!tourSaved) tourSaved = [LY.beams.on, LY.hits.on, LY.focus.on]; LY.beams.on = LY.hits.on = LY.focus.on = true; }

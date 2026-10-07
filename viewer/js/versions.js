@@ -9,6 +9,7 @@
   let anchorId = null, dragSel = null;
   let bulk = null, bulkMsg = '';       /* loading every recording: {ds, done, total, failed} while it runs; the last outcome */
 
+  if (!['all', 'fast', 'gain', 'loss', 'top', 'extra'].includes(S.listMode)) S.listMode = 'all';
   const LISTS = [['all', 'All versions'], ['fast', 'Fastest laps'], ['gain', 'Biggest gains'], ['loss', 'Biggest losses'], ['top', 'Top speeds']];
   /* chart classes: [palette key, filled dot?, meaning] */
   const CLS = {
@@ -131,9 +132,9 @@
     box.innerHTML = h + '</tbody></table></div>';
     box.scrollTop = keep;
     if (focusRow) { const tr = box.querySelector('#vt tbody tr[data-id="' + CSS.escape(focusRow) + '"]'); if (tr) tr.focus({ preventScroll: true }); }
-    box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; render(); }; });
+    box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; RV.uiSet('listMode', S.listMode); render(); }; });
     /* the full list starts with every version; the rankings start with the kept ones */
-    if ($('ko')) $('ko').onchange = e => { if (S.listMode === 'all') S.keptAll = e.target.checked; else S.keptOnly = e.target.checked; render(); };
+    if ($('ko')) $('ko').onchange = e => { if (S.listMode === 'all') S.keptAll = e.target.checked; else S.keptOnly = e.target.checked; RV.uiSet('keptAll', S.keptAll); RV.uiSet('keptOnly', S.keptOnly); render(); };
     RV.sectors.wire(box);
     paintRows(); setupProg(); renderDetail();
     wireBulk();

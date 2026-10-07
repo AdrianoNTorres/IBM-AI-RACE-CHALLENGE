@@ -13,8 +13,9 @@
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
     camFrac: 0,                      /* fractional progress 0..1 between step i and i+1 (smoothing at ≤1×) */
     hold: { dir: 0, start: 0, rate: 0 },
-    tab: 'pv', listMode: 'all', keptOnly: true, keptAll: false, detailId: null,
-    sideTab: 'layers', layerGroup: 'Sensors', teleTab: 'charts', guideTab: 'layout', setTab: 'prefs',
+    /* the lists and tabs open as they were left (RV.uiGet), otherwise at their defaults */
+    tab: 'pv', listMode: RV.uiGet('listMode', 'all'), keptOnly: RV.uiGet('keptOnly', true), keptAll: RV.uiGet('keptAll', false), detailId: null,
+    sideTab: RV.uiGet('sideTab', 'layers'), layerGroup: RV.uiGet('layerGroup', 'Sensors'), teleTab: RV.uiGet('teleTab', 'charts'), guideTab: 'layout', setTab: 'prefs',
     hoverD: null, chartsDirty: true, progDirty: true, loadTok: 0,
     loop: null, loopDraft: null,     /* a section of the lap played on a loop: [from, to] in metres of lap distance; the one being dragged */
     vmin: 0, vmax: 1,                /* speed range of the run in focus, for the colour scale */
@@ -255,7 +256,7 @@
   function setView(m) {
     if (m === 'basic' && S.ds && !S.ds.hasSimple) { RV.toast(NO_BASIC); return; }
     RV.prefs.view = m; RV.savePrefs();
-    RV.map.viewDefaults();
+    RV.map.viewDefaults(true);
     refreshAll();
   }
   RV.setView = setView; RV.NO_BASIC = NO_BASIC;
@@ -354,25 +355,26 @@
       b.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); e.stopPropagation(); hold(dir); } });
       b.addEventListener('keyup', release);
     }
-    /* replay keys, on the Track and Telemetry tabs */
+    /* replay keys, on the Track and Telemetry tabs; which key does what is RV.KEYS and the reader's changes to it */
     addEventListener('keydown', e => {
       if (S.tab !== 'pm' && S.tab !== 'pt') return;
       const tg = e.target, typing = tg.tagName === 'INPUT' && tg.type === 'text';
       if (typing || e.ctrlKey || e.metaKey || e.altKey || !S.R) return;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const act = RV.keyAction(e);
+      if (!act) return;
+      /* Space and Enter press the focused control; the tab of the page already open has nothing to do, so there they are replay keys */
+      const openTab = tg.classList && tg.classList.contains('tab') && tg.classList.contains('on');
+      if ((e.key === ' ' || e.key === 'Enter') && ((tg.tagName === 'BUTTON' && !openTab) || tg.tagName === 'SELECT' || tg.type === 'checkbox')) return;
+      if (act === 'fwd' || act === 'back') {
         if (tg.type === 'range' || tg.tagName === 'SELECT') tg.blur();
         e.preventDefault();
-        if (!e.repeat) hold(e.key === 'ArrowRight' ? 1 : -1);
-      } else if (e.key === ' ') {
-        /* space presses the focused control; the tab of the page already open has nothing to do, so there it is the replay key */
-        const openTab = tg.classList && tg.classList.contains('tab') && tg.classList.contains('on');
-        if ((tg.tagName === 'BUTTON' && !openTab) || tg.tagName === 'SELECT' || tg.type === 'checkbox') return;
-        e.preventDefault(); setPlaying(!S.playing);
-      } else if (e.key === 'Home') go(0);
-      else if (e.key === 'Escape' && S.loop) setLoop(null);
-      else RV.map.key(e);
+        if (!e.repeat) hold(act === 'fwd' ? 1 : -1);
+      } else if (act === 'play') { e.preventDefault(); if (!e.repeat) setPlaying(!S.playing); }
+      else if (act === 'home') go(0);
+      else if (act === 'endloop') { if (S.loop) setLoop(null); }
+      else RV.map.key(act);
     });
-    addEventListener('keyup', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') release(); });
+    addEventListener('keyup', e => { const a = RV.keyAction(e); if (a === 'fwd' || a === 'back') release(); });
     addEventListener('blur', release);
     addEventListener('resize', () => { RV.map.size(); S.chartsDirty = true; S.progDirty = true; });
 

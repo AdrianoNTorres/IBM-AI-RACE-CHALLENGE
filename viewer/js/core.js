@@ -49,16 +49,59 @@
     autoplay: true,                                    /* start the replay when a run opens */
     tutorialDone: false,                               /* the welcome and tour have been seen (or skipped) */
     sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
+    uid: '',                                           /* this browser's id: random, made on the first visit, sent nowhere */
+    keys: {},                                          /* replay keys the reader changed: action id to key (see RV.KEYS) */
+    ui: {},                                            /* what was last chosen on the pages: layers, panels, lists, tabs */
   });
+  /* a random id (UUID, version 4); crypto.randomUUID needs a secure page, so a page opened from disk makes its own */
+  function newId() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* not available here */ }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+  }
+  let fresh = false;                                     /* the id was made on this visit and is not stored yet */
   RV.loadPrefs = function () {
     const p = DEFAULTS();
     try { Object.assign(p, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* storage blocked: defaults */ }
     if (!p.source || p.source.kind !== 'github' || !p.source.link) p.source = DEFAULTS().source;
+    if (!p.keys || typeof p.keys !== 'object') p.keys = {};
+    if (!p.ui || typeof p.ui !== 'object') p.ui = {};
+    if (!p.uid) { p.uid = newId(); fresh = true; }
     return p;
   };
   RV.savePrefs = function () { try { localStorage.setItem(KEY, JSON.stringify(RV.prefs)); } catch (e) { /* not saved */ } };
-  RV.resetPrefs = function () { RV.prefs = DEFAULTS(); try { localStorage.removeItem(KEY); } catch (e) { /* nothing stored */ } };
+  /* everything back to its default, except the id: it stays the same browser */
+  RV.resetPrefs = function () { const uid = RV.prefs.uid; RV.prefs = DEFAULTS(); RV.prefs.uid = uid; RV.savePrefs(); };
   RV.prefs = RV.loadPrefs();
+  if (fresh) RV.savePrefs();
+  /* What was last chosen on the pages (RV.prefs.ui). Written a moment after the last change, so a slider being
+     dragged does not write on every step. */
+  let uiTimer = null;
+  RV.uiGet = (k, dflt) => (RV.prefs.ui[k] === undefined ? dflt : RV.prefs.ui[k]);
+  RV.uiSet = function (k, v) { RV.prefs.ui[k] = v; clearTimeout(uiTimer); uiTimer = setTimeout(RV.savePrefs, 250); };
+
+  /* ---------- replay keys ----------
+     The actions of the Track and Telemetry pages and their default keys. A key the reader changed is in
+     RV.prefs.keys. Letters are compared without regard to case. */
+  RV.KEYS = [
+    { id: 'play', label: 'Play or pause', def: ' ' },
+    { id: 'fwd', label: 'One step forward; hold for slow motion', def: 'ArrowRight' },
+    { id: 'back', label: 'One step back; hold for slow motion backwards', def: 'ArrowLeft' },
+    { id: 'home', label: 'Back to the start of the lap', def: 'Home' },
+    { id: 'endloop', label: 'End the loop over a section', def: 'Escape' },
+    { id: 'zoomin', label: 'Zoom the map in', def: '+' },
+    { id: 'zoomout', label: 'Zoom the map out', def: '-' },
+    { id: 'follow', label: 'Follow the car, or stop following', def: 'f' },
+  ];
+  RV.normKey = k => (k.length === 1 ? k.toLowerCase() : k);
+  RV.keyOf = id => RV.prefs.keys[id] || RV.KEYS.find(a => a.id === id).def;
+  /* the action a key press stands for, or null; = counts as + (the same key without Shift) unless = is a key itself */
+  RV.keyAction = function (e) {
+    const hit = k => RV.KEYS.find(a => RV.normKey(RV.keyOf(a.id)) === k), k = RV.normKey(e.key);
+    const a = hit(k) || (k === '=' ? hit('+') : null);
+    return a ? a.id : null;
+  };
+  RV.keyLabel = k => ({ ' ': 'Space', ArrowRight: '\u2192', ArrowLeft: '\u2190', ArrowUp: '\u2191', ArrowDown: '\u2193', Escape: 'Esc', '-': '\u2212' }[k] || (k.length === 1 ? k.toUpperCase() : k));
+  RV.kbd = id => '<kbd>' + RV.esc(RV.keyLabel(RV.keyOf(id))) + '</kbd>';
 
   /* ---------- theme ---------- */
   RV.pal = {};

@@ -8,6 +8,33 @@
   let srcKind = null;                  /* which kind of source the form shows: github | local */
   let result = null;                   /* outcome of the last attempt to apply a source: {ok, html} */
   let working = false;
+  let capturing = null;                /* the action whose new key is being waited for (Controls tab) */
+
+  /* While a key is being chosen, the next key press is the choice: nothing else on the page sees it. */
+  addEventListener('keydown', e => {
+    if (!capturing) return;
+    if (S.tab !== 'ps' || S.setTab !== 'controls') { capturing = null; return; }
+    e.preventDefault(); e.stopPropagation();
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;       /* a modifier on its way down */
+    const act = RV.KEYS.find(a => a.id === capturing);
+    if (e.key === 'Escape') { capturing = null; render(); return; }
+    if (e.key === 'Tab') { RV.toast('Tab moves between controls and cannot be a replay key.'); return; }
+    const k = RV.normKey(e.key), clash = RV.KEYS.find(a => a.id !== act.id && RV.normKey(RV.keyOf(a.id)) === k);
+    if (clash) { RV.toast(RV.keyLabel(k) + ' is already the key for \u201c' + clash.label + '\u201d. Change that one first.'); return; }
+    if (k === RV.normKey(act.def)) delete RV.prefs.keys[act.id]; else RV.prefs.keys[act.id] = k;
+    RV.savePrefs(); capturing = null; render(); RV.map.buildSide();
+  }, true);
+  function controlsHtml() {
+    const changed = RV.KEYS.some(a => RV.prefs.keys[a.id]);
+    return '<div class="card"><div class="cardhead"><h3>Replay keys</h3><span class="note">On the Track and Telemetry pages</span></div>' +
+      '<table class="spec keyst"><tr><th>Action</th><th>Key</th><th></th></tr>' + RV.KEYS.map(a => '<tr><td>' + a.label + '</td><td>' +
+        (capturing === a.id ? '<span class="warn">Press the new key \u2026</span>' : RV.kbd(a.id) + (RV.prefs.keys[a.id] ? ' <span class="note">default: ' + esc(RV.keyLabel(a.def)) + '</span>' : '')) +
+        '</td><td><button class="btn sm" data-key="' + a.id + '">' + (capturing === a.id ? 'Cancel' : 'Change') + '</button></td></tr>').join('') + '</table>' +
+      '<div class="acts"><button class="btn" id="kReset"' + (changed ? '' : ' disabled') + '>Reset the keys</button></div>' +
+      '<p class="note">Press Change, then the key you want. Esc cancels, so Esc itself can only be the key it is by default. A key that another action uses is refused. ' +
+      'With Ctrl, Alt or the Command key held, a key is left to the browser. Space and Enter still press a button that has the focus.</p>' +
+      '<p class="note">Fixed keys: in the versions table \u2191 \u2193 move between rows, Enter selects and Space adds to the comparison; on the lap-time chart \u2190 \u2192 step through the versions, + and \u2212 zoom, 0 resets.</p></div>';
+  }
 
   function seg(id, items, cur, label) {
     return '<div class="seg" id="' + id + '" role="group" aria-label="' + label + '">' + items.map(it =>
@@ -134,7 +161,7 @@
         '<dt>Versions</dt><dd>Every version with its lap time, the lap-time chart, the rankings, and a panel that explains what the selected version changed and why.</dd>' +
         '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams.</dd>' +
         '<dt>Telemetry</dt><dd>Charts of speed, throttle, brake and more along the lap, and in the detailed view sector times and a table of 100 m sections.</dd>' +
-        '<dt>Settings</dt><dd>Theme, view, data source and replay preferences, the guide to the data format, and this help.</dd></dl>') +
+        '<dt>Settings</dt><dd>Theme, view, data source and replay preferences; Controls, where the replay keys can be changed; this help; and the guide to the data format.</dd></dl>') +
       card('Selecting and comparing', '<ul class="helpul"><li><b>Select one version:</b> click its row on the Versions page.</li>' +
         '<li><b>Compare several (up to ' + RV.MAX_RUNS + '):</b> drag across rows, or Shift-click for a range, or Ctrl-click to add or remove one. Each gets its own colour.</li>' +
         '<li><b>The car in focus</b> is the one clicked first: the map follows it and time gaps are measured against it. Click another car on the map, its row in the Cars table, or its name in the top bar to put that one in focus.</li>' +
@@ -143,15 +170,16 @@
         (ds && !ds.hasSimple ? '<p class="warn">' + RV.NO_BASIC + '</p>' : '')) +
       '</div><div class="col">' +
       card('Mouse and keyboard', '<table class="spec"><tr><th>Where</th><th>Do this</th><th>To</th></tr>' +
-        '<tr><td>Replay</td><td>' + k('Space') + '</td><td>play or pause</td></tr>' +
-        '<tr><td>Replay</td><td>' + k('\u2190') + ' ' + k('\u2192') + '</td><td>move one step; hold for slow motion (0.1\u00d7, then 0.25\u00d7, then 0.5\u00d7)</td></tr>' +
-        '<tr><td>Replay</td><td>' + k('Home') + '</td><td>back to the start of the lap</td></tr>' +
+        '<tr><td>Replay</td><td>' + RV.kbd('play') + '</td><td>play or pause</td></tr>' +
+        '<tr><td>Replay</td><td>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</td><td>move one step; hold for slow motion (0.1\u00d7, then 0.25\u00d7, then 0.5\u00d7)</td></tr>' +
+        '<tr><td>Replay</td><td>' + RV.kbd('home') + ', ' + RV.kbd('endloop') + '</td><td>back to the start of the lap; end the loop over a section</td></tr>' +
         '<tr><td>Map</td><td>drag, wheel, double-click</td><td>move the map, zoom, return to the car</td></tr>' +
-        '<tr><td>Map</td><td>' + k('+') + ' ' + k('\u2212') + ', ' + k('F') + '</td><td>zoom; follow the car or stop following</td></tr>' +
+        '<tr><td>Map</td><td>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + ', ' + RV.kbd('follow') + '</td><td>zoom; follow the car or stop following</td></tr>' +
         '<tr><td>Charts</td><td>wheel, drag, click, double-click</td><td>zoom the distance axis, pan, move the car there, show the whole lap</td></tr>' +
         '<tr><td>Versions table</td><td>' + k('\u2191') + ' ' + k('\u2193') + ', ' + k('Enter') + ', ' + k('Space') + '</td><td>move between rows, select the row, add it to or remove it from the comparison</td></tr>' +
         '<tr><td>Lap-time chart</td><td>' + k('\u2190') + ' ' + k('\u2192') + ', ' + k('+') + ' ' + k('\u2212') + ', ' + k('0') + '</td><td>step through the versions, zoom, reset</td></tr>' +
-        '<tr><td>Anywhere</td><td>' + k('Tab') + '</td><td>move to the next control</td></tr></table>') +
+        '<tr><td>Anywhere</td><td>' + k('Tab') + '</td><td>move to the next control</td></tr></table>' +
+        '<div class="acts"><button class="btn" id="hKeys">Change the replay keys</button></div>') +
       card('Reading the colours', '<ul class="helpul"><li><b>Path on the map:</b> red where the car was slowest, green where it was fastest. In the detailed view it can show braking instead.</li>' +
         '<li><b>Sensor beams:</b> pink means the edge of the road is close, cyan means it is far.</li>' +
         '<li><b>Lap-time chart:</b> filled green = kept and a new best lap; filled blue = kept, not a new best; filled yellow = kept as an enabling change; red ring = rejected although its lap was faster; filled red = rejected, slower or equal; grey ring = rejected enabling change.</li>' +
@@ -175,14 +203,30 @@
     if (srcKind == null) srcKind = ds && ds.src.kind === 'local' ? 'local' : 'github';
     const noBasic = ds && !ds.hasSimple ? RV.NO_BASIC : '';
     const current = ds ? esc(ds.src.label()) : 'nothing is loaded';
-    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['help', 'Help']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
+    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['controls', 'Controls'], ['help', 'Help'], ['format', 'Data format']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
+    if (S.setTab !== 'controls') capturing = null;
+    const guideCard = () => '<div class="card guidecard"><div class="cardhead"><h3>Data format</h3><span class="note">What a repository or folder must contain</span></div>' +
+      '<div class="seg wrap subtabs" id="sGuide" role="tablist">' + Object.keys(GUIDE).map(k => '<button role="tab" data-v="' + k + '" class="' + (k === S.guideTab ? 'on' : '') + '" aria-selected="' + (k === S.guideTab) + '">' + GUIDE[k][0] + '</button>').join('') + '</div>' +
+      '<div class="guidebody">' + GUIDE[S.guideTab][1] + '</div></div>';
+    if (S.setTab === 'controls' || S.setTab === 'format') {
+      const ctl = S.setTab === 'controls', keep0 = box.scrollTop;
+      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>' + (ctl ? 'Controls' : 'Data format') + '</h1><p class="lead">' +
+        (ctl ? 'The keys that drive the replay. Saved in this browser only.' : 'How a repository or a folder must be laid out for this page to show it.') + '</p></div>' + tabs + (ctl ? controlsHtml() : guideCard()) + '</div>';
+      box.scrollTop = keep0;
+      box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
+      box.querySelectorAll('#sGuide button').forEach(b => { b.onclick = () => { S.guideTab = b.dataset.v; render(); }; });
+      box.querySelectorAll('[data-key]').forEach(b => { b.onclick = () => { capturing = capturing === b.dataset.key ? null : b.dataset.key; render(); const again = box.querySelector('[data-key="' + (capturing || b.dataset.key) + '"]'); if (again) again.focus(); }; });
+      if ($('kReset')) $('kReset').onclick = () => { RV.prefs.keys = {}; RV.savePrefs(); capturing = null; render(); RV.map.buildSide(); RV.toast('The replay keys are back to their defaults.'); };
+      return;
+    }
     if (S.setTab === 'help') {
       const keep0 = box.scrollTop;
       box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Help</h1><p class="lead">What the run viewer shows and how to use it.</p></div>' + tabs + helpHtml() + '</div>';
       box.scrollTop = keep0;
       box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
       $('hTour').onclick = () => RV.tutorial.start(true);
-      $('hFormat').onclick = () => { S.setTab = 'prefs'; render(); const g = box.querySelector('.guidecard'); if (g) g.scrollIntoView({ block: 'start' }); };
+      $('hFormat').onclick = () => { S.setTab = 'format'; render(); box.scrollTop = 0; };
+      if ($('hKeys')) $('hKeys').onclick = () => { S.setTab = 'controls'; render(); box.scrollTop = 0; };
       return;
     }
     let h = '<div class="setwrap"><div class="pagehead"><h1>Settings</h1><p class="lead">Saved in this browser only.</p></div>' + tabs +
@@ -198,7 +242,7 @@
       '<div class="field"><div><b>Start playing when a run opens</b><p class="note">Off: the replay waits at the start line.</p></div><label class="tg"><input type="checkbox" id="sAuto" ' + (P.autoplay ? 'checked' : '') + ' aria-label="Start playing when a run opens"><span></span></label></div>' +
       '<div class="field"><div><b>Compared cars</b><p class="note">Same lap time shows who is ahead on the track. Same distance puts the cars side by side to compare their lines.</p></div>' + seg('sSync', [['t', 'Same lap time'], ['d', 'Same distance']], P.sync, 'Where compared cars are placed') + '</div></div>' +
 
-      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
+      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed, the default keys, layers, panels and lists. The viewer ID stays.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
       '</div><div class="col">' +
 
       '<div class="card"><div class="cardhead"><h3>Data source</h3><span class="note">Now showing: ' + current + '</span></div>' +
@@ -212,9 +256,8 @@
       '<p class="note"><b>The map:</b> to see your own track, the source must include its ' + RV.TORCS + ' track file as <code>track.xml</code>. ' +
       (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p></div>' +
 
-      '<div class="card guidecard"><div class="cardhead"><h3>Data format</h3><span class="note">What a repository or folder must contain</span></div>' +
-      '<div class="seg wrap subtabs" id="sGuide" role="tablist">' + Object.keys(GUIDE).map(k => '<button role="tab" data-v="' + k + '" class="' + (k === S.guideTab ? 'on' : '') + '" aria-selected="' + (k === S.guideTab) + '">' + GUIDE[k][0] + '</button>').join('') + '</div>' +
-      '<div class="guidebody">' + GUIDE[S.guideTab][1] + '</div></div>' +
+      '<div class="card"><div class="cardhead"><h3>This browser</h3></div><div class="field"><div><b>Viewer ID</b><p class="note">A random id made on your first visit. Your settings, keys and layout are saved under it in this browser. It is sent nowhere.</p></div><code class="uid">' + esc(P.uid) + '</code></div>' +
+      '<p class="note">The description of the data a source must contain is on the <button class="link" id="sFormat">Data format</button> tab.</p></div>' +
       '</div></div></div>';
     const keep = box.scrollTop, focusLink = document.activeElement && document.activeElement.id === 'sLink';
     box.innerHTML = h;
@@ -229,11 +272,13 @@
     on('sSpeed', v => { P.speed = +v; RV.savePrefs(); $('spd').value = v; render(); });
     on('sSync', v => { P.sync = v; RV.savePrefs(); RV.map.buildSide(); render(); });
     on('sKind', v => { srcKind = v; result = null; render(); });
-    on('sGuide', v => { S.guideTab = v; render(); });
+    if ($('sFormat')) $('sFormat').onclick = () => { S.setTab = 'format'; render(); box.scrollTop = 0; };
     $('sAuto').onchange = e => { P.autoplay = e.target.checked; RV.savePrefs(); };
     $('sReset').onclick = () => {
       const was = P.source.link, local = ds && ds.src.kind === 'local';
       RV.resetPrefs(); RV.applyTheme(); $('spd').value = '1'; draft = RV.DEFAULT_LINK; srcKind = 'github'; result = null;
+      Object.assign(S, { listMode: 'all', keptOnly: true, keptAll: false, sideTab: 'layers', layerGroup: 'Sensors', teleTab: 'charts' });
+      $('pm').classList.remove('side-closed'); RV.map.defaults();
       RV.refreshAll();
       if (was !== RV.DEFAULT_LINK || local || !ds) apply(async () => RV.data.githubSource(RV.DEFAULT_LINK), RV.DEFAULT_LINK); else render();
       RV.toast('Settings are back to their defaults.');

@@ -442,6 +442,8 @@ th[title] { cursor: help; }
 .guidebody { overflow-wrap: anywhere; } .guidebody h4:first-child { margin-top: 4px; }
 table.spec { margin: 0 0 12px; } table.spec th, table.spec td { text-align: left; white-space: normal; vertical-align: top; padding: 7px 10px 7px 0; }
 table.spec td:first-child { white-space: nowrap; }
+table.keyst { max-width: 760px; } table.keyst td { vertical-align: middle; } table.keyst td:last-child { text-align: right; padding-right: 0; }
+code.uid { font-size: 12px; user-select: all; overflow-wrap: anywhere; }
 
 /* ---------- help tab, welcome and tour ---------- */
 #sTabs { margin-bottom: 18px; }
