@@ -246,7 +246,7 @@
       (rv ? '<th>Previous best<br><span class="note">' + esc(ref) + '</span></th><th>Difference</th>' : '') +
       S.CM.map(m => '<th>' + sw(m.id) + esc(m.id) + '</th><th><span class="note">to ' + esc(id) + '</span></th>').join('') + '</tr></thead><tbody>';
     const row = (name, where, k) => {
-      const mine = k < 3 ? R.sec[k] : R.sum.lap, theirs = rs ? (k < 3 ? rs[k] : rv.sum.lap) : null;
+      const mine = k < 3 ? R.sec[k] : R.sum.lap, theirs = rs ? (k < 3 ? rs[k] : (rv.sum ? rv.sum.lap : rv.pre ? rv.pre.lap : rv.lap)) : null;   /* the reference's times may come from the site's summary, before its recording is read */
       return '<tr' + (k === 3 ? ' class="total"' : '') + '><td class="l"><b>' + name + '</b></td><td class="l note">' + where + '</td><td class="num">' + tm(mine) + '</td>' +
         (rv ? '<td class="num dim">' + (rs ? tm(theirs) : (rv.file ? 'loading' : 'no recording')) + '</td><td class="num">' + (rs && mine != null && theirs != null ? RV.secDelta(mine - theirs) : '') + '</td>' : '') +
         S.CM.map(m => { const x = m.r.sec ? (k < 3 ? m.r.sec[k] : m.r.sum.lap) : null; return '<td class="num">' + tm(x) + '</td><td class="num">' + (x != null && mine != null ? RV.secDelta(x - mine) : '') + '</td>'; }).join('') + '</tr>';

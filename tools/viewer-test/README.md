@@ -11,6 +11,7 @@ The viewer (`viewer/`) has no build step and no unit tests. It is checked by dri
 | `smoke.js` | Opens every page and tab, runs a comparison, the tour and a phone-width window, and fails on any script error. |
 | `phase15.js` | Phase 15: the validator, the "Add versions" window (one version, import, export, change, delete), a reload in between. Empties the browser's database of entered versions before and after. |
 | `github.js` | Phase 15.1: log in, the Repository page (add, upload, move, remove, edit, a conflict, a new branch), publishing an entered version, settings saved and loaded. Writes go to a stand-in for the GitHub API inside the page; one check reads the real repository without a login. |
+| `summary.js` | Phase 15.3: the site's summary (run `node tools/viewer-summary/build.js` first) and the analysis limits as a share of the lap. |
 | `security.js`, `frame.html` | Phase 15.2: the real GitHub refuses a write without a token; the page runs only its own script files, connects only to itself and GitHub, does not start inside a frame; a visitor who may only read cannot collect or save a change; a tampered settings file is cleaned. |
 
 `open()` redirects the page's requests to `raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/<branch>/...` to the local server, so the page reads the changelog and the runs **of your working tree**, not what is on GitHub.

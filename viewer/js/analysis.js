@@ -15,10 +15,13 @@
   const K = {
     lineFull: 3,                        /* metres from the reference line that count as 0 % for that point */
     lineOn: 0.5,                        /* within this many metres the car is "on the line" */
-    healthOk: 0.05, healthWarn: 0.25,   /* seconds lost in a sector: up to the first is green, up to the second yellow, more is red */
+    /* Time lost is judged as a share of the reference lap's time, so the same rules fit a 70 s lap and a 4 minute
+       one. The shares are written in thousandths of a per cent of the lap; on a 73 s lap they come to the seconds in
+       brackets. limits(ref) turns them into seconds for one reference lap. */
+    healthOk: 68.4, healthWarn: 341.8,  /* lost in a sector: up to the first is green (0.05 s), up to the second yellow (0.25 s), more is red */
     win: 25,                            /* metres: the lap is examined in windows of this length */
-    winLoss: 0.010,                     /* seconds lost in one window for it to belong to a problem area */
-    zoneLoss: 0.04, zoneBad: 0.12,      /* seconds lost over an area: from the first it is a problem (yellow), from the second a bad one (red) */
+    winLoss: 13.67,                     /* lost in one window for it to belong to a problem area (0.010 s) */
+    zoneLoss: 54.7, zoneBad: 164.1,     /* lost over an area: from the first it is a problem, yellow (0.04 s); from the second a bad one, red (0.12 s) */
     zones: 6,                           /* at most this many problem areas */
     lead: 50,                           /* metres before an area that the loop and the explanation also take in: the cause is usually on the way in */
   };
@@ -31,6 +34,14 @@
     return d1 > d0 && d > d0 ? r.t[j] + (r.t[j + 1] - r.t[j]) * (d - d0) / (d1 - d0) : r.t[j];
   }
   const sev = (x, a, b) => (x <= a ? 'ok' : x <= b ? 'warn' : 'bad');
+  /* the limits in seconds for one reference lap: its lap time times each share */
+  function limits(ref) {
+    const lap = ref.sum && ref.sum.lap != null ? ref.sum.lap : ref.t[ref.n - 1] - ref.t[0], f = Math.max(lap, 1) / 1e5, o = { lap: lap };
+    for (const k of ['healthOk', 'healthWarn', 'winLoss', 'zoneLoss', 'zoneBad']) o[k] = K[k] * f;
+    return o;
+  }
+  /* a limit in words: seconds, to as many places as it needs */
+  const secs = x => (x >= 1 ? x.toFixed(1) : x >= 0.1 ? x.toFixed(2) : x.toFixed(3).replace(/0$/, '')) + ' s';
   const WORD = { ok: 'on pace', warn: 'needs some work', bad: 'needs work' };
 
   /* Everything about run R against the reference lap, or null when there is nothing to compare with (no map
@@ -47,7 +58,7 @@
     }
     if (!ref || !ref.x) return null;
     if (R._an && R._an.ref === ref) return R._an;
-    const hw = S.ds.trk.hw, n = R.n, dev = new Float32Array(n), self = ref === R;
+    const hw = S.ds.trk.hw, n = R.n, dev = new Float32Array(n), self = ref === R, L = limits(ref);
     let sum = 0, max = 0, maxAt = 0, on = 0, len = 0;
     /* line: the sideways distance between the two cars at the same point of the lap, in metres */
     for (let k = 0, j = 0; k < n; k++) {
@@ -63,7 +74,7 @@
     for (let k = 1; k < n; k++) mean += dev[k] * Math.max(0, R.d[k] - R.d[k - 1]);
     const line = { dev: dev, pct: len ? 100 * sum / len : 100, on: len ? 100 * on / len : 100, mean: len ? mean / len : 0, max: max, maxAt: maxAt };
     /* sectors: seconds lost in each */
-    const health = R.sec && ref.sec ? [0, 1, 2].map(k => (R.sec[k] == null || ref.sec[k] == null ? null : { delta: R.sec[k] - ref.sec[k], sev: sev(R.sec[k] - ref.sec[k], K.healthOk, K.healthWarn) })) : null;
+    const health = R.sec && ref.sec ? [0, 1, 2].map(k => (R.sec[k] == null || ref.sec[k] == null ? null : { delta: R.sec[k] - ref.sec[k], sev: sev(R.sec[k] - ref.sec[k], L.healthOk, L.healthWarn) })) : null;
     /* problem areas: windows where time is lost, joined when they touch */
     const zones = [];
     if (!self) {
@@ -71,12 +82,12 @@
       let cur = null;
       for (let d = 0; d <= end; d += K.win) {
         const loss = (tAt(R, d + K.win) - tAt(R, d)) - (tAt(ref, d + K.win) - tAt(ref, d));
-        if (loss >= K.winLoss) { if (cur && d - cur.d1 <= K.win) { cur.d1 = d + K.win; cur.loss += loss; } else { cur = { d0: d, d1: d + K.win, loss: loss }; zones.push(cur); } }
+        if (loss >= L.winLoss) { if (cur && d - cur.d1 <= K.win) { cur.d1 = d + K.win; cur.loss += loss; } else { cur = { d0: d, d1: d + K.win, loss: loss }; zones.push(cur); } }
       }
     }
-    const top = zones.filter(z => z.loss >= K.zoneLoss).sort((a, b) => b.loss - a.loss).slice(0, K.zones).sort((a, b) => a.d0 - b.d0);
-    top.forEach((z, k) => { z.n = k + 1; z.sev = z.loss >= K.zoneBad ? 'bad' : 'warn'; z.from = Math.max(0, z.d0 - K.lead); z.why = explain(R, ref, z, hw); });
-    return (R._an = { ref: ref, what: what, self: self, line: line, health: health, zones: top });
+    const top = zones.filter(z => z.loss >= L.zoneLoss).sort((a, b) => b.loss - a.loss).slice(0, K.zones).sort((a, b) => a.d0 - b.d0);
+    top.forEach((z, k) => { z.n = k + 1; z.sev = z.loss >= L.zoneBad ? 'bad' : 'warn'; z.from = Math.max(0, z.d0 - K.lead); z.why = explain(R, ref, z, hw); });
+    return (R._an = { ref: ref, what: what, self: self, line: line, health: health, zones: top, lim: L });
   }
 
   /* What differs between the two laps in a problem area: sentences, the most telling first. */
@@ -275,8 +286,8 @@
       '<p class="anline"><span>Racing-line accuracy</span><b class="num">' + A.line.pct.toFixed(0) + ' %</b><small>on average ' + A.line.mean.toFixed(2) + ' m from that lap’s line, at most ' + A.line.max.toFixed(1) + ' m (at ' + RV.fmtInt(A.line.maxAt) + ' m); ' + A.line.on.toFixed(0) + ' % of the lap within ' + K.lineOn + ' m</small></p>' +
       (A.zones.length ? '<div class="anzones">' + A.zones.map(z => '<div class="anzone"><i class="hdot h-' + z.sev + '"></i><div><b>' + z.n + '. ' + RV.fmtInt(z.d0) + '–' + RV.fmtInt(z.d1) + ' m</b> <span class="num slower">' + lossTxt(z.loss) + '</span><small>' + z.why[0] + '</small></div>' +
           '<button class="btn sm" data-loop="' + z.n + '">Loop</button><button class="btn sm" data-why="' + z.n + '">Why</button></div>').join('') + '</div>'
-        : '<p class="note">No stretch of the lap loses ' + K.zoneLoss + ' s or more.</p>') +
-      '<p class="note">Green: up to ' + K.healthOk + ' s lost in the sector. Yellow: up to ' + K.healthWarn + ' s. Red: more. The pins on the map and the bands on the charts mark the same areas.</p>';
+        : '<p class="note">No stretch of the lap loses ' + secs(A.lim.zoneLoss) + ' or more.</p>') +
+      '<p class="note">Green: up to ' + secs(A.lim.healthOk) + ' lost in the sector. Yellow: up to ' + secs(A.lim.healthWarn) + '. Red: more. These limits are a share of that lap\u2019s time (' + (K.healthOk / 1000).toFixed(2) + ' % and ' + (K.healthWarn / 1000).toFixed(2) + ' %), so they fit a lap of any length. The pins on the map and the bands on the charts mark the same areas.</p>';
     box.querySelectorAll('[data-loop]').forEach(b => { b.onclick = () => loop(A.zones[+b.dataset.loop - 1]); });
     box.querySelectorAll('[data-why]').forEach(b => { b.onclick = () => popup(A.zones[+b.dataset.why - 1]); });
     return box;

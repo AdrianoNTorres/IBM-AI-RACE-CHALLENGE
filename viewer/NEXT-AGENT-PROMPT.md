@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 15.1, the GitHub login and the Repository page (2026-10-07). **Next: Phase 16.**
+**Last updated:** after Phase 15.3 (2026-10-07). **Next: Phase 16.**
 
 ---
 
@@ -35,11 +35,10 @@ Read, in this order: this section; "What is left"; the phase you are about to bu
 - **HUD panels are already windows** (drag, resize by a corner grip, close, fold, back to place, only the car in focus): built during Phase 13 at the user's request, ahead of Phase 16.
 - **Hosting** is static on GitHub Pages; Streamlit was not used. Settings are per browser (`localStorage`), not per account.
 
-### Offered to the user and not decided
+### Offered to the user and decided
 
-- Problem-area thresholds as a share of the lap time instead of fixed seconds (`K` in `js/analysis.js`), for data with larger gaps or another track length.
-- A summary file (one JSON with every version's lap and sector times, written by the publishing workflow) so that sector data does not need every recording to be loaded. SQL was discussed and not recommended.
-- Moving the site to the branch `main` (see Phase 9).
+- Problem-area thresholds as a share of the lap time, and the summary file: **built** (Phase 15.3, user 2026-10-07).
+- Moving the site to the branch `main` (see Phase 9): **not now** (user, 2026-10-07: "leave the site in experimental_hosting for now").
 
 ## What has been done
 
@@ -206,6 +205,13 @@ Security pass (user, 2026-10-07: "a random user must not be able to edit, change
 - **Settings read from GitHub are not trusted** (`clean()` in `account.js`): only the known settings, each in its expected shape; no key, viewer ID or data source is ever taken from the file.
 - `<meta name="referrer" content="no-referrer">`.
 - **Told to the user, not done by the page (they are settings on GitHub):** the branches are not protected (measured: `protected: false` on `main` and `experimental_hosting`); a ruleset that blocks force pushes and deletions is worth adding. A leaked write token can change the site's own files under `viewer/`, which the workflow then publishes: keep the token limited to this repository and "Contents", with an expiry date. Every site published under the same GitHub account shares this site's browser storage (same origin), so a token kept in the browser can be read by scripts of the owner's other Pages sites.
+
+### Phase 15.3 (COMPLETE) — tag: `phase-15.3`
+The two things offered earlier that the user asked for (2026-10-07). Check: `node tools/viewer-summary/build.js`, then `node tools/viewer-test/summary.js`.
+- **Analysis limits as a share of the lap** (`js/analysis.js`): `K.healthOk`, `healthWarn`, `winLoss`, `zoneLoss`, `zoneBad` are thousandths of a per cent of the reference lap's time; `limits(ref)` turns them into seconds, kept on the result as `A.lim` and used for every text that names a limit. On the 73 s lap they are the seconds they were (0.05, 0.25, 0.010, 0.04, 0.12): v1.05 has exactly the same problem areas as before.
+- **The summary** (`viewer/summary.json`, not in Git): written by `tools/viewer-summary/build.js`, which runs the viewer's own `core.js`, `track.js` and `data.js` in Node, so its lap and sector times are the page's own to the last digit. The publishing workflow runs it before uploading (`continue-on-error`: without it the site works as before) and is now also triggered by `docs/CHANGELOG.md`, `runs/**` and `track.xml`. `data.js` `readSummary` takes it only for the repository, branch and folder it was made from, never for a page opened from disk; a version uses its entry only while it still names the same recording (`v.pre`, and from it `v.sec`, `v.beams`). **`v.sec` no longer means the recording is loaded: `v.sum` does.** (One table assumed the first and threw; found by the test, fixed.)
+- What it gives: the best theoretical lap over all 100 recordings as the page opens; sector times in the details of a version that was never opened; on Versions, Sectors across versions, the tick "Every version, not only the opened ones" (`S.secAll`). The narrow table on the Track page stays with the opened versions.
+- **Not checked: the workflow run itself** (the step was run by hand on this machine; on GitHub it runs on Linux with the Node that the runner has).
 
 ## Pre-Phase-9 audit (2026-10-07)
 

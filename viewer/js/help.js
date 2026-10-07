@@ -38,6 +38,7 @@
       '<tr><td><code>track0</code> … <code>track18</code></td><td>optional</td><td>the 19 distance sensors, metres (−1 off track); without them the run replays without beams</td></tr>' +
       '<tr><td><code>focA</code>, <code>foc0</code> … <code>foc4</code></td><td>optional</td><td>focus rays: centre angle and five distances; without them no focus rays</td></tr></table>' +
       '<p><b>Lap time of a recording:</b> the <code>lastLapTime</code> of the first row after the line if there is one; otherwise the last clock reading plus the remaining distance at the last speed. <b>Slowest corner:</b> the lowest speed more than 100 m from the start line and after the first 8 seconds. Other columns are ignored.</p>' +
+      '<p><b>Sector times before a recording is opened:</b> when the site is published, a summary of every recording of its own repository is written (lap, sector times, sensors), so the Versions page knows them at once. For another repository or a folder, sector times appear as recordings are opened.</p>' +
       '<p>A version without a CSV is listed but cannot be replayed. A recording that stops early is shown as an incomplete lap; an empty one is reported as such.</p>'],
     optional: ['Optional files',
       '<h4>docs/CHANGELOG-simple.md</h4><p>Same format as <code>docs/CHANGELOG.md</code>, same version names. Its title and its What changed, Why, Decision and Learned fields are the texts of the <b>basic view</b>. Without this file the basic view cannot be selected and the page uses the detailed view.</p>' +
