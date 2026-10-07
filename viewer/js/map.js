@@ -105,7 +105,7 @@
      rear wheels 0.75 m either side, tyres 0.30 m wide. The front wheels turn with the recorded steering (full lock 21 degrees).
      Never drawn smaller than about 16 px. */
   function drawCar(ctx, p, fill, z, userScale) {           /* p: [x, y, yaw, steering], see poseAt */
-    const sc = Math.max(1, 16 / (4.8 * z)) * (userScale || 1), lw = 0.05, P = RV.pal;
+    const sc = Math.max(1, 16 / (4.8 * z)) * (userScale || RV.prefs.carSize), lw = 0.05, P = RV.pal;
     ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(p[2]); ctx.scale(sc, sc);
     ctx.strokeStyle = P['road-mark']; ctx.lineWidth = 0.06; ctx.beginPath();
     for (const w of [[1.6, 0.70], [1.6, -0.70], [-1.35, 0.75], [-1.35, -0.75]]) {
@@ -387,16 +387,16 @@
       sc.innerHTML = '<div class="cap">Car size (1 = true scale)</div>';
       const allIds = [S.sel[0]].concat(S.CM.map(m => m.id));
       for (const id of allIds) {
-        const cur = S.carScale[id] || 1;
+        const cur = S.carScale[id] || RV.prefs.carSize;
         const row = el('div', 'carsize', '<i class="sw" style="background:' + RV.col(id) + '"></i><b>' + esc(id) + '</b>' +
           '<input type="range" min="0.3" max="4" step="0.1" value="' + cur.toFixed(1) + '" aria-label="Car size for ' + esc(id) + '"><span class="num">' + cur.toFixed(1) + '×</span>');
-        row.querySelector('input').oninput = e => { S.carScale[id] = +e.target.value; e.target.nextSibling.textContent = (+e.target.value).toFixed(1) + '×'; };
+        row.querySelector('input').oninput = e => { S.carScale[id] = +e.target.value; RV.uiSet('carScale', S.carScale); e.target.nextSibling.textContent = (+e.target.value).toFixed(1) + '×'; };
         const resetBtn = el('button', 'btn sm', 'Reset');
-        resetBtn.onclick = () => { delete S.carScale[id]; buildSide(); };
+        resetBtn.onclick = () => { delete S.carScale[id]; RV.uiSet('carScale', S.carScale); buildSide(); };
         row.appendChild(resetBtn); sc.appendChild(row);
       }
       const resetAll = el('button', 'btn wide', 'Reset all car sizes');
-      resetAll.onclick = () => { S.carScale = {}; buildSide(); };
+      resetAll.onclick = () => { S.carScale = {}; RV.uiSet('carScale', S.carScale); buildSide(); };
       sc.appendChild(resetAll);
       s.appendChild(sc);
     }
@@ -664,7 +664,7 @@
         for (const p of leftPts) g.lineTo(p[0], p[1]);
         for (let k = rightPts.length - 1; k >= 0; k--) g.lineTo(rightPts[k][0], rightPts[k][1]);
         g.closePath();
-        g.fillStyle = 'rgba(0,0,0,0.55)';
+        g.fillStyle = 'rgba(0,0,0,' + RV.prefs.loopDim + ')';         /* how dark: Settings, Replay */
         g.fill('evenodd');
         g.restore();
       }
@@ -916,6 +916,13 @@
       if (H.zoom) view.z = +H.zoom;
     },
     viewDefaults: viewDefaults, defaults: defaults,
+    /* the camera a run opens with (Settings, Replay), unless the address asked for one */
+    startCamera() {
+      if (hashCam) return;
+      const m = RV.prefs.camera;
+      view.follow = m !== 'fit'; view.rot = m === 'up'; view.fit = m === 'fit'; view.all = false; view.ox = view.oy = 0; view.ang = 0;
+      if (view.follow && view.z < 1) view.z = 3.2;
+    },
     /* the tutorial talks about the sensor beams, so they are shown while it runs and put back afterwards */
     tourLayers(on) {
       if (on) { if (!tourSaved) tourSaved = [LY.beams.on, LY.hits.on, LY.focus.on]; LY.beams.on = LY.hits.on = LY.focus.on = true; }

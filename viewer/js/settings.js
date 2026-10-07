@@ -9,6 +9,25 @@
   let result = null;                   /* outcome of the last attempt to apply a source: {ok, html} */
   let working = false;
   let capturing = null;                /* the action whose new key is being waited for (Controls tab) */
+  let shown = null;                    /* the service whose key is shown in full for the moment (API keys) */
+
+  /* The API keys card: every service, its key (masked) and what each feature that needs it can do now. */
+  function keysHtml() {
+    const K = RV.apiKeys, link = S.ds && S.ds.src.kind === 'github' ? 'https://github.com/' + S.ds.src.name : RV.prefs.source.link;
+    const word = { none: 'no key', ok: 'the key works', bad: 'GitHub refused this key', unknown: 'not checked (no connection)', checking: 'checking \u2026' };
+    return '<div class="card keyscard"><div class="cardhead"><h3>API keys</h3><span class="note">Your own keys for outside services. Optional.</span></div>' +
+      '<p class="note">Repository in use: <a href="' + esc(link) + '" target="_blank" rel="noopener">' + esc(link) + '</a></p>' +
+      K.SERVICES.map(sv => {
+        const st = K.status(sv.id), key = K.get(sv.id);
+        return '<div class="field"><div><b>' + esc(sv.name) + '</b><p class="note">' + esc(sv.what) + '</p>' +
+          (key ? '<p><code class="uid">' + esc(shown === sv.id ? key : K.masked(key)) + '</code> <span class="' + (st === 'bad' ? 'warn' : 'note') + '">' + word[st] + '</span></p>' : '') + '</div>' +
+          '<div class="acts"><button class="btn' + (key ? '' : ' prim') + '" data-keyset="' + sv.id + '">' + (key ? 'Replace' : 'Enter a key') + '</button>' +
+          (key ? '<button class="btn" data-keyshow="' + sv.id + '" aria-pressed="' + (shown === sv.id) + '">' + (shown === sv.id ? 'Hide' : 'Show') + '</button><button class="btn" data-keyclear="' + sv.id + '">Delete</button>' : '') + '</div></div>' +
+          '<ul class="keyfeat">' + sv.features.map(f => { const b = K.blocked(f.id); return '<li class="' + (b ? 'blocked' : 'working') + '"><b>' + esc(f.name) + '</b> <span>' + (b ? 'blocked' : 'working') + '</span>' +
+            (b ? '<small>' + esc(f.why.charAt(0).toUpperCase() + f.why.slice(1)) + '</small>' : '') + '</li>'; }).join('') + '</ul>';
+      }).join('') +
+      '<p class="note">A key is kept in this browser only, under your viewer ID, and is never part of the site or its repository. \u201cReset to defaults\u201d leaves it; Delete removes it.</p></div>';
+  }
 
   /* While a key is being chosen, the next key press is the choice: nothing else on the page sees it. */
   addEventListener('keydown', e => {
@@ -240,21 +259,28 @@
       '<div class="card"><div class="cardhead"><h3>Replay</h3></div>' +
       '<div class="field"><div><b>Speed</b><p class="note">The speed a replay starts at. The bar under the replay changes it at any time.</p></div>' + seg('sSpeed', [['0.25', '0.25×'], ['0.5', '0.5×'], ['1', '1×'], ['2', '2×'], ['4', '4×']], String(P.speed), 'Replay speed') + '</div>' +
       '<div class="field"><div><b>Start playing when a run opens</b><p class="note">Off: the replay waits at the start line.</p></div><label class="tg"><input type="checkbox" id="sAuto" ' + (P.autoplay ? 'checked' : '') + ' aria-label="Start playing when a run opens"><span></span></label></div>' +
-      '<div class="field"><div><b>Compared cars</b><p class="note">Same lap time shows who is ahead on the track. Same distance puts the cars side by side to compare their lines.</p></div>' + seg('sSync', [['t', 'Same lap time'], ['d', 'Same distance']], P.sync, 'Where compared cars are placed') + '</div></div>' +
+      '<div class="field"><div><b>Compared cars</b><p class="note">Same lap time shows who is ahead on the track. Same distance puts the cars side by side to compare their lines.</p></div>' + seg('sSync', [['t', 'Same lap time'], ['d', 'Same distance']], P.sync, 'Where compared cars are placed') + '</div>' +
+      '<div class="field"><div><b>Camera when a run opens</b><p class="note">A comparison always opens on the whole track.</p></div>' + seg('sCam', [['fit', 'Whole track'], ['follow', 'Follow the car'], ['up', 'Follow, car points up']], P.camera, 'Camera when a run opens') + '</div>' +
+      '<div class="field"><div><b>Smooth motion</b><p class="note">At 1× and slower the cars and the camera glide between the recorded steps. Off: they jump from step to step.</p></div><label class="tg"><input type="checkbox" id="sSmooth" ' + (P.smooth ? 'checked' : '') + ' aria-label="Smooth motion at 1× and slower"><span></span></label></div>' +
+      '<div class="field"><div><b>Car size</b><p class="note">For every car without a size of its own (Track, Camera). 1 is true scale.</p></div><div class="setsl"><input type="range" id="sCar" min="0.3" max="4" step="0.1" value="' + P.carSize + '" aria-label="Car size"><span class="num" id="sCarV">' + P.carSize.toFixed(1) + '×</span></div></div>' +
+      '<div class="field"><div><b>Dimming outside a loop</b><p class="note">How dark the rest of the map is while a section is played on a loop.</p></div><div class="setsl"><input type="range" id="sDim" min="0" max="0.9" step="0.05" value="' + P.loopDim + '" aria-label="Dimming outside a loop"><span class="num" id="sDimV">' + Math.round(P.loopDim * 100) + ' %</span></div></div></div>' +
 
-      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed, the default keys, layers, panels and lists. The viewer ID stays.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
+      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed and the other replay values, the default keys, layers, panels, lists and car sizes. The viewer ID and your API keys stay.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
       '</div><div class="col">' +
 
       '<div class="card"><div class="cardhead"><h3>Data source</h3><span class="note">Now showing: ' + current + '</span></div>' +
       seg('sKind', [['github', 'GitHub repository'], ['local', 'Local folder']], srcKind, 'Kind of data source') +
       (srcKind === 'github'
         ? '<label class="lbl" for="sLink">Repository link</label><div class="inrow"><input type="text" id="sLink" spellcheck="false" autocomplete="off" value="' + esc(draft) + '"><button class="btn prim" id="sApply"' + (working ? ' disabled' : '') + '>Load</button></div>' +
+          '<p class="note"><button class="keygate' + (RV.apiKeys.blocked('private') ? ' blocked' : '') + '" id="sPrivate"' + (RV.apiKeys.blocked('private') ? ' aria-disabled="true" title="Needs your own GitHub token. Click to enter one."' : ' title="Your GitHub token is used for repositories that are not public."') + '>Private repositories: ' + (RV.apiKeys.blocked('private') ? 'need your GitHub token' : 'on, with your GitHub token') + '</button></p>' +
           '<p class="note">A public repository: <code>https://github.com/owner/repo</code>, the same with <code>/tree/&lt;branch&gt;</code>, or <code>owner/repo</code>. ' + (draft.trim() !== RV.DEFAULT_LINK ? '<button class="link" id="sDefault">Use the default repository</button>' : 'This is the default repository.') + '</p>'
         : '<div class="inrow"><button class="btn prim" id="sFolder"' + (working ? ' disabled' : '') + '>Choose a folder …</button></div>' +
           '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains docs/CHANGELOG.md, or drop it on this page. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
       '<div id="srcResult" class="result"></div>' +
       '<p class="note"><b>The map:</b> to see your own track, the source must include its ' + RV.TORCS + ' track file as <code>track.xml</code>. ' +
       (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p></div>' +
+
+      keysHtml() +
 
       '<div class="card"><div class="cardhead"><h3>This browser</h3></div><div class="field"><div><b>Viewer ID</b><p class="note">A random id made on your first visit. Your settings, keys and layout are saved under it in this browser. It is sent nowhere.</p></div><code class="uid">' + esc(P.uid) + '</code></div>' +
       '<p class="note">The description of the data a source must contain is on the <button class="link" id="sFormat">Data format</button> tab.</p></div>' +
@@ -271,12 +297,20 @@
     on('sView', v => { RV.setView(v); });
     on('sSpeed', v => { P.speed = +v; RV.savePrefs(); $('spd').value = v; render(); });
     on('sSync', v => { P.sync = v; RV.savePrefs(); RV.map.buildSide(); render(); });
+    on('sCam', v => { P.camera = v; RV.savePrefs(); render(); });
+    $('sSmooth').onchange = e => { P.smooth = e.target.checked; RV.savePrefs(); };
+    $('sCar').oninput = e => { P.carSize = +e.target.value; $('sCarV').textContent = P.carSize.toFixed(1) + '\u00d7'; RV.savePrefs(); };
+    $('sDim').oninput = e => { P.loopDim = +e.target.value; $('sDimV').textContent = Math.round(P.loopDim * 100) + ' %'; RV.savePrefs(); };
+    box.querySelectorAll('[data-keyset]').forEach(b => { b.onclick = () => RV.apiKeys.prompt(b.dataset.keyset, b.dataset.feature); });
+    box.querySelectorAll('[data-keyclear]').forEach(b => { b.onclick = () => { RV.apiKeys.clear(b.dataset.keyclear); shown = null; RV.toast('The key was deleted from this browser.'); render(); }; });
+    box.querySelectorAll('[data-keyshow]').forEach(b => { b.onclick = () => { shown = shown === b.dataset.keyshow ? null : b.dataset.keyshow; render(); }; });
     on('sKind', v => { srcKind = v; result = null; render(); });
     if ($('sFormat')) $('sFormat').onclick = () => { S.setTab = 'format'; render(); box.scrollTop = 0; };
     $('sAuto').onchange = e => { P.autoplay = e.target.checked; RV.savePrefs(); };
     $('sReset').onclick = () => {
       const was = P.source.link, local = ds && ds.src.kind === 'local';
       RV.resetPrefs(); RV.applyTheme(); $('spd').value = '1'; draft = RV.DEFAULT_LINK; srcKind = 'github'; result = null;
+      S.carScale = {};
       Object.assign(S, { listMode: 'all', keptOnly: true, keptAll: false, sideTab: 'layers', layerGroup: 'Sensors', teleTab: 'charts' });
       $('pm').classList.remove('side-closed'); RV.map.defaults();
       RV.refreshAll();
@@ -291,6 +325,7 @@
       if ($('sDefault')) $('sDefault').onclick = () => { draft = RV.DEFAULT_LINK; render(); };
     }
     if ($('sFolder')) $('sFolder').onclick = () => apply(pickFolder);
+    if ($('sPrivate')) $('sPrivate').onclick = () => { if (RV.apiKeys.blocked('private')) RV.apiKeys.prompt('github', 'private'); else RV.toast('Your GitHub token is stored: a private repository it may read can be loaded like any other.'); };
   }
 
   RV.settings = { render: render, useSource(src) { srcKind = src.kind; return src._pick ? apply(pickFolder) : apply(async () => src); } };

@@ -81,7 +81,11 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 
 **Basic view and Detailed view.** The basic view uses the plain-language texts from `docs/CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
 
-Settings are saved in the browser (`localStorage`, key `rv_prefs`), together with a random viewer ID made on the first visit, the replay keys you changed (Settings, **Controls**: press Change, then the key) and the layout you left: which layers and panels are on, their opacity and line width, the open tabs, the versions list and the section gap. "Reset to defaults" puts all of it back except the ID. Nothing is sent anywhere.
+Settings are saved in the browser (`localStorage`, key `rv_prefs`), together with a random viewer ID made on the first visit, the replay keys you changed (Settings, **Controls**: press Change, then the key) and the layout you left: which layers and panels are on, their opacity and line width, the open tabs, the versions list and the section gap. "Reset to defaults" puts all of it back except the ID and your API keys. Nothing is sent anywhere.
+
+**Replay defaults** (Settings, Replay): speed, start playing when a run opens, where compared cars are placed, the camera a run opens with, smooth motion on or off, the default car size and how dark the map is outside a looped section. A size given to a single car on the Track tab is remembered.
+
+**API keys** (Settings, API keys): the page needs no key for public repositories. With a GitHub token of your own it can read a private repository of yours and is not held to GitHub's 60 checks an hour. The key is stored in this browser only, shown masked, sent to GitHub and to nobody else, and can be replaced or deleted at any time; the card says for each feature whether it works or is blocked, and a blocked feature asks for the key when clicked (with steps for getting one). The system is `js/keys.js`.
 
 Under Layers in the detailed view every layer has a switch and an opacity slider, and every layer that is a line a width slider; the panels on the map have a switch and an opacity slider. New layers and panels are added in code with `RV.map.addLayer` and `RV.map.addPanel` (`js/map.js`) and get the same controls.
 

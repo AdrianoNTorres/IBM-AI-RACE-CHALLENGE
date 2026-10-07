@@ -231,19 +231,40 @@
     const api = 'https://api.github.com/repos/' + name;
     src.where = () => name + (src.branch && src.branch !== 'HEAD' ? ', branch ' + src.branch : ', default branch') + (src.dir ? ', folder ' + src.dir.replace(/\/$/, '') : '');
     src.label = () => 'GitHub: ' + src.where();
-    src.readText = async (path, what) => (await http(raw(src.branch, src.dir, path), what || path)).text();
+    /* The reader's own GitHub token, if one is stored (js/keys.js). With it the GitHub API answers more often and a
+       private repository can be read: raw.githubusercontent.com takes no token from a web page, so a file it does
+       not have is then asked for through the API. */
+    const token = () => (RV.apiKeys ? RV.apiKeys.get('github') : '');
+    const auth = extra => { const t = token(); return t ? { headers: Object.assign({ Authorization: 'Bearer ' + t }, extra || {}) } : (extra ? { headers: extra } : undefined); };
+    async function read(branch, dir, path, what) {
+      let miss;
+      try { return await (await http(raw(branch, dir, path), what)).text(); } catch (e) {
+        /* no token, or one GitHub has refused: the file is simply missing, as it is for everyone */
+        if (e.code !== 'missing' || !token() || RV.apiKeys.status('github') === 'bad') throw e;
+        miss = e;
+      }
+      let res;
+      try { res = await fetch(api + '/contents/' + enc(dir + path) + (branch !== 'HEAD' ? '?ref=' + encodeURIComponent(branch) : ''), auth({ Accept: 'application/vnd.github.raw+json' })); }
+      catch (e) { throw new RVError('offline', what + ' could not be loaded: the request to GitHub did not get through.', 'Check the network connection.'); }
+      if (res.status === 404) throw new RVError('missing', what + ' was not found.');
+      if (res.status === 401) throw miss;                 /* a token that no longer works must not break a public repository */
+      if (!res.ok) throw new RVError(res.status === 403 || res.status === 429 ? 'rate' : 'http', what + ' could not be loaded from GitHub (HTTP ' + res.status + ').', 'Try again in a moment.');
+      return res.text();
+    }
+    src.readText = (path, what) => read(src.branch, src.dir, path, what || path);
 
     /* Why CHANGELOG.md was not found: the only place the GitHub API is needed (it allows 60 requests an hour). */
     async function diagnose(branch) {
       let r;
-      try { r = await fetch(api); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
+      try { r = await fetch(api, auth()); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
       if (r.status === 404) return new RVError('repo', 'The repository ' + name + ' was not found, or it is private.',
-        'The page reads public repositories only. Check the spelling of the owner and the repository name.');
+        token() ? 'Check the spelling of the owner and the repository name, and that your GitHub token (Settings, API keys) may read this repository.'
+          : 'Check the spelling of the owner and the repository name. A private repository needs your own GitHub token: Settings, API keys.');
       if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ", and GitHub\u2019s request limit prevented checking why (HTTP " + r.status + ').',
         'Check the link, or wait a few minutes and try again.');
       const info = await r.json();
       if (branch !== 'HEAD') {
-        const b = await fetch(api + '/branches/' + enc(branch)).catch(() => null);
+        const b = await fetch(api + '/branches/' + enc(branch), auth()).catch(() => null);
         if (b && b.status === 404) return new RVError('branch', 'The repository ' + name + ' has no branch called "' + branch + '".',
           'Its default branch is "' + info.default_branch + '".');
       }
@@ -257,7 +278,7 @@
       for (let k = 1; k <= r.length; k++) cands.push([r.slice(0, k).join('/'), r.slice(k).length ? r.slice(k).join('/') + '/' : '']);
       for (const [branch, dir] of cands) {
         try {
-          const text = await (await http(raw(branch, dir, 'docs/CHANGELOG.md'), 'docs/CHANGELOG.md')).text();
+          const text = await read(branch, dir, 'docs/CHANGELOG.md', 'docs/CHANGELOG.md');
           src.branch = branch; src.dir = dir;
           return text;
         } catch (e) { if (e.code !== 'missing') throw e; }
@@ -267,7 +288,7 @@
     /* The CSVs in runs/, by one API call; null if that is not possible (rate limit). */
     src.listRuns = async function () {
       try {
-        const r = await fetch(api + '/contents/' + enc(src.dir + 'runs') + (src.branch !== 'HEAD' ? '?ref=' + encodeURIComponent(src.branch) : ''));
+        const r = await fetch(api + '/contents/' + enc(src.dir + 'runs') + (src.branch !== 'HEAD' ? '?ref=' + encodeURIComponent(src.branch) : ''), auth());
         if (!r.ok) return r.status === 404 ? new Map() : null;
         const out = new Map();
         for (const f of await r.json()) if (f.type === 'file' && /\.csv$/i.test(f.name)) out.set(f.name, f.size);

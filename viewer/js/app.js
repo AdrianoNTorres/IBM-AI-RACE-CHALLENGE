@@ -7,7 +7,7 @@
   const S = RV.S = {
     ds: null,                        /* the open data set (see data.js openSource) */
     sel: [], selCol: {},             /* selected run ids (first = the car in focus) and their colour numbers */
-    carScale: {},                    /* per-car scale multiplier (id → number, default 1) */
+    carScale: RV.uiGet('carScale', {}),   /* size of single cars (id to multiplier), as they were left; the others use RV.prefs.carSize */
     applied: [],                     /* the selection whose runs are loaded and shown */
     R: null, CM: [],                 /* the run in focus and the compared runs [{r, id}] */
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
@@ -207,7 +207,7 @@
       } else {
         seekT(tt);
         /* camera smoothing: at ≤1× speed compute fractional progress within the current step interval */
-        if (spd <= 1 && S.i < n - 1) {
+        if (spd <= 1 && RV.prefs.smooth && S.i < n - 1) {
           const t0 = R.t[S.i], t1 = R.t[S.i + 1];
           S.camFrac = t1 > t0 ? RV.clamp((S.t - t0) / (t1 - t0), 0, 1) : 0;
         } else {
@@ -284,6 +284,7 @@
     $('brandSub').textContent = ds.trk ? RV.track.title(ds.trk) : '';
     $('brandSub').title = ds.src.label();
     RV.versions.prepare();
+    RV.map.startCamera();
     S.secHidden = {};
     RV.map.viewDefaults();
     const withFile = ds.versions.filter(v => v.file);
@@ -330,6 +331,8 @@
   /* ---------- start-up ---------- */
   RV.boot = function () {
     RV.applyTheme();
+    RV.apiKeys.onChange(() => { if (S.tab === 'ps') RV.settings.render(); });
+    RV.apiKeys.checkAll();
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (RV.prefs.theme === 'system') RV.applyTheme(); });
 
     /* options in the address, e.g. #tab=pm&run=v1.05&cmp=v1.01,v0.96&frame=1539&mode=adv&list=gain */

@@ -445,6 +445,20 @@ table.spec { margin: 0 0 12px; } table.spec th, table.spec td { text-align: left
 table.spec td:first-child { white-space: nowrap; }
 table.keyst { max-width: 760px; } table.keyst td { vertical-align: middle; } table.keyst td:last-child { text-align: right; padding-right: 0; }
 code.uid { font-size: 12px; user-select: all; overflow-wrap: anywhere; }
+.setsl { display: flex; align-items: center; gap: 10px; flex: 0 1 260px; } .setsl input { flex: 1; min-width: 0; } .setsl span { min-width: 44px; text-align: right; color: var(--ink); font-weight: 600; }
+/* keys the reader supplies: the card in Settings, a blocked feature, and the dialog that asks for a key */
+.keyscard .field .acts { margin: 0; } .keyscard .field p { margin-top: 6px; }
+ul.keyfeat { list-style: none; margin: 0 0 12px; padding: 0; } ul.keyfeat li { padding: 6px 0 6px 22px; position: relative; } ul.keyfeat li b { color: var(--ink); }
+ul.keyfeat li::before { content: ""; position: absolute; left: 4px; top: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--faster); }
+ul.keyfeat li.blocked::before { background: var(--mute); } ul.keyfeat li span { font-weight: 600; color: var(--faster); } ul.keyfeat li.blocked span { color: var(--mute); }
+ul.keyfeat small { display: block; color: var(--mute); font-size: 13px; }
+.keygate { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 12px; font-weight: 600; cursor: pointer; }
+.keygate.blocked { color: var(--mute); background: var(--surface-2); border-style: dashed; }
+.keydlg { position: fixed; inset: 0; z-index: 45; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
+.keycard { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 22px 24px 18px; }
+.keycard h2 { font-size: 22px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; } .keycard ol { padding-left: 20px; margin: 4px 0 10px; } .keycard li { margin-bottom: 4px; }
+.keyhelp { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: 700 14px var(--font-ui); cursor: pointer; }
+.keycard .warn { margin: 10px 0 0; } .keycard .warn ul { margin: 6px 0; padding-left: 20px; }
 
 /* ---------- help tab, welcome and tour ---------- */
 #sTabs { margin-bottom: 18px; }

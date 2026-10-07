@@ -49,6 +49,11 @@
     autoplay: true,                                    /* start the replay when a run opens */
     tutorialDone: false,                               /* the welcome and tour have been seen (or skipped) */
     sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
+    camera: 'fit',                                     /* the camera when a run opens: fit (whole track) | follow | up (follow, car points up) */
+    smooth: true,                                      /* smooth motion between steps at 1x and slower */
+    loopDim: 0.55,                                     /* how dark the map outside a looped section is, 0 to 0.9 */
+    carSize: 1,                                        /* size of every car that has no size of its own (1 = true scale) */
+    apiKeys: {},                                       /* the reader's own keys for outside services, by service id (js/keys.js) */
     uid: '',                                           /* this browser's id: random, made on the first visit, sent nowhere */
     keys: {},                                          /* replay keys the reader changed: action id to key (see RV.KEYS) */
     ui: {},                                            /* what was last chosen on the pages: layers, panels, lists, tabs */
@@ -65,12 +70,16 @@
     if (!p.source || p.source.kind !== 'github' || !p.source.link) p.source = DEFAULTS().source;
     if (!p.keys || typeof p.keys !== 'object') p.keys = {};
     if (!p.ui || typeof p.ui !== 'object') p.ui = {};
+    if (!p.apiKeys || typeof p.apiKeys !== 'object') p.apiKeys = {};
+    if (!['fit', 'follow', 'up'].includes(p.camera)) p.camera = 'fit';
+    if (!(p.loopDim >= 0 && p.loopDim <= 0.9)) p.loopDim = 0.55;
+    if (!(p.carSize >= 0.3 && p.carSize <= 4)) p.carSize = 1;
     if (!p.uid) { p.uid = newId(); fresh = true; }
     return p;
   };
   RV.savePrefs = function () { try { localStorage.setItem(KEY, JSON.stringify(RV.prefs)); } catch (e) { /* not saved */ } };
-  /* everything back to its default, except the id: it stays the same browser */
-  RV.resetPrefs = function () { const uid = RV.prefs.uid; RV.prefs = DEFAULTS(); RV.prefs.uid = uid; RV.savePrefs(); };
+  /* everything back to its default, except the id (it stays the same browser) and the reader's keys (they are not settings) */
+  RV.resetPrefs = function () { const uid = RV.prefs.uid, keys = RV.prefs.apiKeys; RV.prefs = DEFAULTS(); RV.prefs.uid = uid; RV.prefs.apiKeys = keys; RV.savePrefs(); };
   RV.prefs = RV.loadPrefs();
   if (fresh) RV.savePrefs();
   /* What was last chosen on the pages (RV.prefs.ui). Written a moment after the last change, so a slider being
