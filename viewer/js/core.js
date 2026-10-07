@@ -4,9 +4,9 @@
   'use strict';
   const RV = (globalThis.RV = globalThis.RV || {});
 
-  RV.DEFAULT_LINK = 'https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/tree/experimental_hosting';
+  RV.DEFAULT_LINK = 'https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/tree/viewer_no_login';
   /* the bundled track file, as published in the site's repository: used when the page is opened from disk */
-  RV.TRACK_URL = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/experimental_hosting/viewer/tracks/corkscrew.xml';
+  RV.TRACK_URL = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/viewer_no_login/viewer/tracks/corkscrew.xml';
   RV.MAX_RUNS = 6;                       /* runs that can be shown together: one colour each */
 
   /* ---------- small helpers ---------- */

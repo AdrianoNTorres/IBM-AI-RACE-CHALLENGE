@@ -331,6 +331,20 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 .win:hover > .wingrip, .win.sizing > .wingrip { opacity: 1; } .win.min > .wingrip { display: none; } .win.sizing { cursor: nwse-resize; }
 .wintab { display: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; font-weight: 600; font-size: 13px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
 .win.min > .wintab { display: block; } .win.min > :not(.winbar):not(.wintab):not(.wingrip) { display: none !important; }
+/* a track window (js/map.js, "the track windows"): the same window as a panel, with a title that moves it and a map inside.
+   Its buttons sit at the right, clear of the title; the window the side panel is changing has the accent frame. */
+.twin { position: absolute; z-index: 6; cursor: default; }
+.twin > .winbar { left: auto; right: 10px; }
+.twbody { display: flex; flex-direction: column; width: 100%; height: 100%; background: var(--map-bg); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.twin.tsel > .twbody { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.twtitle { flex: none; padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; font-size: 13px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: grab; user-select: none; touch-action: none; }
+.twtitle small { color: var(--mute); font-weight: 400; font-size: 12.5px; margin-left: 8px; } .twin.dragging .twtitle { cursor: grabbing; }
+.twview { position: relative; flex: 1 1 0; min-height: 0; }
+.twc { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; } .twc.drag { cursor: grabbing; }
+/* the top of the side panel: which view of the track the panel changes, and the button for another one */
+.twrow { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.twrow label { color: var(--ink); font-weight: 600; white-space: nowrap; } .twrow select { flex: 1 1 0; min-width: 0; } .twrow .btn { flex: none; white-space: nowrap; }
+.twcars { width: 100%; }
 /* one row per car: the car in focus full size, compared cars smaller */
 .incar { display: flex; align-items: center; gap: 12px; padding: 2px 0; }
 .incar + .incar { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px; }

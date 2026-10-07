@@ -76,7 +76,7 @@
         '<p>The site only reads data. It changes nothing in the source, and nothing you open is uploaded anywhere. Your settings are saved in this browser.</p>') +
       card('The pages', '<dl class="helpdl">' +
         '<dt>Versions</dt><dd>Every version with its lap time, the lap-time chart, the rankings, and a panel that explains what the selected version changed and why.</dd>' +
-        '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams.</dd>' +
+        '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams. “+ Track window” at the top of its side panel opens another view of the same replay in a window over the map, with its own camera, layers, path colour and cars; up to four. Click a window, or the map, to choose which one the side panel changes.</dd>' +
         '<dt>Telemetry</dt><dd>Charts of speed, throttle, brake and more along the lap, and in the detailed view sector times and a table of 100 m sections.</dd>' +
         '<dt>Settings</dt><dd>Five tabs: General (theme, view, reset), Replay (how a replay starts and looks), Data (the source and your own API keys), Customization (colours and themes) and Controls (the replay keys).</dd>' +
         '<dt>Help</dt><dd>This page. The list on the left has one entry per subject; the search box finds a word in all of them.</dd></dl>') +

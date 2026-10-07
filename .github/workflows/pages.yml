@@ -6,7 +6,7 @@ name: Publish the run viewer
 
 on:
   push:
-    branches: [experimental_hosting]   # change to main when the viewer moves there
+    branches: [viewer_no_login]   # change to main when the viewer moves there
     # the site itself, and the data its summary is made from
     paths: ['viewer/**', '.github/workflows/pages.yml', 'tools/viewer-summary/**', 'docs/CHANGELOG.md', 'runs/**', 'track.xml']
   workflow_dispatch:

@@ -16,7 +16,7 @@ Serving the folder also works and uses the local copy of the track file: `python
 
 ## Where the data comes from
 
-By default the page reads the repository and branch in `RV.DEFAULT_LINK` (`js/core.js`); at present that is `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE`, branch `experimental_hosting`. Point it (and `RV.TRACK_URL`) at the branch the site is published from. Another source is chosen in **Settings**.
+By default the page reads the repository and branch in `RV.DEFAULT_LINK` (`js/core.js`); at present that is `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE`, branch `viewer_no_login`. Point it (and `RV.TRACK_URL`) at the branch the site is published from. Another source is chosen in **Settings**.
 
 | Shown | Source file | When it is read |
 |---|---|---|

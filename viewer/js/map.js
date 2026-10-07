@@ -9,15 +9,17 @@
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$, el = RV.el, esc = RV.esc;
   const NB = 32;                        /* speed colour steps of the driven line */
-  const c = $('c'), g = c.getContext('2d'), mini = $('mini'), mg = mini.getContext('2d');
+  let c = $('c'), g = c.getContext('2d');   /* the canvas being painted: the main map's, or a track window's while that one is painted */
+  const mini = $('mini'), mg = mini.getContext('2d');
 
   /* camera. z: pixels per metre; ox, oy: pan in pixels; cx, cy, ang: centre and rotation when not following;
      all: keep every car in view (sz, scx, scy: its smoothed zoom and centre; maxAll: its closest zoom) */
-  const view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
+  let view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
   /* fit: the whole track is kept in view (the start state); it ends when the user moves, zooms or follows */
-  const opt = { line: 'upto', colour: 'speed', allInputs: true };     /* line: how much of the driven line is drawn; colour: by speed or by brake; allInputs: wheel and pedals of the compared cars too */
+  let opt = { line: 'upto', colour: 'speed', allInputs: true };     /* line: how much of the driven line is drawn; colour: by speed or by brake; allInputs: wheel and pedals of the compared cars too */
   let near = { x: 0, y: 0, r2: 1e18 };                         /* the part of the track that can be on screen this frame */
-  const buf = document.createElement('canvas'), bg = buf.getContext('2d'), miniBuf = document.createElement('canvas');
+  let buf = document.createElement('canvas'), bg = buf.getContext('2d');
+  const miniBuf = document.createElement('canvas');
   let bufKey = '', miniKey = '', secNow = '', tourSaved = null;
   let hudHtml = '', slvHtml = '', ldbHtml = '';
   let lastCam = null;                   /* base point, centre, angle and zoom of the last drawn frame */
@@ -27,7 +29,45 @@
 
   const trk = () => S.ds.trk;
   const onMap = () => !!S.R && !!S.R.x;                 /* the run in focus has a position on the track in use */
-  const others = () => S.CM.filter(m => m.r.x);         /* compared runs that can be drawn */
+  /* ---------- more than one view of the track ----------
+     The main map and every track window (see "the track windows" below) is a target: a canvas with its own camera
+     (view), its own path options (opt), its own layer switches (lay: id to [on, opacity, width]) and its own choice
+     of cars (car). The drawing code, the camera code and the side panel all work on "the current target": c, g, buf,
+     bg, view, opt and the on / alpha / w of every layer. Normally that is the main map. enter(T) puts a window's
+     state in those places and leave() takes it out again (keeping what was changed), so nothing else in this file
+     needs to know that windows exist. Always paired, never nested: use inWin(T, fn). */
+  const OPT0 = opt;                     /* the main map's options; allInputs (the wheel and pedals panel) lives only there */
+  const MAIN = { id: 'main', main: true, c: c, g: g, buf: buf, bg: bg, view: view, opt: opt, car: null, one: false, zNow: view.z };
+  const WINS = [];                      /* the track windows, in the order they were opened */
+  let cur = MAIN;                       /* the target whose state is in place */
+  let sideT = MAIN;                     /* the target the side panel shows and changes */
+  let held = null;                      /* the main map's layer states while a window's are in place */
+  const late = { side: false, save: false, legend: false };   /* asked for while a window's state was in place: done after leave() */
+  function enter(T) {
+    MAIN.bufKey = bufKey; MAIN.lastCam = lastCam; MAIN.cam = cam; MAIN.near = near; MAIN.fp = fp;
+    held = LAYERS.map(L => [L.on, L.alpha, L.w]);
+    for (const L of LAYERS) { const q = T.lay[L.id]; L.on = q ? !!q[0] : L.on0; L.alpha = q ? q[1] : L.alpha0; L.w = q && q[2] != null ? q[2] : L.w0; }
+    c = T.c; g = T.g; buf = T.buf; bg = T.bg; view = T.view; opt = T.opt; bufKey = T.bufKey; lastCam = T.lastCam; cam = T.cam; near = T.near;
+    cur = T;
+  }
+  function leave() {
+    const T = cur;
+    LAYERS.forEach((L, k) => { T.lay[L.id] = [L.on, L.alpha, L.w]; if (held[k]) { L.on = held[k][0]; L.alpha = held[k][1]; L.w = held[k][2]; } });
+    T.bufKey = bufKey; T.lastCam = lastCam; T.cam = cam; T.near = near;
+    c = MAIN.c; g = MAIN.g; buf = MAIN.buf; bg = MAIN.bg; view = MAIN.view; opt = MAIN.opt; bufKey = MAIN.bufKey; lastCam = MAIN.lastCam; cam = MAIN.cam; near = MAIN.near; fp = MAIN.fp;
+    cur = MAIN; held = null;
+    if (late.save) { late.save = false; saveUi(); }
+    if (late.legend) { late.legend = false; legend(); }
+    if (late.side) { late.side = false; buildSide(); }
+  }
+  function inWin(T, fn) {
+    if (T === MAIN || cur !== MAIN) return fn();
+    enter(T);
+    try { return fn(); } finally { leave(); }
+  }
+  const act = fn => inWin(sideT, fn);   /* a control of the side panel changes the target the panel shows */
+  /* compared runs that can be drawn; none where the target shows one car only */
+  const others = () => (cur.one ? [] : S.CM.filter(m => m.r.x));
 
   /* ---------- drawing helpers ---------- */
   function poly(ctx, P) { ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (const p of P) ctx.lineTo(p[0], p[1]); }
@@ -57,14 +97,14 @@
   }
   /* colour step (0 to NB-1) of every piece of the run's line, by speed or by brake */
   function colourSteps(r) {
-    if (r._bk && r._bkBy === opt.colour) return r._bk;
+    const had = r._bk || (r._bk = {});
+    if (had[opt.colour]) return had[opt.colour];
     const bk = new Uint8Array(r.n);
     for (let k = 0; k < r.n - 1; k++) {
       const f = opt.colour === 'brake' ? (r.br[k] + r.br[k + 1]) / 2 : ((r.v[k] + r.v[k + 1]) / 2 - S.vmin) / (S.vmax - S.vmin || 1);
       bk[k] = RV.clamp(Math.floor(f * NB), 0, NB - 1);
     }
-    r._bkBy = opt.colour;
-    return (r._bk = bk);
+    return (had[opt.colour] = bk);
   }
   let stepCols = null, stepColsKey = '';
   function colours() {
@@ -285,7 +325,10 @@
   /* What the reader last chose on the map (layers, panels, path options, the side panel open or closed) is kept in
      this browser and put back on the next visit. The defaults (on0, alpha0) are noted before that. */
   function saveUi() {
-    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha, L.pos || null, !!L.min, L.solo === true, L.scale || 1]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+    if (cur !== MAIN) { late.save = true; return; }
+    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha, L.pos || null, !!L.min, L.solo === true, L.scale || 1]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed'), mainCar: MAIN.car,
+      wins: WINS.map(T => ({ n: T.n, pos: T.pos, w: T.w, h: T.h, min: !!T.min, alpha: T.alpha, car: T.car, auto: !!T.auto, opt: { line: T.opt.line, colour: T.opt.colour }, lay: T.lay,
+        view: { z: T.view.z, ox: T.view.ox, oy: T.view.oy, cx: T.view.cx, cy: T.view.cy, ang: T.view.ang, follow: T.view.follow, rot: T.view.rot, fit: T.view.fit, all: T.view.all } })) });
   }
   /* puts back what was stored for one layer or panel (id), or for all of them */
   function restoreUi(id) {
@@ -317,7 +360,7 @@
     if (['full', 'upto', 'near'].includes(o.line)) opt.line = o.line;
     if (o.lineW >= WMIN && o.lineW <= WMAX && !(u.layers || []).some(q => q[0] === 'line' && q[3])) LY.line.w = +o.lineW;   /* stored before widths were per layer */
     if (o.colour === 'speed' || o.colour === 'brake') opt.colour = o.colour;
-    if (typeof o.allInputs === 'boolean') opt.allInputs = o.allInputs;
+    if (typeof o.allInputs === 'boolean') OPT0.allInputs = o.allInputs;
     if (u.closed) $('pm').classList.add('side-closed');
   })();
   /* ---------- the panels as small windows ----------
@@ -331,7 +374,7 @@
   const mapwrap = $('mapwrap');
   let winZ = 5, winDrag = null;
   const winOf = L => $('win-' + L.id);
-  const soloOf = L => (L.solo === 'opt' ? !opt.allInputs : L.solo === true);
+  const soloOf = L => (L.solo === 'opt' ? !OPT0.allInputs : L.solo === true);
   /* A panel's size is a scale of the whole panel (L.scale, 1 = as designed): text, bars and canvases grow together.
      It is set with the grip at the panel's bottom right corner, or with the Size slider under Layers. */
   function sizeWin(L) {
@@ -392,7 +435,7 @@
     w.querySelector('.wb.m').onclick = () => { L.min = !L.min; paintWin(L); placeWins(); saveUi(); };
     w.querySelector('.wb.g').onclick = () => { L.pos = null; L.scale = 1; L.min = false; sizeWin(L); paintWin(L); placeWins(); saveUi(); if (S.sideTab === 'layers') buildSide(); };
     if (w.querySelector('.wb.f')) w.querySelector('.wb.f').onclick = () => {
-      if (L.solo === 'opt') opt.allInputs = !opt.allInputs; else L.solo = !L.solo;
+      if (L.solo === 'opt') OPT0.allInputs = !OPT0.allInputs; else L.solo = !L.solo;
       paintWin(L); if (L.id === 'leg') legend(); saveUi(); if (S.sideTab === 'layers') buildSide();
     };
     /* drag anywhere on the panel; a press on the tab of a folded panel that does not move opens it */
@@ -427,15 +470,200 @@
   placeWins();
   const GROUPS = ['Track', 'Car and path', 'Sensors', 'Compared runs', 'Panels on the map'];
 
+  /* ---------- the track windows ----------
+     A second, third ... view of the same replay, floating over the main map. Each is a target (see "more than one
+     view of the track"): its own camera, layers, path colour and choice of cars, on the same clock. It looks and
+     behaves like the panel windows (.win: the same three buttons, the same grip, a tab when folded), with two
+     differences: it is moved by its title, because a drag on its map moves that map, and its grip changes the
+     window's width and height instead of scaling it. Which target the side panel shows (sideT) is chosen by
+     clicking a window or the main map, or in the list at the top of the side panel; the chosen window has the
+     accent-coloured frame. Windows are saved with the layout and closed by "Restore the default layers". */
+  const TW = { max: 4, w: 400, h: 290, minW: 220, minH: 170 };
+  const freshView = () => ({ z: 1, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 });
+  const twName = T => (T.main ? 'Main map' : 'Track ' + T.n);
+  /* where a new window may begin: to the right of the panels that stand in the left column (two columns of them while cars are compared) */
+  function freeLeft() {
+    const m = mapwrap.getBoundingClientRect();
+    let x = 0;
+    for (const L of OVER) { const w = winOf(L); if (w && !L.pos && L.home === $('overlay') && w.offsetWidth) x = Math.max(x, w.getBoundingClientRect().right - m.left); }
+    return x ? Math.round(x + 16) : 270;
+  }
+  /* what a window shows, for its title: the car or cars, and how the driven line is coloured */
+  function twWhat(T) {
+    const car = T.one ? T.car : S.CM.length ? 'all cars' : (S.sel[0] || '');
+    return car + ', ' + (T.opt.colour === 'brake' ? 'braking' : 'speed');
+  }
+  function placeT(T) {
+    const W = mapwrap.clientWidth, H = mapwrap.clientHeight, w = T.el;
+    if (!W) return;
+    T.w = Math.round(RV.clamp(T.w, TW.minW, Math.max(TW.minW, W - 8))); T.h = Math.round(RV.clamp(T.h, TW.minH, Math.max(TW.minH, H - 18)));
+    w.style.width = T.min ? '' : T.w + 'px'; w.style.height = T.min ? '' : T.h + 'px';
+    w.style.left = RV.clamp(T.pos[0], 0, Math.max(0, W - w.offsetWidth)) + 'px'; w.style.top = RV.clamp(T.pos[1], 10, Math.max(10, H - Math.min(w.offsetHeight, 40))) + 'px';
+  }
+  function paintT(T) {
+    T.el.classList.toggle('min', !!T.min); T.el.classList.toggle('tsel', sideT === T);
+    T.el.style.opacity = T.alpha < 1 ? T.alpha : '';
+    const m = T.el.querySelector('.wb.m');
+    m.title = T.min ? 'Open ' + twName(T) : 'Fold ' + twName(T) + ' into a tab'; m.setAttribute('aria-label', m.title);
+  }
+  /* the side panel shows this target from now on */
+  function pick(T) {
+    if (sideT === T) return;
+    sideT = T; WINS.forEach(paintT);
+    if (S.ds) buildSide();
+  }
+  function closeWin(T, quiet) {
+    const k = WINS.indexOf(T);
+    if (k < 0) return;
+    WINS.splice(k, 1); T.el.remove();
+    if (sideT === T) { sideT = MAIN; WINS.forEach(paintT); }
+    if (!quiet) { saveUi(); if (S.ds) buildSide(); }
+  }
+  /* o: nothing for a new window, or what was saved for one */
+  function addWin(o) {
+    o = o || {};
+    if (WINS.length >= TW.max) { RV.toast('There is room for ' + TW.max + ' track windows. Close one to open another.'); return null; }
+    let n = o.n > 1 && !WINS.some(x => x.n === o.n) ? Math.floor(o.n) : 2;
+    while (WINS.some(x => x.n === n)) n++;
+    const k = WINS.length, oo = o.opt || {}, cv = el('canvas', 'twc'), bf = document.createElement('canvas');
+    const lay = {};
+    if (o.lay && typeof o.lay === 'object') { for (const id in o.lay) { const q = o.lay[id]; if (Array.isArray(q)) lay[id] = [!!q[0], q[1] >= 0 && q[1] <= 1 ? +q[1] : 1, q[2] >= WMIN && q[2] <= WMAX ? +q[2] : null]; } }
+    else for (const L of LAYERS) lay[L.id] = [L.on, L.alpha, L.w];           /* a new window starts with the main map's layers */
+    const T = {
+      id: 'tw' + n, n: n, c: cv, g: cv.getContext('2d'), buf: bf, bg: bf.getContext('2d'), bufKey: '', lastCam: null, cam: null, near: { x: 0, y: 0, r2: 1e18 },
+      view: freshView(), lay: lay, car: typeof o.car === 'string' && o.car ? o.car : null, auto: !!o.auto, one: false, zNow: 1, title: '',
+      /* a new window colours the line the other way than the main map does: speed there, braking here */
+      opt: { line: ['full', 'upto', 'near'].includes(oo.line) ? oo.line : MAIN.opt.line, colour: oo.colour === 'speed' || oo.colour === 'brake' ? oo.colour : (MAIN.opt.colour === 'speed' ? 'brake' : 'speed') },
+      pos: Array.isArray(o.pos) && isFinite(o.pos[0]) && isFinite(o.pos[1]) ? [+o.pos[0], +o.pos[1]] : [freeLeft() + 28 * k, 56 + 28 * k],
+      w: o.w > 0 ? +o.w : TW.w, h: o.h > 0 ? +o.h : TW.h, min: !!o.min, alpha: o.alpha >= 0.2 && o.alpha <= 1 ? +o.alpha : 1,
+    };
+    const v = o.view || {};
+    for (const key of ['z', 'ox', 'oy', 'cx', 'cy', 'ang']) if (isFinite(v[key]) && v[key] !== null && (key !== 'z' || v[key] > 0)) T.view[key] = +v[key];
+    for (const key of ['follow', 'rot', 'fit', 'all']) if (typeof v[key] === 'boolean') T.view[key] = v[key];
+    const name = twName(T), w = el('div', 'win twin moved',
+      '<div class="winbar"><button class="wb c" title="Close ' + name + '" aria-label="Close ' + name + '"></button><button class="wb m"></button><button class="wb g" title="Put ' + name + ' back in its place, at its normal size" aria-label="Put ' + name + ' back in its place, at its normal size"></button></div>' +
+      '<button class="wintab" title="Open ' + name + '">' + name + '</button>' +
+      '<div class="twbody"><div class="twtitle" title="Drag to move ' + name + '"></div><div class="twview"></div></div>' +
+      '<span class="wingrip" title="Drag to resize ' + name + '; double-click for its normal size"></span>');
+    w.id = 'win-' + T.id; w.dataset.id = T.id; T.el = w;
+    cv.setAttribute('aria-label', name + ': another view of the replay. Drag to pan, wheel to zoom.');
+    w.querySelector('.twview').appendChild(cv);
+    mapwrap.appendChild(w);
+    const front = () => { w.style.zIndex = ++winZ; };
+    w.querySelectorAll('.wb').forEach(b => b.addEventListener('pointerdown', e => e.stopPropagation()));
+    w.querySelector('.wb.c').onclick = () => { closeWin(T); RV.toast(name + ' is closed. “+ Track window” at the top of the side panel opens a new one.'); };
+    w.querySelector('.wb.m').onclick = () => { T.min = !T.min; paintT(T); placeT(T); saveUi(); };
+    w.querySelector('.wb.g').onclick = () => { const q = WINS.indexOf(T); T.pos = [freeLeft() + 28 * q, 56 + 28 * q]; T.w = TW.w; T.h = TW.h; T.min = false; paintT(T); placeT(T); saveUi(); };
+    w.querySelector('.wintab').onclick = () => { T.min = false; paintT(T); placeT(T); front(); saveUi(); };
+    w.addEventListener('pointerdown', () => { front(); pick(T); }, true);
+    /* the title moves the window */
+    w.querySelector('.twtitle').addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const r = w.getBoundingClientRect(), m = mapwrap.getBoundingClientRect(), ox = r.left - m.left, oy = r.top - m.top, sx = e.clientX, sy = e.clientY;
+      const mv = ev => { T.pos = [ox + ev.clientX - sx, oy + ev.clientY - sy]; w.classList.add('dragging'); placeT(T); };
+      const up = () => {
+        removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+        w.classList.remove('dragging'); T.pos = [parseFloat(w.style.left) || 0, parseFloat(w.style.top) || 0]; saveUi();
+      };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+    /* the grip changes the window's width and height */
+    const grip = w.querySelector('.wingrip');
+    grip.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation(); e.preventDefault();
+      const w0 = T.w, h0 = T.h, sx = e.clientX, sy = e.clientY;
+      const mv = ev => { T.w = w0 + ev.clientX - sx; T.h = h0 + ev.clientY - sy; w.classList.add('sizing'); placeT(T); };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); w.classList.remove('sizing'); saveUi(); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+    grip.addEventListener('dblclick', e => { e.stopPropagation(); T.w = TW.w; T.h = TW.h; placeT(T); saveUi(); });
+    /* its map: drag moves it, the wheel zooms, a double-click follows the car, a click on another car puts that car in focus */
+    let d = null, mvd = 0;
+    cv.addEventListener('pointerdown', e => { if (e.button !== 0) return; d = [e.clientX, e.clientY]; mvd = 0; cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); });
+    cv.addEventListener('pointermove', e => {
+      if (!d) return;
+      const dx = e.clientX - d[0], dy = e.clientY - d[1];
+      mvd += Math.abs(dx) + Math.abs(dy); d = [e.clientX, e.clientY];
+      inWin(T, () => { if (mvd >= 5) { detach(); view.fit = false; } view.ox += dx; view.oy += dy; keepInSight(); });
+    });
+    const up = e => {
+      if (!d) return;
+      d = null; cv.classList.remove('drag');
+      if (mvd < 5 && !T.one && e.type === 'pointerup') { const h = inWin(T, () => carAt(e)); if (h && h !== S.sel[0]) RV.sel.makeRef(h); }
+      else saveUi();
+    };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (!onMap()) return;
+      inWin(T, () => {
+        if (autoZoom()) return;
+        const k = Math.exp(-e.deltaY * 0.0015);
+        if (view.follow) { const b = base(); zoomAt(b[0] + view.ox, b[1] + view.oy, k); } else { const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, k); }
+      });
+      saveUi();
+    }, { passive: false });
+    cv.addEventListener('dblclick', () => { if (onMap()) { inWin(T, resetView); saveUi(); } });
+    WINS.push(T); paintT(T); placeT(T); front();
+    w.style.display = S.ds && onMap() ? '' : 'none';
+    return T;
+  }
+  /* Which car a window is built round. A window that shows one car only, and not the car in focus, is painted with
+     that car in the place of the car in focus (S.R, S.i, S.sel) for as long as the painting takes; the function
+     returned puts the real ones back. */
+  function carFor(T) {
+    T.one = false; T.pose = poseAt(S.R, S.i, S.camFrac);
+    if (!T.car) return null;
+    if (T.car === S.sel[0]) { T.one = true; return null; }
+    const m = S.CM.find(x => x.id === T.car && x.r.x);
+    if (!m) return null;                                   /* that car is not selected now: the window shows every car until it is */
+    const keep = [S.R, S.i, S.sel], pose = ghostPose(m.r), i = RV.ghostIdx(m.r);
+    T.one = true; T.pose = pose; S.R = m.r; S.i = i; S.sel = [m.id];
+    return () => { S.R = keep[0]; S.i = keep[1]; S.sel = keep[2]; };
+  }
+  function drawWins(r) {
+    for (const T of WINS) {
+      const W = T.c.clientWidth, H = T.c.clientHeight;
+      if (T.min || !W || !H) continue;
+      if (T.c.width !== Math.round(W * r) || T.c.height !== Math.round(H * r)) { T.c.width = Math.round(W * r); T.c.height = Math.round(H * r); }
+      const back = carFor(T);
+      enter(T);
+      try { g.setTransform(r, 0, 0, r, 0, 0); g.fillStyle = RV.pal['map-bg']; g.fillRect(0, 0, W, H); scene(W, H, r, T.pose); }
+      finally { leave(); if (back) back(); }
+      const what = twWhat(T);
+      if (what !== T.title) { T.title = what; T.el.querySelector('.twtitle').innerHTML = esc(twName(T)) + '<small>' + esc(what) + '</small>'; }
+    }
+  }
+  /* comparing on separate tracks: the main map keeps the car in focus, every compared car gets a window of its own */
+  function perCar() {
+    WINS.filter(T => T.auto).forEach(T => closeWin(T, true));
+    const ids = S.CM.filter(m => m.r.x).map(m => m.id), room = TW.max - WINS.length;
+    MAIN.car = 'focus'; MAIN.one = true;
+    const x0 = freeLeft();
+    ids.slice(0, room).forEach((id, k) => addWin({ car: id, auto: true, opt: { line: MAIN.opt.line, colour: MAIN.opt.colour }, w: 340, h: 250, pos: [x0 + (k >> 1) * 352, 50 + (k & 1) * 262] }));
+    if (ids.length > room) RV.toast('There is room for ' + TW.max + ' track windows: ' + ids.slice(room).join(', ') + ' ' + (ids.length - room > 1 ? 'have' : 'has') + ' none.');
+    saveUi(); buildSide();
+  }
+  /* and back: every car on the main map, the windows made by perCar closed */
+  function oneTrack() { WINS.filter(T => T.auto).forEach(T => closeWin(T, true)); MAIN.car = null; MAIN.one = false; saveUi(); buildSide(); }
+  (function () {
+    const u = RV.uiGet('map', null);
+    if (!u) return;
+    if (u.mainCar === 'focus') { MAIN.car = 'focus'; MAIN.one = true; }
+    for (const o of Array.isArray(u.wins) ? u.wins.slice(0, TW.max) : []) if (o && typeof o === 'object') addWin(o);
+  })();
+
   /* ---------- side panel: the same three sections in both views; the detailed view adds controls inside them ---------- */
   function toggleRow(name, desc, on, fn) {
     const r = el('div', 'lr' + (on ? '' : ' off'), '<label class="tg"><input type="checkbox" ' + (on ? 'checked' : '') + ' aria-label="' + esc(name) + '"><span></span></label><div><div class="ln">' + name + '</div><div class="ld">' + desc + '</div></div>');
-    r.querySelector('input').onchange = e => { r.classList.toggle('off', !e.target.checked); fn(e.target.checked); saveUi(); };
+    r.querySelector('input').onchange = e => { r.classList.toggle('off', !e.target.checked); act(() => fn(e.target.checked)); saveUi(); };
     return r;
   }
   function slider(row, label, min, max, step, val, fmt, fn) {
     const o = el('div', 'lo', '<small>' + label + '</small><input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" aria-label="' + esc(label || 'Value') + '"><span class="num">' + fmt(val) + '</span>');
-    o.querySelector('input').oninput = e => { o.lastChild.textContent = fmt(+e.target.value); fn(+e.target.value); saveUi(); };
+    o.querySelector('input').oninput = e => { o.lastChild.textContent = fmt(+e.target.value); act(() => fn(+e.target.value)); saveUi(); };
     row.appendChild(o);
     return o.querySelector('input');
   }
@@ -445,7 +673,7 @@
     for (const it of items) {
       const b = el('button', it[0] === cur ? 'on' : null, it[1]);
       b.setAttribute('aria-pressed', it[0] === cur);
-      b.onclick = () => { s.querySelectorAll('button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', false); }); b.classList.add('on'); b.setAttribute('aria-pressed', true); fn(it[0]); saveUi(); };
+      b.onclick = () => { s.querySelectorAll('button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', false); }); b.classList.add('on'); b.setAttribute('aria-pressed', true); act(() => fn(it[0])); saveUi(); };
       s.appendChild(b);
     }
     return s;
@@ -476,7 +704,7 @@
     return r;
   }
   function viewSection(s, sm) {
-    const many = S.CM.length > 0;
+    const many = others().length > 0;
     s.appendChild(toggleRow('Follow car', sm ? 'Keeps the car in the middle of the view.' : 'Keeps the car in focus in the same place on screen. Switches off by itself when you drag the map.', view.follow, v => { setFollow(v); if (!v) view.all = false; buildSide(); }));
     s.appendChild(toggleRow('Car points up', sm ? 'Turns the map so the car always drives toward the top.' : 'Rotates the map so the car in focus always drives toward the top. Turn off for a fixed map.', view.rot, setRot));
     /* always listed, so it can be found; it needs a comparison to do anything */
@@ -492,12 +720,34 @@
       zoomInput._fmt = f;
     }
     const br = el('div', 'btnrow'), b1 = el('button', 'btn', 'Back to the car'), b2 = el('button', 'btn', 'Whole track');
-    b1.onclick = resetView; b2.onclick = fitView; br.appendChild(b1); br.appendChild(b2); s.appendChild(br);
+    b1.onclick = () => { act(resetView); saveUi(); }; b2.onclick = () => { act(fitView); saveUi(); }; br.appendChild(b1); br.appendChild(b2); s.appendChild(br);
+    if (!cur.main) {                                       /* a track window: the things that belong to the window itself */
+      const T = cur, r = el('div', 'lr', '<span></span><div><div class="ln">' + twName(T) + '</div><div class="ld">Drag its title to move it and its bottom right corner to resize it. Double-click its map to follow the car.</div></div>');
+      slider(r, 'Opacity', 0.2, 1, 0.05, T.alpha, v => Math.round(v * 100) + ' %', v => { T.alpha = v; paintT(T); });
+      s.appendChild(r);
+      const x = el('button', 'btn wide', 'Close ' + twName(T));
+      x.onclick = () => closeWin(T);
+      s.appendChild(x);
+    }
   }
   /* the Cars tab: who is on the track (a row puts that car in focus), where compared cars are placed, and the size of each */
   function carsSection(s, sm) {
     const many = S.CM.length > 0;
-    if (many) s.appendChild(carsTable());
+    if (many) {
+      const T = cur, o = el('div', 'opt', '<div class="cap">' + (T.main ? 'Cars on the main map' : 'Cars in ' + twName(T)) + '</div>');
+      const items = [['', 'All selected cars']].concat(T.main ? [['focus', 'Only the car in focus']] : S.sel.map(id => [id, 'Only ' + id]));
+      if (!T.main && T.car && !S.sel.includes(T.car)) items.push([T.car, 'Only ' + T.car + ' (not selected now)']);
+      const pickCar = el('select', 'twcars', items.map(it => '<option value="' + esc(it[0]) + '"' + ((T.car || '') === it[0] ? ' selected' : '') + '>' + esc(it[1]) + '</option>').join(''));
+      pickCar.setAttribute('aria-label', 'Which cars are shown');
+      pickCar.onchange = () => { T.car = pickCar.value || null; T.auto = false; if (T.main) T.one = T.car === 'focus'; saveUi(); buildSide(); };
+      o.appendChild(pickCar);
+      const br = el('div', 'btnrow'), b1 = el('button', 'btn', 'One window per car'), b2 = el('button', 'btn', 'All cars on one track');
+      b1.title = 'The main map keeps the car in focus; every compared car gets a track window of its own.';
+      b2.title = 'Every selected car on the main map again; the windows made by “One window per car” are closed.';
+      b1.onclick = perCar; b2.onclick = oneTrack; br.appendChild(b1); br.appendChild(b2); o.appendChild(br);
+      s.appendChild(o);
+      s.appendChild(carsTable());
+    }
     else s.appendChild(el('p', 'note', 'One car is on the track. Select several versions on the Versions page to compare them: they are listed here, each with its gap to the car in focus.'));
     if (many && !sm) {
       const o = el('div', 'opt', '<div class="cap">Where the other cars are placed. Same lap time shows who is ahead; same distance shows the difference in line.</div>');
@@ -525,20 +775,20 @@
     }
   }
   function layersSection(s, sm) {
-    const many = S.CM.length > 0;
+    const many = S.CM.length > 0 && !cur.one, main = cur.main;
     if (sm) {
       const sb = toggleRow('Sensor beams', 'The lines from the car to the edges of the road.', LY.beams.on, v => { LY.beams.on = LY.hits.on = LY.focus.on = v; });
       sb.title = BEAMS_TIP; s.appendChild(sb);
       s.appendChild(toggleRow('Driven path', 'The line the car drove, coloured by its speed.', LY.line.on, v => { LY.line.on = v; }));
       s.appendChild(toggleRow('Distance marks', 'A label every 100 m along the track.', LY.marks.on, v => { LY.marks.on = v; }));
       if (many) s.appendChild(toggleRow('The other cars', 'The cars and paths of the other selected versions.', LY.ghost.on, v => { LY.ghost.on = LY.lineB.on = v; }));
-      s.appendChild(toggleRow('Wheel and pedals', 'The steering wheel and the throttle and brake graph, bottom right.', OVER[3].on, v => { OVER[3].on = v; panels(); }));
-      if (many) s.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; paintWin(OVER[3]); }));
+      if (main) s.appendChild(toggleRow('Wheel and pedals', 'The steering wheel and the throttle and brake graph, bottom right.', OVER[3].on, v => { OVER[3].on = v; panels(); }));
+      if (many && main) s.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], OPT0.allInputs, v => { OPT0.allInputs = v; paintWin(OVER[3]); }));
       return;
     }
     /* detailed: one group open at a time */
     for (const G of GROUPS) {
-      if (G === 'Compared runs' && !many) continue;
+      if ((G === 'Compared runs' && !many) || (G === 'Panels on the map' && !main)) continue;   /* the panels belong to the main map */
       const open = S.layerGroup === G, items = G === 'Panels on the map' ? OVER : LAYERS.filter(L => L.g === G);
       const head = el('button', 'acc' + (open ? ' open' : ''), '<span>' + G + '</span><small>' + items.filter(L => L.on).length + ' of ' + items.length + ' on</small>');
       head.setAttribute('aria-expanded', open);
@@ -554,7 +804,7 @@
           slider(r, 'Opacity', 0.2, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; panels(); });
           slider(r, 'Size', SMIN, SMAX, 0.05, L.scale || 1, v => Math.round(v * 100) + ' %', v => { L.scale = v; sizeWin(L); placeWins(); });
           body.appendChild(r);
-          if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; paintWin(OVER[3]); }));
+          if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], OPT0.allInputs, v => { OPT0.allInputs = v; paintWin(OVER[3]); }));
         }
         continue;
       }
@@ -571,8 +821,9 @@
         }
       }
     }
-    const rb = el('button', 'btn wide', 'Restore the default layers');
-    rb.onclick = defaults;
+    const rb = el('button', 'btn wide', main ? 'Restore the default layers' : 'Restore the default layers of ' + twName(cur));
+    if (main && WINS.length) rb.title = 'Also closes the track windows.';
+    rb.onclick = () => act(defaults);
     s.appendChild(rb);
   }
   /* sector times on the Track tab: where the car is now, and the table of every opened version */
@@ -602,8 +853,12 @@
   }
   /* every layer, panel and path option back to how the page comes */
   function defaults() {
-    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; L.pos = null; L.min = false; L.scale = 1; sizeWin(L); if (L.solo === true) L.solo = false; });
-    opt.line = 'upto'; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
+    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; });
+    if (cur === MAIN) {                                    /* the page as it comes: the panels in their places, no track windows, every car on the main map */
+      OVER.forEach(L => { L.on = true; L.alpha = 1; L.pos = null; L.min = false; L.scale = 1; sizeWin(L); if (L.solo === true) L.solo = false; });
+      OPT0.allInputs = true; WINS.slice().forEach(T => closeWin(T, true)); MAIN.car = null; MAIN.one = false;
+    }
+    opt.line = 'upto'; opt.colour = 'speed'; stepColsKey = ''; if (S.R) delete S.R._bk;
     OVER.forEach(paintWin); placeWins();
     viewDefaults(true); legend(); panels(); buildSide();
   }
@@ -614,6 +869,7 @@
       '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
       '<h4>Moving around</h4><p>Drag beside the road to move the map and use the mouse wheel to zoom. Drag along the road to pick a stretch: it plays on a loop and the rest of the map is dimmed (hold Shift to move the map from the road instead). Double-click to return to the car.' + (many ? ' Click another car, its name in the top bar, or its row under Cars, to put it in focus.' : '') + '</p>' +
+      '<h4>More than one view</h4><p>“+ Track window” at the top of this panel opens another view of the same replay in a window over the map, with its own camera, layers, path colour and cars: one by speed and one by braking, say, or one car in each. Click a window, or the map, to choose which of them this panel changes. Under Cars, “One window per car” puts every compared car on a track of its own.</p>' +
       '<h4>Keys</h4><dl class="keys"><dt>' + RV.kbd('play') + '</dt><dd>play or pause</dd><dt>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
       '<dt>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + '</dt><dd>zoom</dd><dt>' + RV.kbd('follow') + '</dt><dd>follow the car, or stop following</dd><dt>' + RV.kbd('home') + '</dt><dd>back to the start of the lap</dd>' +
       '<dt>' + RV.kbd('endloop') + '</dt><dd>end the loop over a section</dd></dl><p class="note">The keys can be changed under Settings, Controls.</p>'));
@@ -622,9 +878,22 @@
     s.appendChild(all);
   }
   function buildSide() {
+    if (cur !== MAIN) { late.side = true; return; }
+    if (sideT !== MAIN && !WINS.includes(sideT)) sideT = MAIN;
+    inWin(sideT, buildSideNow);
+  }
+  function buildSideNow() {
     const s = $('side'), sm = RV.simple();
     s.innerHTML = ''; zoomInput = null; carCells = [];
     if (!S.ds) return;
+    /* which view of the track this panel shows and changes, and the button that opens another */
+    const tw = el('div', 'twrow', '<label for="twSel">Settings of</label><select id="twSel">' + [MAIN].concat(WINS).map(T => '<option value="' + T.id + '"' + (T === cur ? ' selected' : '') + '>' + twName(T) + '</option>').join('') + '</select>');
+    tw.querySelector('select').onchange = e => pick([MAIN].concat(WINS).find(T => T.id === e.target.value) || MAIN);
+    const more = el('button', 'btn sm', '+ Track window');
+    more.id = 'twAdd'; more.disabled = !onMap() || WINS.length >= TW.max;
+    more.title = WINS.length >= TW.max ? 'There is room for ' + TW.max + ' track windows. Close one to open another.' : 'Another view of the same replay, in a window over the map, with its own camera, layers and cars.';
+    more.onclick = () => { const T = addWin(); if (T) { saveUi(); pick(T); } };
+    tw.appendChild(more); s.appendChild(tw);
     /* how the driven line is coloured: always at hand, in both views */
     const pc = el('div', 'pathcol', '<span>Path colour</span>');
     pc.appendChild(segs([['speed', 'Speed'], ['brake', 'Brake']], opt.colour, v => { opt.colour = v; stepColsKey = ''; if (S.R) delete S.R._bk; legend(); }, 'Colour the driven path by'));
@@ -645,6 +914,7 @@
     message();
   }
   function panels() {
+    for (const T of WINS) T.el.style.display = onMap() ? '' : 'none';
     for (const L of OVER) {
       const show = L.on && onMap();
       const w = winOf(L);
@@ -678,7 +948,7 @@
   }
 
   /* ---------- camera ---------- */
-  function size() { const r = window.devicePixelRatio || 1; if (!c.clientWidth) return; c.width = c.clientWidth * r; c.height = c.clientHeight * r; placeWins(); mapwrap.classList.toggle('cmp', S.CM.length > 0); }
+  function size() { const r = window.devicePixelRatio || 1; if (!c.clientWidth) return; c.width = c.clientWidth * r; c.height = c.clientHeight * r; placeWins(); WINS.forEach(placeT); mapwrap.classList.toggle('cmp', S.CM.length > 0); }
   function base() { const W = c.clientWidth, H = c.clientHeight; return [W / 2, (view.follow && view.rot) ? H * 0.64 : H / 2]; }
   function carsNow() {
     /* every car where it is drawn: smoothed between steps, the compared cars as well as the one in focus */
@@ -717,31 +987,21 @@
   function resetView() { view.follow = true; view.rot = true; view.fit = false; view.all = false; view.z = 3.2; view.ox = view.oy = 0; buildSide(); }
   /* the whole track, centred in the part of the map that the panels on the left do not cover */
   function applyFit(W, H) {
-    const B = trk().box, left = (W > 900 && OVER[0].on) ? 250 : 0;
-    view.cx = (B[0] + B[1]) / 2; view.cy = (B[2] + B[3]) / 2; view.ang = 0; view.ox = left / 2; view.oy = 0;
-    view.z = Math.min((W - left) / (B[1] - B[0]), H / (B[3] - B[2])) * 0.9;
+    const B = trk().box, left = (cur === MAIN && W > 900 && OVER[0].on) ? 250 : 0;
+    view.cx = (B[0] + B[1]) / 2; view.cy = (B[2] + B[3]) / 2; view.ang = 0; view.ox = left / 2; view.oy = cur === MAIN ? 0 : 10;
+    view.z = Math.min((W - left) / (B[1] - B[0]), H / (B[3] - B[2])) * (cur === MAIN ? 0.9 : 0.8);   /* a window keeps a wider margin: pins and labels stand outside the road */
   }
   function fitView() { view.follow = false; view.rot = false; view.all = false; view.fit = true; buildSide(); }
 
   /* ---------- the frame ---------- */
-  function draw() {
-    const P = RV.pal, r = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight, R = S.R, i = S.i;
-    if (!W) return;
-    if (c.width !== Math.round(W * r) || c.height !== Math.round(H * r)) size();
-    g.setTransform(r, 0, 0, r, 0, 0); g.fillStyle = P['map-bg']; g.fillRect(0, 0, W, H);
-    if (!R) {                                             /* no run selected: say how to begin */
-      if (S.ds && S.ds.trk) {
-        g.fillStyle = P['ink-2']; g.font = '600 ' + Math.max(15, Math.min(22, W / 36)) + 'px ' + P.font; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText('Select a version on the Versions tab to begin replay', W / 2, H / 2, W - 48);
-        g.textAlign = 'start'; g.textBaseline = 'alphabetic';
-      }
-      return;
-    }
-    if (!onMap()) return;
+  /* The current target's picture: its camera worked out, the track, everything that moves, the dimming outside a
+     loop. W, H: the canvas in CSS pixels; r: device pixels per CSS pixel; pose: where its car in focus is. */
+  function scene(W, H, r, pose) {
+    const P = RV.pal;
     if (view.fit && !view.follow) applyFit(W, H);
     const many = others().length > 0;
     /* smooth motion: at 1× and slower the car, its beams and the camera move between the recorded steps */
-    const sc = fp = poseAt(R, i, S.camFrac);
+    const sc = fp = pose;
     const a = view.rot ? Math.PI / 2 - sc[2] : view.ang;
     let b = base(), ce = view.follow ? [sc[0], sc[1]] : [view.cx, view.cy];
     if (view.follow && view.all && many) { const f = frameAll(a, W, H); ce = f[0]; view.z = f[1]; b = [W / 2, H / 2]; }
@@ -800,6 +1060,23 @@
         g.restore();
       }
     }
+    cur.zNow = z;
+  }
+  function draw() {
+    const P = RV.pal, r = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight, R = S.R, i = S.i;
+    if (!W) return;
+    if (c.width !== Math.round(W * r) || c.height !== Math.round(H * r)) size();
+    g.setTransform(r, 0, 0, r, 0, 0); g.fillStyle = P['map-bg']; g.fillRect(0, 0, W, H);
+    if (!R) {                                             /* no run selected: say how to begin */
+      if (S.ds && S.ds.trk) {
+        g.fillStyle = P['ink-2']; g.font = '600 ' + Math.max(15, Math.min(22, W / 36)) + 'px ' + P.font; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('Select a version on the Versions tab to begin replay', W / 2, H / 2, W - 48);
+        g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+      }
+      return;
+    }
+    if (!onMap()) return;
+    scene(W, H, r, poseAt(R, i, S.camFrac));
     const sn = secNow !== null && document.getElementById('secNow');
     if (sn && R.sec) {                                    /* the Sectors section of the side panel: where the car is now */
       const cu = trk().sectors.cuts, k = R.d[i] < cu[0] ? 0 : R.d[i] < cu[1] ? 1 : 2, t0 = k === 0 ? 0 : k === 1 ? R.sec[0] : (R.sec[0] != null && R.sec[1] != null ? R.sec[0] + R.sec[1] : null);
@@ -812,13 +1089,14 @@
       if (q.ga !== ga) { q.gap.textContent = ga; q.ga = ga; }                    /* the page is touched only when a value changes */
       if (q.sp !== sp) { q.spd.textContent = sp; q.sp = sp; }
     }
-    if (zoomInput && document.activeElement !== zoomInput) { const lv = Math.log(z).toFixed(2); if (zoomInput.value !== lv) { zoomInput.value = lv; zoomInput.nextSibling.textContent = zoomInput._fmt(+lv); } }
-    if (OVER[3].on) RV.inputs.draw([{ id: S.sel[0], r: R, i: i }].concat(opt.allInputs ? S.CM.map(m => ({ id: m.id, r: m.r, i: RV.ghostIdx(m.r) })) : []));
+    if (zoomInput && document.activeElement !== zoomInput) { const lv = Math.log(sideT.zNow || view.z).toFixed(2); if (zoomInput.value !== lv) { zoomInput.value = lv; zoomInput.nextSibling.textContent = zoomInput._fmt(+lv); } }
+    if (OVER[3].on) RV.inputs.draw([{ id: S.sel[0], r: R, i: i }].concat(OPT0.allInputs ? S.CM.map(m => ({ id: m.id, r: m.r, i: RV.ghostIdx(m.r) })) : []));
     if (OVER[1].on) drawMini();
     if (OVER[0].on) drawHud(sm, gapTxt);
     if (OVER[4].on) drawSectorLive();
     if (OVER[5].on) drawDeltaBar();
     for (let k = 6; k < OVER.length; k++) if (OVER[k].on && OVER[k].draw) OVER[k].draw(R, i);   /* panels added with addPanel */
+    if (WINS.length) drawWins(r);
   }
   function drawMini() {
     const R = S.R, B = trk().box, P = RV.pal, r = (window.devicePixelRatio || 1) * (OVER[1].scale || 1), cw = mini.clientWidth, chh = mini.clientHeight;
@@ -976,6 +1254,7 @@
   }
 
   function legend() {
+    if (cur !== MAIN) { late.legend = true; return; }
     const R = S.R, sm = RV.simple();
     if (!R) { $('leg').innerHTML = ''; return; }
     $('leg').innerHTML = (opt.colour === 'brake'
@@ -1027,6 +1306,7 @@
   }
   let sel = null;                       /* a stretch of road being selected by dragging along it: the lap distance where it began */
   c.addEventListener('pointerdown', e => {
+    pick(MAIN);
     drag = [e.clientX, e.clientY]; moved = 0; c.setPointerCapture(e.pointerId);
     const hit = e.shiftKey ? null : trackAt(e);            /* Shift always moves the map */
     sel = onRoad(hit) && !carAt(e) && !hitAt(e) ? hit[0] : null;
@@ -1135,7 +1415,7 @@
       if (!def.draw) def.draw = function () {};
       LAYERS.push(def); enrol(def);
       if (!GROUPS.includes(def.g)) GROUPS.splice(GROUPS.length - 1, 0, def.g);       /* before "Panels on the map" */
-      restoreUi(def.id); sortLayers(); bufKey = '';
+      restoreUi(def.id); sortLayers(); bufKey = ''; WINS.forEach(T => { T.bufKey = ''; });
       if (S.ds) buildSide();
       return def;
     },
@@ -1153,6 +1433,15 @@
     },
     /* where every selected car is drawn now: [{id, x, y}] in track coordinates (used by tests) */
     carsNow: () => (onMap() ? carsNow() : []),
+    /* the track windows: list() says what each shows; add(o), close(n), pick(n or 0 for the main map), perCar(), oneTrack(); at(n, x, y) is screenOf for a window */
+    wins: {
+      list: () => WINS.map(T => ({ n: T.n, car: T.car, one: T.one, colour: T.opt.colour, line: T.opt.line, follow: T.view.follow, fit: T.view.fit, z: T.zNow, min: !!T.min, alpha: T.alpha, w: T.w, h: T.h, pos: T.pos.slice(), title: T.title, on: Object.keys(T.lay).filter(id => T.lay[id][0]) })),
+      add: o => { const T = addWin(o); if (T) { saveUi(); pick(T); } return T ? T.n : 0; },
+      close: n => { const T = WINS.find(x => x.n === n); if (T) closeWin(T); },
+      pick: n => pick(WINS.find(x => x.n === n) || MAIN),
+      picked: () => (sideT.main ? 0 : sideT.n), mainCar: () => MAIN.car, perCar: perCar, oneTrack: oneTrack,
+      at: (n, x, y) => { const T = WINS.find(q => q.n === n); return T && T.cam ? inWin(T, () => cam(x, y)) : null; },   /* the camera reads the view in place, so the window's is put there */
+    },
     /* where a point of the track (metres) is on screen in the last drawn frame: [x, y] in the map, or null (used by tests) */
     screenOf: (x, y) => (cam ? cam(x, y) : null),
   };
