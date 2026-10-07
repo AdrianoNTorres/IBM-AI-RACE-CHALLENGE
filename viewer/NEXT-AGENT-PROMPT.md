@@ -1,9 +1,44 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 14 (2026-10-07)
+**Last updated:** after Phase 14 (2026-10-07). **Next: Phase 15.**
 
 ---
+
+## Start here
+
+Phases 1 to 14 are built, tested, tagged (`phase-1` ... `phase-14`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: **Phase 15** (manual entry and CSV import), **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
+
+Read, in this order: this section; "What is left"; the phase you are about to build in `RACE_RUNNER_TASKS_ORDERED.md`; `tools/viewer-test/README.md`. Read the sections on finished phases only when you touch that code.
+
+### How the work is done (agreed with the user; keep to it)
+
+1. **One phase, then stop.** Build one phase, test it, commit, tag, push, report what to check, and wait for the user to try it. Do not start the next phase in the same turn. A phase with several parts (16, 17) may be stopped after each part if the user asks.
+2. **The user's later word beats the specification.** Where the user has asked for something different on a built phase, that stands; the cases so far are listed under "Where the build differs from the specification". If the specification asks for something that overlaps with what exists, or you would build it differently, **say what you propose and wait for a yes** before building (the user asked for exactly this on 14.1).
+3. **Test in a real browser before saying it works.** `tools/viewer-test/` drives the page in headless Edge; `node smoke.js` must pass after every change, and every new feature gets its own check **and a screenshot that you look at**. Test the page as it opens (newest version, nothing compared) as well as with a comparison: twice a feature passed its check and was invisible to the user there.
+4. **Commit, tag, push after each phase** on the branch `experimental_hosting`: `git push origin experimental_hosting phase-N`. A push republishes the site (Actions, "Publish the run viewer"). **No Claude attribution** in commits or tags: before pushing, `git log --format='%an %ae%n%B' origin/experimental_hosting..HEAD | grep -ic "claude\|anthropic\|co-authored"` must print 0. Never commit `runs/*.csv` that are untracked (the user's manual laps), `.vscode/`, or the modified `.gitignore`.
+5. **Change the `?v=` tag in `viewer/index.html`** (all script and stylesheet links) whenever a file changes, or browsers mix old and new files and the user sees a half-updated page.
+6. **Say plainly what was and was not checked**, and what the user should look at. Report a test that failed, with the reason, also when the reason is the test.
+7. Every colour is a token (`css/app.css` + `RV.theme.TOKENS`); every map drawing is a layer (`RV.map.addLayer`); every box over the map is a panel (`RV.map.addPanel`) and therefore a window; every setting is in `RV.prefs` or `RV.prefs.ui`. A feature that needs a private key goes through `js/keys.js`. Do not build a second way of doing any of these.
+8. The site stays static (GitHub Pages, no server, no build step, classic scripts on the one global `RV`). Anything from outside must be free and reachable by other users later; nothing of the owner's is embedded.
+
+### Where the build differs from the specification (on purpose)
+
+- **Deltas** are always a time gap at the same point of the track. The **delta bar** is a solid green or red bar, not white-centred, and compares with the **fastest lap recorded**, not the previous best; the **live sector table** uses the same reference. The bars do not animate when they re-order.
+- The **analysis** (pins, bands, line accuracy) compares with the fastest lap; the fastest lap itself with the next fastest.
+- The **gear chart** is a step line without filled areas. On the charts, value-coloured lines are used with one run only; compared runs have one solid colour each.
+- The **driven line** on the map runs red (slow) to green (fast).
+- The **sector table and delta bar** sit under the overview map on the left; the colour keys are top right.
+- **Theme selector**: Light, Dark, System and one "Custom" drop-down; previews across the top of the Customization tab.
+- **Help** is a page in the top bar, not a tab of Settings.
+- **HUD panels are already windows** (drag, resize by a corner grip, close, fold, back to place, only the car in focus): built during Phase 13 at the user's request, ahead of Phase 16.
+- **Hosting** is static on GitHub Pages; Streamlit was not used. Settings are per browser (`localStorage`), not per account.
+
+### Offered to the user and not decided
+
+- Problem-area thresholds as a share of the lap time instead of fixed seconds (`K` in `js/analysis.js`), for data with larger gaps or another track length.
+- A summary file (one JSON with every version's lap and sector times, written by the publishing workflow) so that sector data does not need every recording to be loaded. SQL was discussed and not recommended.
+- Moving the site to the branch `main` (see Phase 9).
 
 ## What has been done
 
@@ -73,6 +108,12 @@ Static multi-file page under `viewer/`. No build step; loads directly in a brows
 | `viewer/js/sectors.js` | Sector time helpers shared by Versions and Telemetry |
 | `viewer/js/settings.js` | Settings / Help page |
 | `viewer/js/tutorial.js` | Guided tutorial overlay |
+| `viewer/js/keys.js` | The reader's own API keys: services, storage, the dialog that asks for a key |
+| `viewer/js/theme.js` | Every colour token, the Basic groups, themes, the colour picker, the Customization tab |
+| `viewer/js/analysis.js` | Run in focus against the reference lap: line accuracy, sector health, problem areas, delta to compared cars |
+| `viewer/js/help.js` | The Help page and the data-format guide |
+| `viewer/RACE_RUNNER_TASKS_ORDERED.md` | The specification of all eighteen phases |
+| `tools/viewer-test/` | The browser test harness (`server.js`, `h.js`, `smoke.js`, README) |
 | `viewer/css/app.css` | All CSS, fully token-based (light/dark themes) |
 
 Global namespace: `globalThis.RV`. All modules attach to it.
@@ -174,19 +215,29 @@ Phases 1-8 were checked in a headless browser against the working tree (106 vers
 
 ---
 
-## Phases 9–18 (summary)
+## What is left
 
-Full spec in the original Race Runner ordered implementation list. Key notes:
+### Phase 15: manual run/version entry and import
 
-- **Phase 9:** Convert/host on GitHub Pages (static is preferred; evaluate Streamlit only if something genuinely requires a backend). Parity check all Phase 1–8 features after conversion.
-- **Phase 10:** User ID (`crypto.randomUUID()`), `localStorage` persistence for settings and defaults, Controls tab with key rebinding, Help > Data Format tab.
-- **Phase 11:** Overlay framework (enable/disable, opacity, width) — build once, reused by Phases 14 and 16.
-- **Phase 12:** Customization/themes tab in Settings. Basic (group shortcuts) + Advanced (per-element). Saved per user.
-- **Phase 13:** Navigation cleanup, split crowded panels, reorganise Help.
-- **Phase 14:** Comparison deltas, racing-line accuracy, sector health pins, problem corners in telemetry.
-- **Phase 15:** Manual run/version entry window + CSV import with per-row validation.
-- **Phase 16:** Draggable multi-track windows + resizable/minimizable HUD elements (same window component).
-- **Phase 17:** General, Beginner, and Advanced tutorials (written last).
-- **Phase 18:** 3D visualisation behind a feature flag (lowest priority).
+A window for adding a version or a run by hand, and for importing several from a CSV. Read the phase in the specification; the points that are easy to get wrong:
+
+- **Where the entries live.** The site only reads its source (a repository or a folder) and cannot write to it. Entered and imported versions therefore have to be kept in the browser and merged into the data set when it opens. `localStorage` is too small for recordings (a run CSV is close to 1 MB): use IndexedDB for them. Say this to the user before building: an entered version exists in that browser only, unless it is exported. Offer an export (the changelog entry as text and the CSV) so it can be put into the repository.
+- **One validator module** that is used by manual entry and by CSV import, returns valid / warning (with what is missing and which features that affects) / blocked (with the reason), and never throws: wrap the parsing. The existing rules are in `js/data.js` (`parseChangelog`, `buildVersions`, `parseCsv`, `buildRun`, `REQUIRED`, `FIT_TOL`) and described in Help, Data format (`js/help.js`): reuse them, do not restate them.
+- A version without a recording is a **warning** (listed, cannot be replayed, no sectors, no analysis); a recording that lacks a required column, has no rows of a lap, or does not fit the track is **blocked**.
+- Result type is chosen with rounded selectable icons: kept, kept as an enabling change, enabling change later rejected, rejected. `data.js` reads "enabling change" only from a Decision that starts with it.
+- CSV import of several runs: each validated on its own; a summary of valid, warned and blocked; blocked ones skipped with their reasons.
+- New colours are tokens; the window should reuse the dialog look of `.keydlg` / `.keycard` or become the shared window component of Phase 16.
+
+### Phase 16: multi-track windows
+
+Done already: every HUD panel is a window (`map.js`, "the panels as small windows"): drag, resize, opacity, fold, close, back to its place, saved, reset by "Restore the default layers". **Left:** several track views as draggable, overlapping windows, each with its own layers (one by speed, one by brake), comparisons on the same track or on separate ones. `map.js` draws one canvas with one camera (`view`), one set of layer states (`LAYERS`) and one list of panels; a second track window needs those three to exist per window. That is a restructuring of `map.js`: propose the approach to the user first, and keep the single-window page working throughout.
+
+### Phase 17: tutorials
+
+The tour is `js/tutorial.js` (eleven steps, `STEPS`). Wanted: a chooser before step 1 and again at the end (general / beginner / advanced), a beginner tutorial (all features, simple, more depth) and an advanced one (all features, technical). Write them last, against the page as it then is; the Help page (`js/help.js`) has the current descriptions of everything.
+
+### Phase 18: 3D
+
+Lowest priority, highest risk. Behind a switch so it cannot break the 2D viewer. The track file has elevation that `js/track.js` does not read yet. Any 3D library must be free and loadable by other users without the owner's account. Propose an approach and its limits before building.
 
 **Constraint for all phases:** no private API keys in the repo; third-party services must have a free tier reachable by any user without the owner paying per use.
