@@ -49,6 +49,7 @@
     autoplay: true,                                    /* start the replay when a run opens */
     tutorialDone: false,                               /* the welcome and tour have been seen (or skipped) */
     sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
+    autoLoop: false,                                   /* at the end of the lap, start again by itself (the Auto loop button under the replay) */
     camera: 'fit',                                     /* the camera when a run opens: fit (whole track) | follow | up (follow, car points up) */
     smooth: true,                                      /* smooth motion between steps at 1x and slower */
     loopDim: 0.55,                                     /* how dark the map outside a looped section is, 0 to 0.9 */

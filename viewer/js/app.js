@@ -11,6 +11,7 @@
     applied: [],                     /* the selection whose runs are loaded and shown */
     R: null, CM: [],                 /* the run in focus and the compared runs [{r, id}] */
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
+    over: 0,                         /* seconds the clock has run on past the end of the lap in focus, while slower compared cars finish (auto loop) */
     camFrac: 0,                      /* fractional progress 0..1 between step i and i+1 (smoothing at ≤1×) */
     hold: { dir: 0, start: 0, rate: 0 },
     /* the lists and tabs open as they were left (RV.uiGet), otherwise at their defaults */
@@ -30,7 +31,7 @@
   const idxAtT = RV.idxAtT = (r, t) => RV.bsearch(r.t, t);
   RV.idxAtD = (r, d) => RV.bsearch(r.d, d);
   /* where a compared car is drawn: at the same lap time as the car in focus, or at the same distance */
-  RV.ghostIdx = r => RV.prefs.sync === 't' ? idxAtT(r, S.R.t[S.i]) : RV.idxAtD(r, S.R.d[S.i]);
+  RV.ghostIdx = r => RV.prefs.sync === 't' ? idxAtT(r, S.R.t[S.i] + S.over) : RV.idxAtD(r, S.R.d[S.i]);
 
   /* ---------- sectors (detailed view) ----------
      A run's sector times are compared with the previous best: the fastest kept version before it
@@ -158,11 +159,11 @@
   }
 
   /* ---------- replay clock ---------- */
-  function go(k) { S.i = RV.clamp(k, 0, S.R.n - 1); S.t = S.R.t[S.i]; S.camFrac = 0; }
+  function go(k) { S.i = RV.clamp(k, 0, S.R.n - 1); S.t = S.R.t[S.i]; S.camFrac = 0; S.over = 0; }
   function seekT(tt) {
     const R = S.R, n = R.n;
     if (tt >= S.t) { while (S.i < n - 1 && R.t[S.i + 1] <= tt) S.i++; } else { while (S.i > 0 && R.t[S.i] > tt) S.i--; }
-    S.t = tt;
+    S.t = tt; S.over = 0;
   }
   function setPlaying(p) {
     /* if restarting from the last frame, jump back to the start */
@@ -203,8 +204,18 @@
       if (end != null && S.t <= end && tt > end) {
         go(RV.idxAtD(R, S.loop[0]));                   /* loop boundary: snap */
       } else if (tt >= R.t[n - 1]) {
-        S.i = n - 1; S.t = R.t[n - 1]; S.camFrac = 0;
-        setPlaying(false);                                  /* pause at the finish so sector data is readable */
+        S.i = n - 1; S.camFrac = 0;
+        if (RV.prefs.autoLoop) {
+          /* auto loop: start again by itself, but not before the last compared car has crossed the line. Cars placed
+             at the same lap time finish later the slower they are, so the clock runs on until the slowest is home;
+             cars placed at the same distance finish together. */
+          let last = R.t[n - 1];
+          if (RV.prefs.sync === 't') for (const m of S.CM) last = Math.max(last, m.r.sum.lap != null ? m.r.sum.lap : m.r.t[m.r.n - 1]);   /* its lap time is when it crosses the line */
+          if (tt < last) { S.t = tt; S.over = tt - R.t[n - 1]; } else go(0);
+        } else {
+          S.t = R.t[n - 1]; S.over = 0;
+          setPlaying(false);                                /* pause at the finish so sector data is readable */
+        }
       } else {
         seekT(tt);
         /* camera smoothing: at ≤1× speed compute fractional progress within the current step interval */
@@ -350,6 +361,9 @@
     document.querySelectorAll('#viewsw button').forEach(b => { b.onclick = () => setView(b.dataset.m); });
     $('clr').onclick = () => RV.sel.only(S.sel[0]);
     $('loopChip').onclick = () => setLoop(null);
+    const paintAuto = () => { const b = $('autoLoop'); b.setAttribute('aria-pressed', !!RV.prefs.autoLoop); b.title = RV.prefs.autoLoop ? 'Auto loop is on: at the end of the lap the replay starts again, once every car has finished. Click to switch it off.' : 'Auto loop: at the end of the lap, start the replay again by itself'; };
+    $('autoLoop').onclick = () => { RV.prefs.autoLoop = !RV.prefs.autoLoop; RV.savePrefs(); paintAuto(); if (RV.prefs.autoLoop && S.R && !S.playing && S.i >= S.R.n - 1) setPlaying(true); };
+    paintAuto();
     $('play').onclick = () => setPlaying(!S.playing);
     $('scrub').oninput = e => { go(+e.target.value); S.camFrac = 0; };
     $('spd').value = String(RV.prefs.speed);

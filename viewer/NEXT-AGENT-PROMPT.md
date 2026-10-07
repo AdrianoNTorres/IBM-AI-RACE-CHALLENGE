@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 13 (2026-10-07)
+**Last updated:** after Phase 14.2-14.4 (2026-10-07)
 
 ---
 
@@ -115,6 +115,17 @@ Navigation and usability: crowded places were split into tabs, and Help became a
 6. A full top bar (many compared cars) clips its chips instead of widening the page (`grid-template-columns: minmax(0, 1fr)` on `body`).
 7. The tour has eleven steps: Settings and Help are separate ones.
 8. **Panels as small windows** (user, 2026-10-07; the first part of Phase 16's movable HUD, built early). Every panel over the map is wrapped in a `.win` (`map.js`, "the panels as small windows": `wrapPanel`, `placeWins`, `paintWin`). It can be dragged by any part of it and stays inside the map. Three buttons show while the mouse is over it, as on a Mac window: red closes the panel (back under Layers, Panels on the map), yellow folds it into a small tab that opens it again, green puts it back in its place at its normal size (user, 2026-10-07: green resets). A fourth, blue button limits the panel to the car in focus (only on panels that show several cars, and only while cars are compared: readout, overview map, colour keys, wheel and pedals, delta bar). Position (`L.pos`), folded (`L.min`) and focus-only (`L.solo`; for the wheel and pedals it is `opt.allInputs`) are saved with the layout and reset by "Restore the default layers". A grip at the bottom right corner resizes a panel (`L.scale`, 0.6 to 2.5, applied as CSS `zoom` on the panel so text, bars and canvases grow together; the canvases draw that much finer; double-click the grip for the normal size; also a Size slider under Layers). Still to do in Phase 16: track windows on the same component. The side-panel tab reads "Cars" without a count.
+
+### Phase 14 (14.2, 14.3, 14.4 COMPLETE; 14.1 waits for the user) — tag: `phase-14`
+`js/analysis.js`: the run in focus against the reference lap (the fastest lap recorded, `RV.map.fastest()`). `RV.analysis.of(R)` works everything out once per pair of runs and keeps it on the run (`R._an`); the thresholds are the constants `K` at the top of the file.
+- **14.2 Racing-line accuracy**: the sideways distance to the reference lap's line at every point of the lap. The percentage is the average closeness, where 3 m away counts as 0 % for that point; mean, maximum and the share of the lap within 0.5 m are shown with it (readout row, Sectors side panel, Telemetry summary). Map layer "Racing-line accuracy" (green on the line, red furthest away; off by default) and "Line of the fastest lap" (dashed; off by default), both under Layers, Analysis.
+- **14.3 Sector health and pins**: each sector green (up to 0.05 s lost), yellow (up to 0.25 s) or red; a dot per sector in the live sector table and a card in the Sectors side panel. Problem areas: the lap is examined in 25 m windows; windows that lose 0.010 s or more are joined, and areas that lose 0.04 s or more (red from 0.12 s) are kept, six at most. Each has a numbered pin on the map (layer "Problem pins", on by default); a click plays the area and the 50 m before it on a loop, with the rest of the map dimmed. The map asks `RV.map.onHit(fn)` handlers what a click does.
+- **14.4 Problem areas on the charts**: every telemetry chart has a band over each area in the warning colour, with a numbered tag; a click on the tag opens a popup that says what the run does differently there (arrival speed, braking point, time on the brakes, slowest point, return to full throttle, exit speed, line), with buttons to loop it and show it on the track. `explain()` writes the sentences.
+- **14.1 Comparison deltas: NOT built.** The user (2026-10-07): comparison deltas already exist (time-gap chart, section table, delta bar, readout gaps); anything different must be proposed and confirmed first. What the spec adds beyond those: a map overlay that colours the focus car's line by its difference to the compared cars (their mean, or chosen ones), and a Telemetry table to switch compared cars on and off for all charts with an opacity. Proposed to the user; wait for the answer.
+
+**Also added on the Track page (user, 2026-10-07):**
+- **Auto loop** button beside the playback buttons (`RV.prefs.autoLoop`): at the end of the lap the replay starts again by itself. With compared cars placed at the same lap time, the clock runs on (`S.over`) until the slowest has crossed the line (its lap time), then restarts.
+- **Dragging on the map**: along the road it selects that stretch, which then plays on a loop with the rest dimmed (`trackAt`, `S.loopDraft`); beside the road (or with Shift) it moves the map. The map cannot be dragged away: the middle of the circuit stays in the window (`keepInSight`).
 
 **The full specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`** (added 2026-10-07). Read the phase there before building it. Where the user has since asked for something different on a built phase, the user's later word stands: the delta bar is solid green or red and compares with the fastest recorded lap (not white-centred, not the previous best); the sector table uses the same reference; the gear chart has no filled areas; the colour keys are top right. **Work one phase at a time and stop after each for the user to test** (user, 2026-10-07).
 

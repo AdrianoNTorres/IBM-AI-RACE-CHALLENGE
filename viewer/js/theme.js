@@ -33,6 +33,7 @@
     T('grid', 'Chart grid', 'tele'), T('scale-bad', 'Scales and deltas: slow, slower, worst', 'tele'), T('scale-good', 'Scales and deltas: fast, faster, best', 'tele'),
     T('faster', 'Time gained (text)', 'tele'), T('slower', 'Time lost (text)', 'tele'),
     T('in-throttle', 'Throttle (bar and graph)', 'tele'), T('in-brake', 'Brake (bar and graph)', 'tele'), T('in-clutch', 'Clutch (graph)', 'tele'),
+    T('health-ok', 'Sector health and problem areas: on pace', 'tele'), T('health-warn', 'Sector health and problem areas: needs some work', 'tele'), T('health-bad', 'Sector health and problem areas: needs work', 'tele'),
     T('v-best', 'Lap-time chart: kept, new best lap', 'tele'), T('v-kept', 'Lap-time chart: kept', 'tele'), T('v-rej', 'Lap-time chart: rejected', 'tele'),
   ];
   for (let k = 1; k <= RV.MAX_RUNS; k++) TOKENS.push(T('run-' + k, 'Car ' + k + ': in lists and charts', 'cars'), T('runmap-' + k, 'Car ' + k + ': on the road', 'cars'));

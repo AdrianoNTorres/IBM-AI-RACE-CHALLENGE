@@ -45,6 +45,8 @@
   /* the dark panels over the map (sector table, delta bar) and the speed label beside the car */
   --panel-bg: rgba(13, 15, 20, .82); --panel-ink: #ffffff; --panel-live: #ff8a55; --label-bg: rgba(13, 15, 20, .88); --label-ink: #ffffff;
   --helmet: #f4f2ec;
+  /* sector health and problem areas: on pace, needs some work, needs work */
+  --health-ok: #0e9f4f; --health-warn: #e0a400; --health-bad: #d92d20;
   /* the window buttons of a panel on the map: close, fold, back to its place, and only the car in focus */
   --win-close: #ff5f57; --win-fold: #febc2e; --win-home: #28c840; --win-one: #3b82f6;
   --shadow: 0 1px 2px rgba(20, 22, 27, .06), 0 8px 24px -12px rgba(20, 22, 27, .18);
@@ -129,6 +131,7 @@ button, select, input { font: inherit; color: inherit; }
 .btn.sm { padding: 5px 11px; font-size: 13px; }
 .btn.ghost { background: transparent; }
 .btn.wide { width: 100%; margin-top: 14px; }
+.btn.toggle[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }   /* a button that stays on */
 button.link { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; }
 .seg.wrap { flex-wrap: wrap; }
@@ -285,7 +288,7 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #pm.side-closed { grid-template-columns: minmax(0, 1fr) auto 0px; }
 #mapwrap { position: relative; min-width: 0; overflow: hidden; background: var(--map-bg); }
 #c { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
-#c.drag { cursor: grabbing; }
+#c.drag { cursor: grabbing; } #c.pick { cursor: crosshair; }
 #c:focus-visible { outline-offset: -4px; }
 /* the left column; when the window is too low for all of it, the last panels start a second column beside it */
 #overlay { position: absolute; left: 14px; top: 14px; bottom: 14px; display: flex; flex-flow: column wrap; align-content: flex-start; align-items: flex-start; gap: 10px; pointer-events: none; }
@@ -533,6 +536,22 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 #toast { position: fixed; left: 50%; top: 74px; transform: translate(-50%, -12px); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 10px; box-shadow: var(--shadow); z-index: 20; max-width: min(640px, 92vw); opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.err { background: var(--err); color: #fff; }
+
+/* ---------- analysis: sector health, problem areas, racing-line accuracy ---------- */
+.hdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; background: var(--mute); }
+.hdot.h-ok { background: var(--health-ok); } .hdot.h-warn { background: var(--health-warn); } .hdot.h-bad { background: var(--health-bad); }
+.ancard { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); } .ancard h4 { margin-top: 4px; } .ancard h4 .note { font-weight: 400; font-family: var(--font-ui); }
+.hrow3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 10px; }
+.hrow3 > div { background: var(--surface-2); border-radius: 9px; padding: 8px 10px; display: grid; gap: 1px; border-left: 4px solid var(--mute); }
+.hrow3 > div.h-ok { border-left-color: var(--health-ok); } .hrow3 > div.h-warn { border-left-color: var(--health-warn); } .hrow3 > div.h-bad { border-left-color: var(--health-bad); }
+.hrow3 span { font: 600 12px var(--font-display); letter-spacing: .08em; color: var(--mute); } .hrow3 b { color: var(--ink); font-size: 16px; } .hrow3 small { color: var(--mute); font-size: 12px; }
+.anline { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline; padding: 10px 12px; background: var(--surface-2); border-radius: 9px; margin: 0 0 10px; }
+.anline span { color: var(--ink); font-weight: 600; } .anline b { font: 600 20px var(--font-display); color: var(--ink); } .anline small { grid-column: 1 / -1; color: var(--mute); font-size: 12px; line-height: 1.4; }
+.anzones { display: grid; gap: 4px; margin-bottom: 8px; } .anzone { display: flex; align-items: flex-start; gap: 6px; padding: 7px 0; border-top: 1px solid var(--line); }
+.anzone > div { flex: 1; min-width: 0; } .anzone b { color: var(--ink); } .anzone small { display: block; color: var(--mute); font-size: 12px; line-height: 1.35; } .anzone .hdot { margin-top: 6px; flex: none; }
+.anzone .btn.sm { padding: 3px 9px; }
+#sectorLive .hdot { width: 7px; height: 7px; margin-right: 5px; vertical-align: 1px; }
+.keycard h2 .hdot { width: 12px; height: 12px; margin-right: 0; }
 
 /* ---------- customization: theme previews ---------- */
 /* a strip across the top of the tab: one card per theme, scrolled sideways when there are many */

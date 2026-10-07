@@ -141,10 +141,10 @@
   }
   /* a compared car, moved between its steps by as much as the car in focus is between its own */
   function ghostPose(r) {
-    const R = S.R, i = S.i, f = S.camFrac;
-    if (!(f > 0) || i >= R.n - 1) return poseAt(r, RV.ghostIdx(r), 0);
-    const mine = RV.prefs.sync === 't' ? R.t : R.d, theirs = RV.prefs.sync === 't' ? r.t : r.d;
-    const v = mine[i] + (mine[i + 1] - mine[i]) * f, k = RV.bsearch(theirs, v), span = k < r.n - 1 ? theirs[k + 1] - theirs[k] : 0;
+    const R = S.R, i = S.i, byT = RV.prefs.sync === 't', f = i < R.n - 1 ? S.camFrac : 0, over = byT && RV.prefs.smooth ? S.over : 0;   /* over: the clock has run on past the end of the lap in focus */
+    if (!(f > 0) && !(over > 0)) return poseAt(r, RV.ghostIdx(r), 0);
+    const mine = byT ? R.t : R.d, theirs = byT ? r.t : r.d;
+    const v = mine[i] + (f > 0 ? (mine[i + 1] - mine[i]) * f : 0) + over, k = RV.bsearch(theirs, v), span = k < r.n - 1 ? theirs[k + 1] - theirs[k] : 0;
     return poseAt(r, k, span > 0 ? RV.clamp((v - theirs[k]) / span, 0, 1) : 0);
   }
   let fp = [0, 0, 0, 0];                                  /* pose of the car in focus in the frame being drawn */
@@ -582,6 +582,7 @@
     const R = S.R, sc = S.ds.trk && S.ds.trk.sectors;
     if (!R || !R.sec || !sc) { s.appendChild(el('p', 'note', R ? 'This run has no position on the track map, so it has no sector times.' : 'Select a version to see its sector times.')); return; }
     s.appendChild(el('div', 'secnow', '<span>Car in focus is in</span><b id="secNow" class="num"></b>'));
+    if (RV.analysis) s.appendChild(RV.analysis.sideCard());
     const t = el('div', 'secside', RV.sectors.table(true) + '<p class="note">' + RV.sectors.NOTE + ' A version joins the table when its recording is opened: select or compare it on the Versions tab.</p>' +
       '<p class="note">' + sc.where.map((w, k) => '<b>S' + (k + 1) + '</b> ' + esc(w)).join('. ') + '.</p>');
     s.appendChild(t);
@@ -607,7 +608,7 @@
       '<h4>What you are looking at</h4><p>The car replays the recorded lap of the selected version. The coloured path is the line it drove: red where it was slowest, green where it was fastest.</p>' +
       '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
-      '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, its name in the top bar, or its row under Cars, to put it in focus.' : '') + '</p>' +
+      '<h4>Moving around</h4><p>Drag beside the road to move the map and use the mouse wheel to zoom. Drag along the road to pick a stretch: it plays on a loop and the rest of the map is dimmed (hold Shift to move the map from the road instead). Double-click to return to the car.' + (many ? ' Click another car, its name in the top bar, or its row under Cars, to put it in focus.' : '') + '</p>' +
       '<h4>Keys</h4><dl class="keys"><dt>' + RV.kbd('play') + '</dt><dd>play or pause</dd><dt>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
       '<dt>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + '</dt><dd>zoom</dd><dt>' + RV.kbd('follow') + '</dt><dd>follow the car, or stop following</dd><dt>' + RV.kbd('home') + '</dt><dd>back to the start of the lap</dd>' +
       '<dt>' + RV.kbd('endloop') + '</dt><dd>end the loop over a section</dd></dl><p class="note">The keys can be changed under Settings, Controls.</p>'));
@@ -768,8 +769,8 @@
     }
     paint(g, MOVING);
     /* loop focus dimming: if a loop is active, dim everything outside the loop track region */
-    if (S.loop && trk()) {
-      const lp = S.loop, T = trk(), hw = T.hw;
+    if ((S.loopDraft || S.loop) && trk()) {
+      const lp = S.loopDraft || S.loop, T = trk(), hw = T.hw;   /* the section being selected shows at once */
       const step = Math.max(2, Math.floor(2 / z));          /* sample every few metres */
       /* build a road-strip polygon for the loop range: left edge forward, right edge backward */
       const leftPts = [], rightPts = [];
@@ -858,6 +859,8 @@
     if (!sm) {
       add('Plan allows', R.al[i] > 350 || !R.al[i] ? 'no limit' : R.al[i].toFixed(0) + ' km/h');
       add('Track position', R.tp[i].toFixed(2), 'Track position: 0 = centre, \u00b11 = edge');
+      const A = RV.analysis && RV.analysis.of(R);
+      if (A && !A.self) add('Line accuracy', A.line.pct.toFixed(0) + ' % \u00b7 ' + A.line.dev[i].toFixed(1) + ' m off', 'How close the line is to the line of ' + esc(A.ref.name) + ', the fastest lap: over the whole lap, and here');
       if (R.beams) { let mn = 1e9, mx = -1; for (let k = 0; k < 19; k++) { const d = R.b[i * 19 + k]; if (d >= 0) { mn = Math.min(mn, d); mx = Math.max(mx, d); } } add('Beams', mx < 0 ? 'off track' : mn.toFixed(0) + ' to ' + mx.toFixed(0) + ' m'); }
     }
     for (const m of (OVER[0].solo ? [] : S.CM)) add('<i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id), gapTxt(m.r.t[RV.idxAtD(m.r, R.d[i])] - R.t[i]) + (sm ? '' : ' &nbsp; ' + m.r.v[RV.ghostIdx(m.r)].toFixed(0) + ' km/h'));
@@ -900,6 +903,7 @@
       (secCrossed[0] && secCrossed[1] && R.sec[0] != null && R.sec[1] != null) ? R.sec[0] + R.sec[1] : null,
     ];
     let html = '<div class="ldb-ref">\u0394 to ' + esc(fast && fast.sec ? fast.name : R.name) + ', the fastest lap recorded</div><table><thead><tr><th class="l">S</th><th>Time</th><th>\u0394</th></tr></thead><tbody>';
+    const AN = RV.analysis && RV.analysis.of(R);          /* green, yellow or red per sector: the time lost in it over the whole lap */
     for (let k = 0; k < 3; k++) {
       const crossed = secCrossed[k];
       const live = !crossed && k === curSec;
@@ -917,7 +921,8 @@
       const deltaStyle = dcol ? 'background:' + dcol + ';color:var(--panel-ink)' : '';
       const rowDim = future ? ' slv-future' : '';
       const timeCls = 'slv-time' + (live ? ' slv-live' : '');
-      html += '<tr class="' + rowDim + '"><td class="l num">S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
+      const hl = AN && AN.health && AN.health[k];
+      html += '<tr class="' + rowDim + '"><td class="l num">' + (hl ? '<i class="hdot h-' + hl.sev + '" title="S' + (k + 1) + ': ' + RV.analysis.WORD[hl.sev] + '"></i>' : '') + 'S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
         + '<td class="slv-delta" style="' + deltaStyle + '">' + deltaTxt + '</td></tr>';
     }
     /* Lap total row */
@@ -977,6 +982,8 @@
 
   /* ---------- pointer and keys ---------- */
   let drag = null, moved = 0;
+  const hitters = [];                   /* fn(x, y) of things on the map that can be clicked (RV.map.onHit): returns what a click does, or null */
+  function hitAt(e) { const q = c.getBoundingClientRect(); for (const fn of hitters) { const act = fn(e.clientX - q.left, e.clientY - q.top); if (act) return act; } return null; }
   function carAt(e) {
     if (!cam || !onMap()) return null;
     const q = c.getBoundingClientRect(), mx = e.clientX - q.left, my = e.clientY - q.top;
@@ -984,14 +991,57 @@
     for (const p of carsNow()) { const w = cam(p.x, p.y), d = Math.hypot(w[0] - mx, w[1] - my); if (d < bd) { bd = d; best = p.id; } }
     return best;
   }
-  c.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; moved = 0; c.setPointerCapture(e.pointerId); c.classList.add('drag'); });
+  /* Where a point of the screen is on the track: [lap distance of the nearest point of the centre line, metres from it].
+     Uses the camera of the last drawn frame. */
+  function trackAt(e) {
+    if (!lastCam || !onMap()) return null;
+    const q = c.getBoundingClientRect(), L = lastCam, X = (e.clientX - q.left - L.b[0] - view.ox) / L.z, Y = -(e.clientY - q.top - L.b[1] - view.oy) / L.z;
+    const ca = Math.cos(L.a), sa = Math.sin(L.a), wx = L.ce[0] + X * ca + Y * sa, wy = L.ce[1] - X * sa + Y * ca, C = trk().centre, n = C.length - 1;
+    let best = 1e18, bi = 0;
+    for (let k = 0; k < n; k++) { const dx = C[k][0] - wx, dy = C[k][1] - wy, d2 = dx * dx + dy * dy; if (d2 < best) { best = d2; bi = k; } }
+    return [trk().total * bi / n, Math.sqrt(best)];
+  }
+  /* on the road, or within a few pixels of it when the map is zoomed far out and the road is only a line */
+  const onRoad = hit => !!hit && hit[1] <= Math.max(trk().hw, 9 / view.z);
+  /* The map cannot be dragged away altogether: the middle of the circuit stays inside the window, so at least half of it is always in sight. */
+  function keepInSight() {
+    if (!lastCam || view.follow) return;
+    const B = trk().box, L = lastCam, W = c.clientWidth, H = c.clientHeight, ca = Math.cos(L.a), sa = Math.sin(L.a);
+    const dx = (B[0] + B[1]) / 2 - L.ce[0], dy = (B[2] + B[3]) / 2 - L.ce[1], keep = 60;
+    const sx = L.b[0] + view.ox + (dx * ca - dy * sa) * L.z, sy = L.b[1] + view.oy - (dx * sa + dy * ca) * L.z;     /* the middle of the circuit on screen */
+    view.ox += RV.clamp(sx, keep, Math.max(keep, W - keep)) - sx; view.oy += RV.clamp(sy, keep, Math.max(keep, H - keep)) - sy;
+  }
+  let sel = null;                       /* a stretch of road being selected by dragging along it: the lap distance where it began */
+  c.addEventListener('pointerdown', e => {
+    drag = [e.clientX, e.clientY]; moved = 0; c.setPointerCapture(e.pointerId);
+    const hit = e.shiftKey ? null : trackAt(e);            /* Shift always moves the map */
+    sel = onRoad(hit) && !carAt(e) && !hitAt(e) ? hit[0] : null;
+    c.classList.add(sel == null ? 'drag' : 'pick');
+  });
   c.addEventListener('pointermove', e => {
-    if (!drag) { const h = carAt(e); c.style.cursor = (h && h !== S.sel[0]) ? 'pointer' : ''; return; }
+    if (!drag) { const h = carAt(e); c.style.cursor = ((h && h !== S.sel[0]) || hitAt(e)) ? 'pointer' : (!e.shiftKey && onRoad(trackAt(e))) ? 'crosshair' : ''; return; }
     moved += Math.abs(e.clientX - drag[0]) + Math.abs(e.clientY - drag[1]);
+    if (sel != null) {                                    /* along the road: the stretch between where the drag began and where it is now */
+      const hit = trackAt(e), end = trk().total - 8;
+      if (moved >= 5 && hit && hit[1] <= Math.max(trk().hw * 4, 40 / view.z)) { const a = RV.clamp(sel, 0, end), b = RV.clamp(hit[0], 0, end); S.loopDraft = [Math.min(a, b), Math.max(a, b)]; S.chartsDirty = true; }
+      drag = [e.clientX, e.clientY];
+      return;
+    }
     if (moved >= 5) { detach(); view.fit = false; }
     view.ox += e.clientX - drag[0]; view.oy += e.clientY - drag[1]; drag = [e.clientX, e.clientY];
+    keepInSight();
   });
-  c.addEventListener('pointerup', e => { drag = null; c.classList.remove('drag'); if (moved < 5) { const h = carAt(e); if (h && h !== S.sel[0]) RV.sel.makeRef(h); } });
+  c.addEventListener('pointerup', e => {
+    const picked = sel != null ? S.loopDraft : null;
+    drag = null; sel = null; c.classList.remove('drag'); c.classList.remove('pick');
+    if (picked && moved >= 5) {                           /* a stretch was selected: play it on a loop, the rest of the map dimmed */
+      S.loopDraft = null;
+      if (picked[1] - picked[0] >= 5) { RV.play.setLoop(picked); RV.play.go(RV.idxAtD(S.R, picked[0])); RV.play.set(true); RV.toast('Playing ' + RV.fmtInt(picked[0]) + '\u2013' + RV.fmtInt(picked[1]) + ' m on a loop. ' + RV.keyLabel(RV.keyOf('endloop')) + ' ends it.'); }
+      return;
+    }
+    S.loopDraft = null;
+    if (moved < 5) { const act = hitAt(e), h = act ? null : carAt(e); if (act) act(); else if (h && h !== S.sel[0]) RV.sel.makeRef(h); }
+  });
   /* wheel: no zoom while all cars are kept in view; around the car while following; around the pointer otherwise */
   c.addEventListener('wheel', e => {
     e.preventDefault();
@@ -1056,6 +1106,10 @@
       buildSide();
     },
     LAYERS: LAYERS, PANELS: OVER,
+    /* the reference lap of the sector table, the delta bar and the analysis: the fastest lap recorded */
+    fastest: () => (S.ds ? fastestRun() : null),
+    /* fn(x, y) is asked on every click and mouse move over the map (pixels in the map); it returns a function to run on a click, or null */
+    onHit(fn) { hitters.push(fn); },
     /* Adds a layer to the map. def: { id, g (group heading in the panel; a new name makes a new group), label, d,
        draw(ctx, zoom) in track coordinates and/or screen(ctx, w2s) in pixels, and optionally on, alpha, w (line width
        in px: gives the layer a width slider; use this.w in draw), cmp (only while runs are compared), still (true:

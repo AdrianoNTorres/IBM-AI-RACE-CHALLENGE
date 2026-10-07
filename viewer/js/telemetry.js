@@ -53,6 +53,7 @@
       ['Lap time', lap], ['Top speed', r => r.sum.top.toFixed(0) + ' km/h'], ['Slowest corner', r => r.sum.slow ? r.sum.slow.toFixed(0) + ' km/h' : 'none'],
       [sm ? 'Closest to the road edge (1 = on the edge)' : 'Max |trackPos|', r => r.sum.maxtp.toFixed(sm ? 2 : 3) + ' at ' + RV.fmtInt(r.sum.maxtp_at) + ' m'],
       ['Damage', r => r.sum.damage.toFixed(0)],
+      [sm ? 'How close to the fastest lap\u2019s line' : 'Racing-line accuracy', r => { const A = RV.analysis && RV.analysis.of(r); return !A ? '\u2013' : A.self ? 'the fastest lap' : A.line.pct.toFixed(0) + ' % <span class="note">(' + A.line.mean.toFixed(2) + ' m off on average)</span>'; }],
       [sm ? 'Part of the lap spent braking' : 'Braking', r => r.sum.brake + ' %'], [sm ? '% of the lap at full throttle' : '% of the lap at full throttle', r => r.sum.full + ' %'],
     ];
     let sum = '<div class="card sumcard"><div class="cardhead"><h3>Summary</h3></div><div class="tablewrap"><table class="sumt"><thead><tr><th class="l"></th>' +
@@ -78,7 +79,7 @@
     if (S.teleTab === 'charts') {
       /* step range input */
       h += '<div class="tblbar" id="chartBar"><p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'
-        : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>' +
+        : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap. A coloured band is a stretch where time is lost to the fastest lap: click its numbered tag for why.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>' +
         '<label class="lbl" for="teleRange">Range (m)</label><div class="inrow sm"><input type="text" id="teleRange" spellcheck="false" style="width:120px" placeholder="0\u2013' + Math.round(R.total) + '" value="' + Math.round(xr[0]) + '\u2013' + Math.round(xr[1]) + '"><button class="btn sm" id="teleReset">Full lap</button></div></div>';
       for (const q of CH) {
         if ((q.gap && !many) || (sm && !q.s)) continue;
@@ -255,7 +256,8 @@
     }, { passive: false });
     /* drag: select a section of the lap to play on a loop. Shift-drag: pan. Click: move the car there. */
     let pan = false, d0 = 0;
-    cv.addEventListener('pointerdown', e => { dn = e.clientX; moved = false; pan = e.shiftKey; d0 = at(e); cv.setPointerCapture(e.pointerId); });
+    let py = 0;                                          /* the pointer, in pixels below the top of the plot */
+    cv.addEventListener('pointerdown', e => { dn = e.clientX; moved = false; pan = e.shiftKey; d0 = at(e); py = e.clientY - cv.getBoundingClientRect().top - 8; cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => {
       const r = cv.getBoundingClientRect();
       if (dn !== null) {
@@ -270,7 +272,11 @@
       if (moved && !pan && S.loopDraft && S.loopDraft[1] - S.loopDraft[0] >= 5) {
         const L = S.loopDraft;
         RV.play.setLoop(L); RV.play.go(RV.idxAtD(R(), L[0])); RV.play.set(true);
-      } else if (!moved && S.hoverD !== null) { RV.play.set(false); RV.play.go(RV.idxAtD(R(), S.hoverD)); }
+      } else if (!moved && S.hoverD !== null) {
+        /* a click on the tag of a problem area explains it; anywhere else it moves the car there */
+        const r = cv.getBoundingClientRect(), z = RV.analysis && RV.analysis.tagAt(S.hoverD, py, (r.width - PL - PR) / (xr[1] - xr[0]));
+        if (z) RV.analysis.popup(z); else { RV.play.set(false); RV.play.go(RV.idxAtD(R(), S.hoverD)); }
+      }
       S.loopDraft = null; dn = null; S.chartsDirty = true;
     });
     cv.addEventListener('pointerleave', () => { S.hoverD = null; $('tip').style.display = 'none'; S.chartsDirty = true; });
@@ -340,6 +346,7 @@
       for (let d = Math.ceil(xr[0] / stp) * stp; d <= xr[1]; d += stp) { const xx = X(d); x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke(); x.fillText(RV.fmtInt(d + 0) + ' m', xx, T + ph + 6); }
       if (lo < 0 && hi > 0) { x.strokeStyle = P.mute; x.beginPath(); x.moveTo(PL, Y(0)); x.lineTo(W - PR, Y(0)); x.stroke(); }
       x.save(); x.beginPath(); x.rect(PL, T, pw, ph); x.clip();
+      if (RV.analysis) RV.analysis.bands(x, X, T, ph);    /* the problem areas of the run in focus */
       const lp = S.loopDraft || S.loop;                  /* the section played on a loop, or being selected */
       if (lp) {
         const xa = X(lp[0]), xb = X(lp[1]);
