@@ -1009,13 +1009,19 @@
   }
   /* on the road, or within a few pixels of it when the map is zoomed far out and the road is only a line */
   const onRoad = hit => !!hit && hit[1] <= Math.max(trk().hw, 9 / view.z);
-  /* The map cannot be dragged away altogether: the middle of the circuit stays inside the window, so at least half of it is always in sight. */
+  /* The map cannot be dragged away altogether: the rectangle round the circuit always overlaps the window by a
+     margin. Zoomed in on one corner that rectangle covers the whole window, so the camera is left exactly where the
+     drag puts it; only a drag that would push the whole circuit out of the window is stopped at the edge. */
   function keepInSight() {
     if (!lastCam || view.follow) return;
-    const B = trk().box, L = lastCam, W = c.clientWidth, H = c.clientHeight, ca = Math.cos(L.a), sa = Math.sin(L.a);
-    const dx = (B[0] + B[1]) / 2 - L.ce[0], dy = (B[2] + B[3]) / 2 - L.ce[1], keep = 60;
-    const sx = L.b[0] + view.ox + (dx * ca - dy * sa) * L.z, sy = L.b[1] + view.oy - (dx * sa + dy * ca) * L.z;     /* the middle of the circuit on screen */
-    view.ox += RV.clamp(sx, keep, Math.max(keep, W - keep)) - sx; view.oy += RV.clamp(sy, keep, Math.max(keep, H - keep)) - sy;
+    const B = trk().box, L = lastCam, W = c.clientWidth, H = c.clientHeight, ca = Math.cos(L.a), sa = Math.sin(L.a), keep = 80;
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const q of [[B[0], B[2]], [B[0], B[3]], [B[1], B[2]], [B[1], B[3]]]) {          /* the four corners, on screen */
+      const dx = q[0] - L.ce[0], dy = q[1] - L.ce[1], sx = L.b[0] + view.ox + (dx * ca - dy * sa) * L.z, sy = L.b[1] + view.oy - (dx * sa + dy * ca) * L.z;
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    if (x1 < keep) view.ox += keep - x1; else if (x0 > W - keep) view.ox -= x0 - (W - keep);
+    if (y1 < keep) view.oy += keep - y1; else if (y0 > H - keep) view.oy -= y0 - (H - keep);
   }
   let sel = null;                       /* a stretch of road being selected by dragging along it: the lap distance where it began */
   c.addEventListener('pointerdown', e => {
@@ -1145,5 +1151,7 @@
     },
     /* where every selected car is drawn now: [{id, x, y}] in track coordinates (used by tests) */
     carsNow: () => (onMap() ? carsNow() : []),
+    /* where a point of the track (metres) is on screen in the last drawn frame: [x, y] in the map, or null (used by tests) */
+    screenOf: (x, y) => (cam ? cam(x, y) : null),
   };
 })();

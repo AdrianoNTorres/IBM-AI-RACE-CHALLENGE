@@ -125,7 +125,7 @@ Navigation and usability: crowded places were split into tabs, and Help became a
 
 **Also added on the Track page (user, 2026-10-07):**
 - **Auto loop** button beside the playback buttons (`RV.prefs.autoLoop`): at the end of the lap the replay starts again by itself. With compared cars placed at the same lap time, the clock runs on (`S.over`) until the slowest has crossed the line (its lap time), then restarts.
-- **Dragging on the map**: along the road it selects that stretch, which then plays on a loop with the rest dimmed (`trackAt`, `S.loopDraft`); beside the road (or with Shift) it moves the map. The map cannot be dragged away: the middle of the circuit stays in the window (`keepInSight`).
+- **Dragging on the map**: along the road it selects that stretch, which then plays on a loop with the rest dimmed (`trackAt`, `S.loopDraft`); beside the road (or with Shift) it moves the map. The map cannot be dragged away: the rectangle round the circuit always overlaps the window (`keepInSight`); zoomed in, the camera stays exactly where the drag puts it.
 
 **The full specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`** (added 2026-10-07). Read the phase there before building it. Where the user has since asked for something different on a built phase, the user's later word stands: the delta bar is solid green or red and compares with the fastest recorded lap (not white-centred, not the previous best); the sector table uses the same reference; the gear chart has no filled areas; the colour keys are top right. **Work one phase at a time and stop after each for the user to test** (user, 2026-10-07).
 

@@ -141,14 +141,23 @@
 
   /* ---------- on the map ---------- */
   const NB = 16;
+  /* The dark band under a coloured path. The driven line beneath is coloured by speed in the same red and green, so
+     without the band (and the extra width) a path laid over it could not be told from it. */
+  function ribbon(ctx, R, z, w, st) {
+    ctx.lineWidth = (w + 4) / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = RV.pal['label-bg'];
+    ctx.beginPath();
+    for (let k = 0; k < R.n; k += st) { if (k) ctx.lineTo(R.x[k], R.y[k]); else ctx.moveTo(R.x[k], R.y[k]); }
+    ctx.stroke();
+  }
   let hits = [];                        /* where the pins were drawn in the last frame: [x, y, zone] */
   RV.map.addLayer({
-    id: 'lineacc', g: 'Analysis', label: 'Racing-line accuracy', on: false, alpha: 1, w: 4,
+    id: 'lineacc', g: 'Analysis', label: 'Racing-line accuracy', on: false, alpha: 1, w: 7,
     d: 'The driven line coloured by how far it is from the line of the reference lap: green on it, red furthest from it. The reference is the fastest lap; for the fastest lap itself, the next fastest.',
     draw(ctx, z) {
       const R = S.R, A = of(R);
       if (!A || A.self) return;
       const top = Math.max(A.line.max, 0.5), st = Math.max(1, Math.floor(1.2 / z));
+      ribbon(ctx, R, z, this.w, st);
       ctx.lineWidth = this.w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       for (let b = 0; b < NB; b++) {                      /* one stroke per colour step */
         let any = false;
@@ -229,12 +238,13 @@
     return (R._gap = { key: key, g: g, max: max, maxAt: maxAt, ids: shown.map(m => m.id) });
   }
   const deltaLayer = RV.map.addLayer({
-    id: 'cmpdelta', g: 'Compared runs', label: 'Delta to the compared cars', on: false, alpha: 1, w: 4, cmp: true,
+    id: 'cmpdelta', g: 'Compared runs', label: 'Delta to the compared cars', on: false, alpha: 1, w: 7, cmp: true,
     d: 'The line of the car in focus coloured by its time gap to the compared cars at each point: green where they are level, red where the gap is largest. With several compared cars it is the gap to their average; switch single cars off under Cars, or on the Telemetry page.',
     draw(ctx, z) {
       const R = S.R, G = cmpGap(R);
       if (!G) return;
       const top = Math.max(G.max, 0.02), st = Math.max(1, Math.floor(1.2 / z));
+      ribbon(ctx, R, z, this.w, st);
       ctx.lineWidth = this.w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       for (let b = 0; b < NB; b++) {
         let any = false;
