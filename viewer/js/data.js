@@ -370,6 +370,20 @@
     return bundled;
   }
 
+  /* The summary of the site's own repository, or null: not for another source, not for a page opened from disk, and
+     never an error (the page works without it, only with fewer sector times at the start). */
+  async function readSummary(src) {
+    try {
+      if (src.kind !== 'github' || location.protocol === 'file:') return null;
+      const r = await fetch('summary.json', { cache: 'no-cache' });
+      if (!r.ok) return null;
+      const s = await r.json(), from = s && s.source;
+      if (!from || !s.versions || typeof s.versions !== 'object') return null;
+      if (String(from.repo).toLowerCase() !== (src.owner + '/' + src.repo).toLowerCase() || from.branch !== src.branch || (from.dir || '') !== (src.dir || '')) return null;
+      return s;
+    } catch (e) { return null; }
+  }
+
   /* ---------- a data set: one source, validated and ready to show ---------- */
 
   /* Reads and validates a source. Throws an RVError if it cannot be used; the caller keeps its current data set.
@@ -447,6 +461,15 @@
     }
     ds.byId = {};
     ds.versions.concat(ds.extras).forEach(v => { ds.byId[v.id] = v; });
+    /* The site's summary (summary.json next to the page, written when the site is published: tools/viewer-summary):
+       lap, sector times and sensors of every recording of the site's own repository, so they are known without
+       reading the recordings. It is used only for the repository and branch it was made from, and for a version only
+       while that version still names the recording the summary read. A loaded recording replaces what it says. */
+    ds.summary = re ? re.summary : await readSummary(src);
+    if (ds.summary) for (const v of ds.versions) {
+      const e = ds.summary.versions[v.id];
+      if (e && !v.local && e.file === v.named && Array.isArray(e.sec)) { v.pre = e; v.sec = e.sec; v.beams = !!e.beams; }
+    }
     ds.report = {
       versions: ds.versions.length - local.size, named: ds.versions.filter(v => v.named && !v.local).length,
       withFile: files ? ds.versions.filter(v => v.file && !v.local).length : null,
@@ -499,7 +522,7 @@
     ds.unloadRun = function (id) {
       const v = ds.byId[id];
       if (!v || !v.sum) return false;
-      v.sum = null; v.sec = null; v.beams = null; delete v.refTried; delete v.fastTried; delete v.bulk;
+      v.sum = null; v.sec = v.pre ? v.pre.sec : null; v.beams = v.pre ? !!v.pre.beams : null; delete v.refTried; delete v.fastTried; delete v.bulk;
       ds.runs.delete(id); ds.loaded.delete(id);
       return true;
     };

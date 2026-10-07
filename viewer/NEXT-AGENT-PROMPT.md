@@ -1,13 +1,14 @@
 # Run Viewer — Agent Handoff Document
 
-**Branch:** `experimental_hosting`
-**Last updated:** after Phase 15 (2026-10-07). **Next: the GitHub login the user asked for (see "What is left"), then Phase 16.**
+**Branch:** `viewer_no_login`
+**Last updated:** after Phase 15.3 (2026-10-07), carried over to this branch without the GitHub login. **Next: Phase 16.**
+**The GitHub login, the Repository page and the security pass (Phases 15.1 and 15.2) are not on this branch** (user, 2026-10-07: to be polished later). They are on `experimental_hosting` (tags `phase-15.1`, `phase-15.2`), to be merged back in later; this branch is `phase-15` plus Phase 15.3.
 
 ---
 
 ## Start here
 
-Phases 1 to 15 are built, tested, tagged (`phase-1` ... `phase-15`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: a **login with GitHub** that commits entered versions to the repository (asked for by the user during Phase 15; proposed, not yet agreed in detail), **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
+Phases 1 to 15 are built, tested, tagged (`phase-1` ... `phase-15`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: **Phase 16** (track windows; the HUD part is mostly done), **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
 
 Read, in this order: this section; "What is left"; the phase you are about to build in `RACE_RUNNER_TASKS_ORDERED.md`; `tools/viewer-test/README.md`. Read the sections on finished phases only when you touch that code.
 
@@ -34,11 +35,10 @@ Read, in this order: this section; "What is left"; the phase you are about to bu
 - **HUD panels are already windows** (drag, resize by a corner grip, close, fold, back to place, only the car in focus): built during Phase 13 at the user's request, ahead of Phase 16.
 - **Hosting** is static on GitHub Pages; Streamlit was not used. Settings are per browser (`localStorage`), not per account.
 
-### Offered to the user and not decided
+### Offered to the user and decided
 
-- Problem-area thresholds as a share of the lap time instead of fixed seconds (`K` in `js/analysis.js`), for data with larger gaps or another track length.
-- A summary file (one JSON with every version's lap and sector times, written by the publishing workflow) so that sector data does not need every recording to be loaded. SQL was discussed and not recommended.
-- Moving the site to the branch `main` (see Phase 9).
+- Problem-area thresholds as a share of the lap time, and the summary file: **built** (Phase 15.3, user 2026-10-07).
+- Moving the site to the branch `main` (see Phase 9): **not now** (user, 2026-10-07: "leave the site in experimental_hosting for now").
 
 ## What has been done
 
@@ -181,6 +181,13 @@ Versions entered by hand and imported (Versions, "+ Add versions"; also Settings
 - A recording is stored under its own name only if that is a `run_<digits>_<digits>.csv` no version uses; otherwise it gets a name made from the time, so an export can never overwrite a file of the repository.
 - `RV.entry.setRecording(name, text)` and `RV.entry.addImport([{name, text}])` do what the file chooser does: the tests use them, since a headless browser has no file dialog. **Not tested: the real file chooser and dropping files on the window; the download itself** (the zip's bytes were read back from the page and verified with Python's `zipfile`).
 - Help, Data format has a tab "Entered by hand"; the Versions table and the details panel show the badge "Local".
+
+### Phase 15.3 (COMPLETE) — tag: `phase-15.3`
+The two things offered earlier that the user asked for (2026-10-07). Check: `node tools/viewer-summary/build.js`, then `node tools/viewer-test/summary.js`.
+- **Analysis limits as a share of the lap** (`js/analysis.js`): `K.healthOk`, `healthWarn`, `winLoss`, `zoneLoss`, `zoneBad` are thousandths of a per cent of the reference lap's time; `limits(ref)` turns them into seconds, kept on the result as `A.lim` and used for every text that names a limit. On the 73 s lap they are the seconds they were (0.05, 0.25, 0.010, 0.04, 0.12): v1.05 has exactly the same problem areas as before.
+- **The summary** (`viewer/summary.json`, not in Git): written by `tools/viewer-summary/build.js`, which runs the viewer's own `core.js`, `track.js` and `data.js` in Node, so its lap and sector times are the page's own to the last digit. The publishing workflow runs it before uploading (`continue-on-error`: without it the site works as before) and is now also triggered by `docs/CHANGELOG.md`, `runs/**` and `track.xml`. `data.js` `readSummary` takes it only for the repository, branch and folder it was made from, never for a page opened from disk; a version uses its entry only while it still names the same recording (`v.pre`, and from it `v.sec`, `v.beams`). **`v.sec` no longer means the recording is loaded: `v.sum` does.** (One table assumed the first and threw; found by the test, fixed.)
+- What it gives: the best theoretical lap over all 100 recordings as the page opens; sector times in the details of a version that was never opened; on Versions, Sectors across versions, the tick "Every version, not only the opened ones" (`S.secAll`). The narrow table on the Track page stays with the opened versions.
+- **Not checked: the workflow run itself** (the step was run by hand on this machine; on GitHub it runs on Linux with the Node that the runner has).
 
 ## Pre-Phase-9 audit (2026-10-07)
 

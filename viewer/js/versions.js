@@ -78,7 +78,7 @@
     if (!RV.simple() && sv.length >= 2) {
       const who = [0, 1, 2].map(k => sv.reduce((a, b) => (b.sec[k] < a.sec[k] ? b : a)));
       theo = t('Best theoretical', fmtLap(who.reduce((s, b, k) => s + b.sec[k], 0)),
-        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + ' \u00b7 from the ' + sv.length + ' recordings loaded so far');
+        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + (S.ds.summary ? ', the best of ' + sv.length + ' recordings' : ', from the ' + sv.length + ' recordings loaded so far'));
     }
     return '<div class="tiles' + (theo ? ' five' : '') + '">' +
       t('Best lap', fmtLap(best.lap), esc(best.id) + ', the fastest kept version', 'hero') +
@@ -89,8 +89,11 @@
 
   /* Detailed view: the sector times of every version whose recording has been opened, kept or not. */
   function sectorGrid() {
-    if (RV.simple() || RV.sectors.opened().length < 2) return '';
-    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">Only versions that have been opened (selected or compared) are listed; \u201cLoad all versions\u201d adds none. ' + RV.sectors.NOTE + '</span></div>' + RV.sectors.table(false) + '</div>';
+    const sum = !!S.ds.summary, all = sum && S.secAll;
+    if (RV.simple() || (all ? RV.sectors.known() : RV.sectors.opened()).length < 2 && !sum) return '';
+    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">' +
+      (all ? 'Every version with a recording, from the summary made when the site was published. ' : 'Only versions that have been opened (selected or compared) are listed; \u201cLoad all versions\u201d adds none. ') + RV.sectors.NOTE + '</span></div>' +
+      (sum ? '<label class="check secall"><input type="checkbox" id="secAll"' + (S.secAll ? ' checked' : '') + '> Every version, not only the opened ones</label>' : '') + RV.sectors.table(false) + '</div>';
   }
 
   function render() {
@@ -111,6 +114,7 @@
     if (!sm && S.verTab === 'sectors') {
       box.innerHTML = tiles() + vtabs + (sectorGrid() || '<div class="card"><p class="lead">No sector times to compare yet.</p><p class="note">Sector times come from a version\u2019s recording. Open two or more versions (select one, or compare several) and they are listed here side by side.</p></div>');
       wireTabs(); RV.sectors.wire(box); renderDetail();
+      if ($('secAll')) $('secAll').onchange = e => { S.secAll = e.target.checked; RV.uiSet('secAll', S.secAll); render(); };
       return;
     }
     let h = tiles() + vtabs +

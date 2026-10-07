@@ -7,7 +7,8 @@ name: Publish the run viewer
 on:
   push:
     branches: [experimental_hosting]   # change to main when the viewer moves there
-    paths: ['viewer/**', '.github/workflows/pages.yml']
+    # the site itself, and the data its summary is made from
+    paths: ['viewer/**', '.github/workflows/pages.yml', 'tools/viewer-summary/**', 'docs/CHANGELOG.md', 'runs/**', 'track.xml']
   workflow_dispatch:
 
 permissions:
@@ -27,6 +28,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # viewer/summary.json: lap and sector times of every recording, so the page knows them without reading the
+      # recordings. If it cannot be made the site is published without it and works as before.
+      - name: Write the summary
+        continue-on-error: true
+        run: node tools/viewer-summary/build.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

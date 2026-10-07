@@ -65,7 +65,7 @@
     if (fv && fv.sec) { rs = fv.sec; what = '\u0394 against ' + esc(foc) + ', the run in focus'; }
     else {
       const ref = RV.refIdFor(id), rv = ref && S.ds.byId[ref];
-      RV.needRef(id);
+      if (!(rv && rv.sec)) RV.needRef(id);              /* not read when the site's summary already has its sector times */
       rs = rv && rv.sec;
       what = !rv ? 'no earlier best to compare with' : rv.file ? '\u0394 against the previous best, ' + esc(ref) : 'the previous best, ' + esc(ref) + ', has no recording to compare with';
     }

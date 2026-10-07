@@ -8,15 +8,19 @@
   S.secSort = { k: 'lap', dir: 1 };     /* column the table is sorted by: ver, s0, s1, s2 or lap */
   S.secHidden = {};                     /* ids of the versions taken out of the table */
 
-  const lapOf = v => (v.sum && v.sum.lap != null ? v.sum.lap : v.lap);
+  S.secAll = RV.uiGet('secAll', false); /* Versions tab: list every version the site's summary knows, not only the opened ones */
+  const lapOf = v => (v.sum && v.sum.lap != null ? v.sum.lap : v.pre && v.pre.lap != null ? v.pre.lap : v.lap);
   /* versions (and other recordings) that have been opened and have all three sector times; a recording that was
      only read by "Load all versions" (v.bulk) is not listed until it is selected */
-  function opened() { return S.ds.versions.concat(S.ds.extras).filter(v => !v.bulk && v.sec && v.sec.every(x => x != null) && lapOf(v) != null); }
+  function opened() { return S.ds.versions.concat(S.ds.extras).filter(v => v.sum && !v.bulk && v.sec && v.sec.every(x => x != null) && lapOf(v) != null); }
+  /* every version with sector times, opened or known from the site's summary (data.js) */
+  function known() { return S.ds.versions.concat(S.ds.extras).filter(v => v.sec && v.sec.every(x => x != null) && lapOf(v) != null); }
+  const every = compact => !compact && S.secAll && !!S.ds.summary;
   function shown() { return opened().filter(v => !S.secHidden[v.id]); }
 
   /* The table. compact: the narrow form for the Track tab's side panel. */
   function table(compact) {
-    const all = opened(), rows = shown(), nHidden = all.length - rows.length;
+    const all = every(compact) ? known() : opened(), rows = all.filter(v => !S.secHidden[v.id]), nHidden = all.length - rows.length;
     const back = nHidden ? '<p class="note sec-back">' + nHidden + ' removed from this table. <button class="link" data-secrestore="1">Show all again</button></p>' : '';
     if (!rows.length) return '<p class="note">' + (all.length ? 'Every version has been removed from this table.' : 'No recording with sector times has been opened yet.') + '</p>' + back;
     const order = {};
@@ -57,5 +61,5 @@
     box.querySelectorAll('[data-secrestore]').forEach(b => { b.onclick = () => { S.secHidden = {}; again(); }; });
   }
 
-  RV.sectors = { table: table, wire: wire, opened: opened, shown: shown, NOTE: NOTE };
+  RV.sectors = { table: table, wire: wire, opened: opened, shown: shown, known: known, NOTE: NOTE };
 })();
