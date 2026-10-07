@@ -1,5 +1,8 @@
 /* Run viewer: the Track tab. The replay on the 2D map, its camera, and the side panel.
-   New map features go into LAYERS: each entry gets a switch and an opacity slider in the panel automatically. */
+   The overlay framework: everything drawn on the map is a layer (LAYERS), and every box laid over it is a panel
+   (OVER). A layer or a panel gets its switch and its opacity slider in the side panel automatically, a layer that
+   has a line width (w) a width slider as well, and all three are saved in the browser and put back on the next
+   visit. A new feature adds itself with RV.map.addLayer({...}) or RV.map.addPanel({...}); nothing else is needed. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$, el = RV.el, esc = RV.esc;
@@ -10,7 +13,7 @@
      all: keep every car in view (sz, scx, scy: its smoothed zoom and centre; maxAll: its closest zoom) */
   const view = { z: 3.2, ox: 0, oy: 0, cx: 0, cy: 0, follow: false, rot: false, fit: true, all: false, sInit: false, sz: 3.2, scx: 0, scy: 0, ang: 0, maxAll: 10 };
   /* fit: the whole track is kept in view (the start state); it ends when the user moves, zooms or follows */
-  const opt = { line: 'upto', lineW: 3, colour: 'speed', allInputs: true };     /* line: how much of the driven line is drawn; colour: by speed or by brake; allInputs: wheel and pedals of the compared cars too */
+  const opt = { line: 'upto', colour: 'speed', allInputs: true };     /* line: how much of the driven line is drawn; colour: by speed or by brake; allInputs: wheel and pedals of the compared cars too */
   let near = { x: 0, y: 0, r2: 1e18 };                         /* the part of the track that can be on screen this frame */
   const buf = document.createElement('canvas'), bg = buf.getContext('2d'), miniBuf = document.createElement('canvas');
   let bufKey = '', miniKey = '', secNow = '', tourSaved = null;
@@ -160,15 +163,15 @@
   const LAYERS = [
     { id: 'road', g: 'Track', label: 'Road surface', d: 'The dark area of the road.', on: true, alpha: 1, draw(ctx) { ctx.fillStyle = RV.pal.road; ctx.fill(trackPaths().road, 'evenodd'); } },
     { id: 'edges', g: 'Track', label: 'Track edges', d: 'The lines at both sides. Beyond them the car is off the track.', on: true, alpha: 1, draw(ctx, z) {
-      ctx.lineWidth = 1.6 / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().left); ctx.stroke(trackPaths().right);
+      ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().left); ctx.stroke(trackPaths().right);
     } },
     { id: 'centre', g: 'Track', label: 'Centre line', d: 'Dashed line down the middle of the road (track position 0).', on: false, alpha: 0.6, draw(ctx, z) {
-      ctx.setLineDash([6 / z, 6 / z]); ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().centre); ctx.setLineDash([]);
+      ctx.setLineDash([6 / z, 6 / z]); ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().centre); ctx.setLineDash([]);
     } },
     { id: 'finish', g: 'Track', label: 'Start / finish line', d: 'The start and finish line across the road.', on: true, alpha: 1, draw(ctx, z) {
-      ctx.lineWidth = 3 / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().finish);
+      ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.pal['road-edge']; ctx.stroke(trackPaths().finish);
       /* chequered pattern: alternate black/white dashes */
-      ctx.lineWidth = 3 / z; ctx.setLineDash([4 / z, 4 / z]);
+      ctx.lineWidth = this.w / z; ctx.setLineDash([4 / z, 4 / z]);
       ctx.strokeStyle = RV.pal['road']; ctx.stroke(trackPaths().finish); ctx.setLineDash([]);
     }, screen(ctx, w2s) {
       if (view.z < 1) return;
@@ -178,7 +181,7 @@
       ctx.fillStyle = RV.pal['road']; ctx.fillText(s, p[0] + 12, p[1] + 3);
     } },
     { id: 'marks', g: 'Track', label: 'Distance marks', d: 'A tick and a label every 100 m from the start line.', on: true, alpha: 0.8, draw(ctx, z) {
-      ctx.lineWidth = 1 / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().marks);
+      ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.pal['road-mark']; ctx.stroke(trackPaths().marks);
     }, screen(ctx, w2s) {
       if (view.z < 0.5) return;
       ctx.fillStyle = RV.pal['map-ink']; ctx.font = '12px ' + RV.pal.font;
@@ -186,7 +189,7 @@
     } },
     { id: 'sectors', g: 'Track', label: 'Sector lines', d: 'Where the timing sectors begin (detailed view only). On Corkscrew these are Laguna Seca\u2019s three sectors.', on: true, alpha: 1, draw(ctx, z) {
       if (RV.simple()) return;
-      ctx.lineWidth = 2.5 / z; ctx.strokeStyle = RV.pal.best; ctx.beginPath();
+      ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.pal.best; ctx.beginPath();
       for (const m of trk().sectors.lines) { ctx.moveTo(m[0], m[1]); ctx.lineTo(m[2], m[3]); }
       ctx.stroke();
     }, screen(ctx, w2s) {
@@ -198,7 +201,7 @@
         ctx.fillStyle = RV.pal.surface; ctx.fillText(s, p[0] + 12, p[1] + 4);
       });
     } },
-    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (red slowest, green fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, opt.lineW); } },
+    { id: 'line', g: 'Car and path', label: 'Driven line', d: 'Where the car in focus drove, coloured by its speed (red slowest, green fastest) or by how hard it brakes.', on: true, alpha: 1, draw(ctx, z) { drawSpeedLine(ctx, S.R, z, this.w); } },
     { id: 'car', g: 'Car and path', label: 'Car', d: 'The car in focus: car1-ow1, the open-wheel car the driver runs, drawn to scale. Its front wheels turn with the recorded steering.', on: true, alpha: 1,
       draw(ctx, z) { drawCar(ctx, fp, RV.colMap(S.sel[0]), z, S.carScale[S.sel[0]]); } },
     { id: 'slowcorner', g: 'Car and path', label: 'Slowest corner', d: 'A pin marking the slowest corner of the selected run.', on: true, alpha: 1, draw(ctx, z) {
@@ -225,7 +228,7 @@
     } },
     { id: 'beams', g: 'Sensors', label: 'Track beams', d: 'The 19 distance sensors. Each line runs from the car to the track edge it measures; pink is close, cyan is far, faint means nothing within 200 m.', on: true, alpha: 0.95, draw(ctx, z) {
       const R = S.R; if (!R.beams) return;
-      beamEnds(R, S.i, (d, ex, ey, hit) => { ctx.beginPath(); ctx.moveTo(fp[0], fp[1]); ctx.lineTo(ex, ey); ctx.lineWidth = (hit ? 1.6 : 1) / z; ctx.strokeStyle = RV.beamCol(d, hit ? 1 : 0.3); ctx.stroke(); });
+      beamEnds(R, S.i, (d, ex, ey, hit) => { ctx.beginPath(); ctx.moveTo(fp[0], fp[1]); ctx.lineTo(ex, ey); ctx.lineWidth = (hit ? this.w : this.w * 0.6) / z; ctx.strokeStyle = RV.beamCol(d, hit ? 1 : 0.3); ctx.stroke(); });
     } },
     { id: 'hits', g: 'Sensors', label: 'Beam end points', d: 'A dot where each beam meets the track edge.', on: true, alpha: 1, draw(ctx, z) {
       const R = S.R; if (!R.beams) return;
@@ -241,13 +244,13 @@
         const d = q[k + 1];
         if (d < 0) continue;
         const a = R.yaw[fk] - (q[0] + k - 2) * Math.PI / 180, ex = R.x[fk] + d * Math.cos(a), ey = R.y[fk] + d * Math.sin(a);
-        ctx.beginPath(); ctx.moveTo(R.x[fk], R.y[fk]); ctx.lineTo(ex, ey); ctx.lineWidth = 2 / z; ctx.strokeStyle = RV.beamCol(d, 1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(R.x[fk], R.y[fk]); ctx.lineTo(ex, ey); ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.beamCol(d, 1); ctx.stroke();
         if (d < 199.5) { ctx.save(); ctx.setLineDash([]); ctx.beginPath(); ctx.arc(ex, ey, 4 / z, 0, 7); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2 / z; ctx.stroke(); ctx.restore(); }
       }
       ctx.setLineDash([]);
     } },
     { id: 'lineB', g: 'Compared runs', label: 'Their driven lines', d: 'The path of each compared run, in that run\u2019s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
-      for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (opt.lineW * 0.6 + 2) / z, opt.lineW * 0.6 / z, RV.pal['car-line'], RV.colMap(m.id));
+      for (const m of others()) drawSolid(ctx, m.r, RV.ghostIdx(m.r), z, (this.w + 2) / z, this.w / z, RV.pal['car-line'], RV.colMap(m.id));
     } },
     { id: 'ghost', g: 'Compared runs', label: 'Their cars', d: 'One car per compared run, in that run\u2019s colour.', on: true, alpha: 0.9, cmp: true, draw(ctx, z) {
       for (const m of others()) drawCar(ctx, ghostPose(m.r), RV.colMap(m.id), z, S.carScale[m.id]);
@@ -255,32 +258,57 @@
   ];
   const BEAMS_TIP = '19 distance sensors pointing outward from the car nose';
   const LY = {};
-  LAYERS.forEach(L => { LY[L.id] = L; L.on0 = L.on; L.alpha0 = L.alpha; });
+  /* line widths in screen pixels, for the layers that are lines; a layer without one has no width slider */
+  const WIDTHS = { edges: 1.6, centre: 1, finish: 3, marks: 1, sectors: 2.5, line: 3, beams: 1.6, focus: 2, lineB: 1.8 };
+  const WMIN = 0.5, WMAX = 8;
+  /* notes a layer's defaults (on0, alpha0, w0) so "Restore the default layers" can go back to them */
+  function enrol(L) { if (L.w == null && WIDTHS[L.id]) L.w = WIDTHS[L.id]; if (L.alpha == null) L.alpha = 1; if (L.on == null) L.on = true; LY[L.id] = L; L.on0 = L.on; L.alpha0 = L.alpha; L.w0 = L.w; }
+  LAYERS.forEach(enrol);
   /* the track itself never changes during a replay; everything else moves. The car in focus is drawn last, on top. */
-  const STATIC = LAYERS.filter(L => L.g === 'Track');
-  const MOVING = LAYERS.filter(L => L.g !== 'Track' && L.id !== 'car').concat(LAYERS.filter(L => L.id === 'car'));
+  /* A layer is static if it only depends on the track (group Track, or still: true): those are painted once and kept. */
+  const isStatic = L => (L.still != null ? L.still : L.g === 'Track');
+  let STATIC = [], MOVING = [];
+  function sortLayers() { STATIC = LAYERS.filter(isStatic); MOVING = LAYERS.filter(L => !isStatic(L) && L.id !== 'car').concat(LAYERS.filter(L => L.id === 'car')); }
+  sortLayers();
   const OVER = [
-    { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true },
-    { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true },
-    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, top right.', on: true },
-    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, its brake and throttle bars, and both over the last seconds, bottom right.', on: true },
-    { id: 'sectorLive', label: 'Live sector table', d: 'The sector times of the car in focus as it passes each sector, against the fastest lap recorded. Under the overview map.', on: true },
-    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true },
+    { id: 'hud', label: 'Readout', d: 'The box of numbers, top left.', on: true, alpha: 1 },
+    { id: 'mini', label: 'Overview map', d: 'The small map of the whole track.', on: true, alpha: 1 },
+    { id: 'leg', label: 'Colour keys', d: 'What the colours mean, top right.', on: true, alpha: 1 },
+    { id: 'inputs', label: 'Wheel and pedals', d: 'The steering wheel turning with the car, its brake and throttle bars, and both over the last seconds, bottom right.', on: true, alpha: 1 },
+    { id: 'sectorLive', label: 'Live sector table', d: 'The sector times of the car in focus as it passes each sector, against the fastest lap recorded. Under the overview map.', on: true, alpha: 1 },
+    { id: 'lapDeltaBar', label: 'Lap delta bar', d: 'Every selected car against the fastest lap recorded, at the same point of the track. Under the sector table.', on: true, alpha: 1 },
   ];
   const ALL_IN = ['Wheel and pedals of every car', 'A smaller wheel, bars and pedal graph for each compared car, above those of the car in focus. Off: the car in focus only.'];
   /* What the reader last chose on the map (layers, panels, path options, the side panel open or closed) is kept in
      this browser and put back on the next visit. The defaults (on0, alpha0) are noted before that. */
   function saveUi() {
-    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha]), panels: OVER.map(L => [L.id, L.on]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+    RV.uiSet('map', { layers: LAYERS.map(L => [L.id, L.on, L.alpha, L.w]), panels: OVER.map(L => [L.id, L.on, L.alpha]), opt: Object.assign({}, opt), closed: $('pm').classList.contains('side-closed') });
+  }
+  /* puts back what was stored for one layer or panel (id), or for all of them */
+  function restoreUi(id) {
+    const u = RV.uiGet('map', null);
+    if (!u) return;
+    for (const q of u.layers || []) {
+      const L = LY[q[0]];
+      if (!L || (id && q[0] !== id)) continue;
+      L.on = !!q[1];
+      if (q[2] >= 0 && q[2] <= 1) L.alpha = +q[2];
+      if (L.w != null && q[3] >= WMIN && q[3] <= WMAX) L.w = +q[3];
+    }
+    for (const q of u.panels || []) {
+      const L = OVER.find(x => x.id === q[0]);
+      if (!L || (id && q[0] !== id)) continue;
+      L.on = !!q[1];
+      if (q[2] >= 0.2 && q[2] <= 1) L.alpha = +q[2];
+    }
   }
   (function () {
     const u = RV.uiGet('map', null);
     if (!u) return;
-    for (const q of u.layers || []) if (LY[q[0]]) { LY[q[0]].on = !!q[1]; if (q[2] >= 0 && q[2] <= 1) LY[q[0]].alpha = +q[2]; }
-    for (const q of u.panels || []) { const L = OVER.find(x => x.id === q[0]); if (L) L.on = !!q[1]; }
+    restoreUi();
     const o = u.opt || {};
     if (['full', 'upto', 'near'].includes(o.line)) opt.line = o.line;
-    if (o.lineW >= 1 && o.lineW <= 8) opt.lineW = +o.lineW;
+    if (o.lineW >= WMIN && o.lineW <= WMAX && !(u.layers || []).some(q => q[0] === 'line' && q[3])) LY.line.w = +o.lineW;   /* stored before widths were per layer */
     if (o.colour === 'speed' || o.colour === 'brake') opt.colour = o.colour;
     if (typeof o.allInputs === 'boolean') opt.allInputs = o.allInputs;
     if (u.closed) $('pm').classList.add('side-closed');
@@ -399,7 +427,9 @@
       const count = () => { head.lastChild.textContent = items.filter(L => L.on).length + ' of ' + items.length + ' on'; };
       if (G === 'Panels on the map') {
         for (const L of OVER) {
-          body.appendChild(toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); }));
+          const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; panels(); count(); });
+          slider(r, 'Opacity', 0.2, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; panels(); });
+          body.appendChild(r);
           if (L.id === 'inputs' && many) body.appendChild(toggleRow(ALL_IN[0], ALL_IN[1], opt.allInputs, v => { opt.allInputs = v; }));
         }
         continue;
@@ -408,11 +438,11 @@
         const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; count(); });
         if (L.id === 'beams') r.title = BEAMS_TIP;
         slider(r, 'Opacity', 0, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; });
+        if (L.w != null) slider(r, 'Width', WMIN, WMAX, 0.1, L.w, v => v.toFixed(1) + ' px', v => { L.w = v; });
         body.appendChild(r);
         if (L.id === 'line') {
           const o = el('div', 'opt', '<div class="cap">How much of the line to draw</div>');
           o.appendChild(segs([['full', 'Whole lap'], ['upto', 'Up to the car'], ['near', 'Near the car']], opt.line, v => { opt.line = v; }, 'How much of the line to draw'));
-          slider(o, 'Width', 1, 8, 0.5, opt.lineW, v => v.toFixed(1) + ' px', v => { opt.lineW = v; });
           body.appendChild(o);
         }
       }
@@ -447,8 +477,8 @@
   }
   /* every layer, panel and path option back to how the page comes */
   function defaults() {
-    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; }); OVER.forEach(L => { L.on = true; });
-    opt.line = 'upto'; opt.lineW = 3; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
+    LAYERS.forEach(L => { L.on = L.on0; L.alpha = L.alpha0; L.w = L.w0; }); OVER.forEach(L => { L.on = true; L.alpha = 1; });
+    opt.line = 'upto'; opt.colour = 'speed'; opt.allInputs = true; stepColsKey = ''; if (S.R) delete S.R._bk;
     viewDefaults(true); legend(); panels(); buildSide();
   }
   function helpSection(s, sm) {
@@ -489,6 +519,7 @@
   function panels() {
     for (const L of OVER) {
       const show = L.on && onMap();
+      $(L.id).style.opacity = L.alpha < 1 ? L.alpha : '';
       if (L.id === 'sectorLive' || L.id === 'lapDeltaBar') {
         /* these are shown/hidden by their draw functions to account for missing data;
            panels() only hides them when the layer is turned off or no run is loaded */
@@ -602,7 +633,7 @@
     if (view.follow) paint(g, STATIC);                    /* the camera moves every frame: nothing to keep */
     else {
       /* the camera stands still: the track is painted once into a spare canvas and copied from it each frame */
-      const key = [c.width, c.height, z, view.ox, view.oy, ce[0], ce[1], a, document.documentElement.dataset.theme, RV.simple(), trk().total, STATIC.map(L => L.on + ':' + L.alpha).join()].join('|');
+      const key = [c.width, c.height, z, view.ox, view.oy, ce[0], ce[1], a, document.documentElement.dataset.theme, RV.simple(), trk().total, STATIC.map(L => L.on + ':' + L.alpha + ':' + L.w).join()].join('|');
       if (key !== bufKey) {
         buf.width = c.width; buf.height = c.height;
         bg.setTransform(r, 0, 0, r, 0, 0); bg.fillStyle = P['map-bg']; bg.fillRect(0, 0, W, H);
@@ -656,6 +687,7 @@
     if (OVER[0].on) drawHud(sm, gapTxt);
     if (OVER[4].on) drawSectorLive();
     if (OVER[5].on) drawDeltaBar();
+    for (let k = 6; k < OVER.length; k++) if (OVER[k].on && OVER[k].draw) OVER[k].draw(R, i);   /* panels added with addPanel */
   }
   function drawMini() {
     const R = S.R, B = trk().box, P = RV.pal, r = window.devicePixelRatio || 1, cw = mini.clientWidth, chh = mini.clientHeight;
@@ -890,7 +922,32 @@
       else if (tourSaved) { LY.beams.on = tourSaved[0]; LY.hits.on = tourSaved[1]; LY.focus.on = tourSaved[2]; tourSaved = null; }
       buildSide();
     },
-    LAYERS: LAYERS,
+    LAYERS: LAYERS, PANELS: OVER,
+    /* Adds a layer to the map. def: { id, g (group heading in the panel; a new name makes a new group), label, d,
+       draw(ctx, zoom) in track coordinates and/or screen(ctx, w2s) in pixels, and optionally on, alpha, w (line width
+       in px: gives the layer a width slider; use this.w in draw), cmp (only while runs are compared), still (true:
+       depends on the track only, so it is painted once and kept) }. Its switch, sliders and saved state follow. */
+    addLayer(def) {
+      if (LY[def.id]) return LY[def.id];
+      if (!def.draw) def.draw = function () {};
+      LAYERS.push(def); enrol(def);
+      if (!GROUPS.includes(def.g)) GROUPS.splice(GROUPS.length - 1, 0, def.g);       /* before "Panels on the map" */
+      restoreUi(def.id); sortLayers(); bufKey = '';
+      if (S.ds) buildSide();
+      return def;
+    },
+    /* Adds a panel over the map. def: { id (of an element inside #mapwrap, made here if it is missing), label, d,
+       draw(R, i) called every frame while it is on, and optionally on, alpha }. */
+    addPanel(def) {
+      const had = OVER.find(x => x.id === def.id);
+      if (had) return had;
+      if (!$(def.id)) { const e = el('div'); e.id = def.id; e.className = 'mappanel'; $('overlay').appendChild(e); }
+      if (def.on == null) def.on = true;
+      if (def.alpha == null) def.alpha = 1;
+      OVER.push(def); restoreUi(def.id);
+      if (S.ds) { panels(); buildSide(); }
+      return def;
+    },
     /* where every selected car is drawn now: [{id, x, y}] in track coordinates (used by tests) */
     carsNow: () => (onMap() ? carsNow() : []),
   };

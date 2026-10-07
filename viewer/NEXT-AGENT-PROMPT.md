@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after the pre-Phase-9 audit (2026-10-07)
+**Last updated:** after Phase 11 (2026-10-07)
 
 ---
 
@@ -80,6 +80,20 @@ Global namespace: `globalThis.RV`. All modules attach to it.
 ---
 
 ---
+
+### Phase 9 (COMPLETE) — tag: `phase-9`
+Published on GitHub Pages from the branch `experimental_hosting` by `.github/workflows/pages.yml`, which uploads `viewer/` as it is (static, no build). Live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. The stylesheet and scripts carry a `?v=` tag in `index.html`: change it whenever a file changes, or browsers mix old and new files. Moving to `main` later: merge, change the branch in `pages.yml`, point `RV.DEFAULT_LINK` and `RV.TRACK_URL` (`js/core.js`) at `main`, and allow `main` in the `github-pages` environment.
+
+### Phase 10 (COMPLETE) — tag: `phase-10`
+1. **Viewer ID** (`core.js`): `RV.prefs.uid`, a UUID from `crypto.randomUUID()` (own generator where that is unavailable), made on the first visit, shown under Settings, kept by "Reset to defaults", sent nowhere.
+2. **Saved layout** (`RV.uiGet` / `RV.uiSet`, stored in `RV.prefs.ui`, written 250 ms after the last change): map layers, panels, path options and the open or closed side panel (`map.js` `saveUi` / `restoreUi`), side-panel tab and layer group, versions list and its kept-only boxes, telemetry tab and section gap.
+3. **Controls tab** (`settings.js`): the eight replay actions in `RV.KEYS` (`core.js`) can each be given another key; changes are in `RV.prefs.keys`. `RV.keyAction(e)` maps a key press to an action; `app.js` and `map.js` `key(act)` act on it. A key in use is refused, Esc cancels. Help texts show the current keys through `RV.kbd(id)`.
+4. **Data format tab**: the guide moved from the Settings tab to its own tab; Settings has four tabs (Settings, Controls, Help, Data format).
+
+### Phase 11 (COMPLETE) — tag: `phase-11`
+The overlay framework in `map.js`: every layer (`LAYERS`) and every panel (`OVER`) gets a switch and an opacity slider, a layer with a line width (`w`, defaults in `WIDTHS`) a width slider too, and all of it is saved and restored. New features register with `RV.map.addLayer({ id, g, label, d, draw(ctx, zoom), screen(ctx, w2s), w, cmp, still })` (a new `g` makes a new group; `still: true` layers are painted once into the track buffer) and `RV.map.addPanel({ id, label, d, draw(R, i) })` (the element is made in `#overlay` if missing). Phases 14 and 16 should add their pins and windows this way.
+
+**The full specification of Phases 12-18 is not in the repository**: only the one-line summaries below. Ask the user for the "Race Runner ordered implementation list" before building them.
 
 ## Pre-Phase-9 audit (2026-10-07)
 

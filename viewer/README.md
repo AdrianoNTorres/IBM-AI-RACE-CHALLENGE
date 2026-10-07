@@ -81,7 +81,9 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 
 **Basic view and Detailed view.** The basic view uses the plain-language texts from `docs/CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
 
-Settings are saved in the browser (`localStorage`, key `rv_prefs`).
+Settings are saved in the browser (`localStorage`, key `rv_prefs`), together with a random viewer ID made on the first visit, the replay keys you changed (Settings, **Controls**: press Change, then the key) and the layout you left: which layers and panels are on, their opacity and line width, the open tabs, the versions list and the section gap. "Reset to defaults" puts all of it back except the ID. Nothing is sent anywhere.
+
+Under Layers in the detailed view every layer has a switch and an opacity slider, and every layer that is a line a width slider; the panels on the map have a switch and an opacity slider. New layers and panels are added in code with `RV.map.addLayer` and `RV.map.addPanel` (`js/map.js`) and get the same controls.
 
 ## Opening the page in a particular state
 

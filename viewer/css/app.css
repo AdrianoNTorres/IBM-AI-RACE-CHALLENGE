@@ -283,6 +283,7 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #hud .hud-doing { color: var(--mute); font-size: 13px; margin-top: 3px; }
 #hud dl.kv { border-bottom: 0; padding: 10px 0 0; margin: 10px 0 0; gap: 2px 14px; font-size: 13px; }
 #mini { width: 190px; height: 190px; }
+.mappanel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 10px 14px; }   /* a panel a feature added (RV.map.addPanel) */
 #leg { position: absolute; right: 14px; top: 14px; padding: 10px 14px; pointer-events: none; font-size: 13px; }
 #leg .cap { color: var(--ink); font-weight: 600; margin-top: 8px; } #leg .cap:first-child { margin-top: 0; }
 .grad { width: 190px; height: 9px; border-radius: 5px; margin: 5px 0 2px; }
