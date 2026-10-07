@@ -1009,19 +1009,21 @@
   }
   /* on the road, or within a few pixels of it when the map is zoomed far out and the road is only a line */
   const onRoad = hit => !!hit && hit[1] <= Math.max(trk().hw, 9 / view.z);
-  /* The map cannot be dragged away altogether: the rectangle round the circuit always overlaps the window by a
-     margin. Zoomed in on one corner that rectangle covers the whole window, so the camera is left exactly where the
-     drag puts it; only a drag that would push the whole circuit out of the window is stopped at the edge. */
+  /* The map cannot be dragged away altogether: some road always stays in the window. While any part of the road is
+     on screen the camera is left exactly where the drag puts it (zoomed in on one corner, nothing jumps); a drag
+     that would take the last of the road out of the window stops there. */
   function keepInSight() {
     if (!lastCam || view.follow) return;
-    const B = trk().box, L = lastCam, W = c.clientWidth, H = c.clientHeight, ca = Math.cos(L.a), sa = Math.sin(L.a), keep = 80;
-    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-    for (const q of [[B[0], B[2]], [B[0], B[3]], [B[1], B[2]], [B[1], B[3]]]) {          /* the four corners, on screen */
-      const dx = q[0] - L.ce[0], dy = q[1] - L.ce[1], sx = L.b[0] + view.ox + (dx * ca - dy * sa) * L.z, sy = L.b[1] + view.oy - (dx * sa + dy * ca) * L.z;
-      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    const L = lastCam, W = c.clientWidth, H = c.clientHeight, ca = Math.cos(L.a), sa = Math.sin(L.a), m = Math.min(60, W / 4, H / 4), C = trk().centre;
+    let best = 1e18, bx = 0, by = 0;
+    for (let k = 0; k < C.length; k += 2) {
+      const dx = C[k][0] - L.ce[0], dy = C[k][1] - L.ce[1], sx = L.b[0] + view.ox + (dx * ca - dy * sa) * L.z, sy = L.b[1] + view.oy - (dx * sa + dy * ca) * L.z;
+      const ox = sx < m ? m - sx : sx > W - m ? W - m - sx : 0, oy = sy < m ? m - sy : sy > H - m ? H - m - sy : 0;   /* how far this point is outside the window */
+      if (!ox && !oy) return;                              /* road in sight: nothing to do */
+      const d2 = ox * ox + oy * oy;
+      if (d2 < best) { best = d2; bx = ox; by = oy; }
     }
-    if (x1 < keep) view.ox += keep - x1; else if (x0 > W - keep) view.ox -= x0 - (W - keep);
-    if (y1 < keep) view.oy += keep - y1; else if (y0 > H - keep) view.oy -= y0 - (H - keep);
+    view.ox += bx; view.oy += by;                          /* bring the nearest piece of road back to the edge */
   }
   let sel = null;                       /* a stretch of road being selected by dragging along it: the lap distance where it began */
   c.addEventListener('pointerdown', e => {
