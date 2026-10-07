@@ -15,7 +15,8 @@
     hold: { dir: 0, start: 0, rate: 0 },
     /* the lists and tabs open as they were left (RV.uiGet), otherwise at their defaults */
     tab: 'pv', listMode: RV.uiGet('listMode', 'all'), keptOnly: RV.uiGet('keptOnly', true), keptAll: RV.uiGet('keptAll', false), detailId: null,
-    sideTab: RV.uiGet('sideTab', 'layers'), layerGroup: RV.uiGet('layerGroup', 'Sensors'), teleTab: RV.uiGet('teleTab', 'charts'), guideTab: 'layout', setTab: 'prefs',
+    sideTab: RV.uiGet('sideTab', 'layers'), layerGroup: RV.uiGet('layerGroup', 'Sensors'), teleTab: RV.uiGet('teleTab', 'charts'), guideTab: 'layout', setTab: 'general',
+    verTab: RV.uiGet('verTab', 'overview'), helpTab: RV.uiGet('helpTab', 'start'),   /* Versions: overview | sectors; the Help subject */
     hoverD: null, chartsDirty: true, progDirty: true, loadTok: 0,
     loop: null, loopDraft: null,     /* a section of the lap played on a loop: [from, to] in metres of lap distance; the one being dragged */
     vmin: 0, vmax: 1,                /* speed range of the run in focus, for the colour scale */
@@ -226,7 +227,7 @@
   /* ---------- tabs ---------- */
   function showBar() { $('bar').classList.toggle('on', !!S.R && (S.tab === 'pm' || S.tab === 'pt')); }
   function showTab(id) {
-    if (!S.ds && id !== 'ps') id = 'pe';               /* nothing loaded: only the status page and Settings exist */
+    if (!S.ds && id !== 'ps' && id !== 'ph') id = 'pe';   /* nothing loaded: only the status page, Settings and Help exist */
     S.tab = id;
     document.querySelectorAll('.tab').forEach(q => { const on = q.dataset.t === id; q.classList.toggle('on', on); q.setAttribute('aria-current', on ? 'page' : 'false'); });
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === id));
@@ -236,6 +237,7 @@
     S.chartsDirty = true; S.progDirty = true;
     if (id === 'pm') RV.map.size();
     if (id === 'ps') RV.settings.render();
+    if (id === 'ph') RV.help.render();
   }
   RV.showTab = showTab;
 
@@ -323,7 +325,7 @@
       $('eRetry').onclick = () => loadAtStart(start);
       $('eSet').onclick = () => showTab('ps');
       if ($('eDef')) $('eDef').onclick = () => { RV.prefs.source = { kind: 'github', link: RV.DEFAULT_LINK }; RV.savePrefs(); loadAtStart(start); };
-      if (S.tab !== 'ps') showTab('pe');
+      if (S.tab !== 'ps' && S.tab !== 'ph') showTab('pe');
       paintView();
     }
   }
@@ -332,7 +334,7 @@
   /* ---------- start-up ---------- */
   RV.boot = function () {
     RV.applyTheme();
-    RV.apiKeys.onChange(() => { if (S.tab === 'ps') RV.settings.render(); });
+    RV.apiKeys.onChange(() => { if (S.tab === 'ps' && S.setTab === 'data') RV.settings.render(); });
     RV.apiKeys.checkAll();
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (RV.prefs.theme === 'system') RV.applyTheme(); });
 
@@ -341,7 +343,6 @@
     location.hash.slice(1).split('&').forEach(q => { const p = q.split('='); if (p[0]) H[p[0]] = p[1] === undefined ? true : decodeURIComponent(p[1]); });
     if (H.mode) RV.prefs.view = (H.mode === 'simple' || H.mode === 'basic') ? 'basic' : 'detailed';
     if (H.list) S.listMode = H.list;
-    if (H.help) S.setTab = 'help';
     RV.map.fromHash(H);
     S.tab = 'pe';
 
@@ -383,13 +384,13 @@
     addEventListener('resize', () => { RV.map.size(); S.chartsDirty = true; S.progDirty = true; });
 
     paintView();
-    showTab(H.tab === 'ps' || H.help ? 'ps' : 'pe');
+    showTab(H.help || H.tab === 'ph' ? 'ph' : H.tab === 'ps' ? 'ps' : 'pe');
     setPlaying(RV.prefs.autoplay && !H.pause && !H.frame);
     loadAtStart({
       run: H.run, cmp: H.cmp, detail: H.detail,
       then() { if (H.frame) go(+H.frame - 1); },
     }).then(() => {
-      if (S.ds && H.tab && H.tab !== 'ps') showTab(H.tab);
+      if (S.ds && H.tab && H.tab !== 'ps' && H.tab !== 'ph' && !H.help) showTab(H.tab);
       /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
       if (S.ds && !RV.prefs.tutorialDone && !location.hash.slice(1)) RV.tutorial.start(true);
       /* opened as a local file and nothing loaded: offer the folder picker right on the status page */

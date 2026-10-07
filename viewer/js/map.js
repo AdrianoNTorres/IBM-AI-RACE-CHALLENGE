@@ -376,6 +376,12 @@
     }
     const br = el('div', 'btnrow'), b1 = el('button', 'btn', 'Back to the car'), b2 = el('button', 'btn', 'Whole track');
     b1.onclick = resetView; b2.onclick = fitView; br.appendChild(b1); br.appendChild(b2); s.appendChild(br);
+  }
+  /* the Cars tab: who is on the track (a row puts that car in focus), where compared cars are placed, and the size of each */
+  function carsSection(s, sm) {
+    const many = S.CM.length > 0;
+    if (many) s.appendChild(carsTable());
+    else s.appendChild(el('p', 'note', 'One car is on the track. Select several versions on the Versions page to compare them: they are listed here, each with its gap to the car in focus.'));
     if (many && !sm) {
       const o = el('div', 'opt', '<div class="cap">Where the other cars are placed. Same lap time shows who is ahead; same distance shows the difference in line.</div>');
       o.appendChild(segs([['t', 'Same lap time'], ['d', 'Same distance']], RV.prefs.sync, v => { RV.prefs.sync = v; RV.savePrefs(); }, 'Where the other cars are placed'));
@@ -487,23 +493,25 @@
       '<h4>What you are looking at</h4><p>The car replays the recorded lap of the selected version. The coloured path is the line it drove: red where it was slowest, green where it was fastest.</p>' +
       '<p>The lines fanning out from the car are its sensors (switch them on under Layers if they are hidden). Each measures how far it is to the edge of the road in that direction: pink means the edge is close, cyan means it is far away.</p>' +
       (R && !R.beams ? '<p class="warn">This recording has no sensor columns, so only the path is shown.</p>' : '') +
-      '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, or its name in the top bar, to put it in focus.' : '') + '</p>' +
+      '<h4>Moving around</h4><p>Drag to move the map and use the mouse wheel to zoom. Double-click to return to the car.' + (many ? ' Click another car, its name in the top bar, or its row under Cars, to put it in focus.' : '') + '</p>' +
       '<h4>Keys</h4><dl class="keys"><dt>' + RV.kbd('play') + '</dt><dd>play or pause</dd><dt>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</dt><dd>one step; hold for 0.1&times;, then 0.25&times;, then 0.5&times;</dd>' +
       '<dt>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + '</dt><dd>zoom</dd><dt>' + RV.kbd('follow') + '</dt><dd>follow the car, or stop following</dd><dt>' + RV.kbd('home') + '</dt><dd>back to the start of the lap</dd>' +
       '<dt>' + RV.kbd('endloop') + '</dt><dd>end the loop over a section</dd></dl><p class="note">The keys can be changed under Settings, Controls.</p>'));
+    const all = el('button', 'btn wide', 'Open the full help');
+    all.onclick = () => RV.help.open();
+    s.appendChild(all);
   }
   function buildSide() {
     const s = $('side'), sm = RV.simple();
     s.innerHTML = ''; zoomInput = null; carCells = [];
     if (!S.ds) return;
-    if (S.CM.length) s.appendChild(carsTable());
     /* how the driven line is coloured: always at hand, in both views */
     const pc = el('div', 'pathcol', '<span>Path colour</span>');
     pc.appendChild(segs([['speed', 'Speed'], ['brake', 'Brake']], opt.colour, v => { opt.colour = v; stepColsKey = ''; if (S.R) delete S.R._bk; legend(); }, 'Colour the driven path by'));
     s.appendChild(pc);
     const tabs = el('div', 'seg full subtabs');
     tabs.setAttribute('role', 'tablist');
-    for (const [id, label] of [['view', 'Camera'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
+    for (const [id, label] of [['view', 'Camera'], ['cars', S.CM.length ? 'Cars (' + (S.CM.length + 1) + ')' : 'Cars'], ['layers', 'Layers'], ['sectors', 'Sectors'], ['help', 'Help']]) {
       const b = el('button', S.sideTab === id ? 'on' : null, label);
       b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', S.sideTab === id);
       b.onclick = () => { S.sideTab = id; RV.uiSet('sideTab', id); buildSide(); };
@@ -512,7 +520,7 @@
     s.appendChild(tabs);
     const body = el('div', 'sidebody');
     s.appendChild(body);
-    if (S.sideTab === 'view') viewSection(body, sm); else if (S.sideTab === 'layers') layersSection(body, sm); else if (S.sideTab === 'sectors') sectorsSection(body, sm); else helpSection(body, sm);
+    if (S.sideTab === 'view') viewSection(body, sm); else if (S.sideTab === 'cars') carsSection(body, sm); else if (S.sideTab === 'layers') layersSection(body, sm); else if (S.sideTab === 'sectors') sectorsSection(body, sm); else helpSection(body, sm);
     secNow = '';
     message();
   }

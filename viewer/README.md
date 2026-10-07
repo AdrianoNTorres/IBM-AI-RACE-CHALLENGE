@@ -91,6 +91,18 @@ Settings are saved in the browser (`localStorage`, key `rv_prefs`), together wit
 
 Under Layers in the detailed view every layer has a switch and an opacity slider, and every layer that is a line a width slider; the panels on the map have a switch and an opacity slider. New layers and panels are added in code with `RV.map.addLayer` and `RV.map.addPanel` (`js/map.js`) and get the same controls.
 
+## Finding your way
+
+The top bar has five pages: Versions, Track, Telemetry, Help and Settings.
+
+- **Help** lists its subjects on the left and shows one at a time; the search box finds a word in all of them. The data format is one of the subjects. `#help` in the address opens it.
+- **Settings** has five tabs: General (theme, view, viewer ID, reset), Replay, Data (the source and your API keys), Customization and Controls.
+- **Track**'s side panel has Camera, Cars (the selected cars, where compared cars are placed, the size of each), Layers, Sectors and Help.
+- **Telemetry** shows one of Charts along the lap, Summary, Sectors and Sections at a time.
+- **Versions**, in the detailed view, has the sector times of the opened versions on a tab of their own.
+
+Some older paragraphs in this file still say "the Help tab of Settings" or describe the Telemetry page as one long page; the list above is current.
+
 ## Opening the page in a particular state
 
 Options can be added to the address after `#`, joined with `&`:

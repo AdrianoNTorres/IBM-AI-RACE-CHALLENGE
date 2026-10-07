@@ -99,7 +99,7 @@
       if (w.hidden && !has) {
         w.hidden = false;
         w.innerHTML = '<b>Without this key these parts of the site will not work:</b><ul>' + s.features.map(x => '<li><b>' + esc(x.name) + '</b>: ' + esc(x.why) + '</li>').join('') +
-          '</ul>Everything else works as before. They stay on the page, greyed out; clicking one brings this box back, and the key can be entered at any time under Settings, API keys.';
+          '</ul>Everything else works as before. They stay on the page, greyed out; clicking one brings this box back, and the key can be entered at any time under Settings, Data.';
         $('keySkip').textContent = 'Continue without it';
         return;
       }

@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 12 (2026-10-07)
+**Last updated:** after Phase 13 (2026-10-07)
 
 ---
 
@@ -104,6 +104,16 @@ Customization and themes (`js/theme.js`, Settings > Customization).
 5. Sub-tabs: Menus and UI, Track map, Overlays and panels, Telemetry and scales, Cars.
 6. **Theme selector** (user, 2026-10-07): Light, Dark, System and one "Custom" drop-down that lists the reader's themes by name (`customSelect`), on the Settings tab and the Customization tab, so the row never grows.
 7. **Previews** (user, 2026-10-07): a strip of cards across the top of the Customization tab, one per theme, each with three small windows (Versions, Track, Telemetry) drawn in that theme's colours; a click uses the theme. The classes `.th-light` and `.th-dark` (same rule blocks as the two token sets in `css/app.css`) give one element a whole built-in theme whatever the page's theme is; the card of the theme in use carries neither, so it follows the live colours.
+
+### Phase 13 (COMPLETE) — tag: `phase-13`
+Navigation and usability: crowded places were split into tabs, and Help became a page of its own.
+1. **Help** is a top-bar page (`#ph`, `js/help.js`, `RV.help.open(subject)`): nine subjects in a list on the left (Start here, The pages, Selecting and comparing, Mouse and keyboard, Reading the colours, Using your own data, Data format, If something does not work, Links to a particular state), one shown at a time, and a search box that finds a word in all of them. The data-format guide lives here. `#help` and `#tab=ph` open it. The help texts are the `card(...)` calls in `cards()`; `NAV` says which cards make up which subject.
+2. **Settings** (`js/settings.js`) has five tabs, `S.setTab`: `general` (Appearance, This browser, Reset), `replay` (When a run opens, On the map), `data` (Data source, API keys), `custom`, `controls`.
+3. **Track side panel**: Camera, **Cars**, Layers, Sectors, Help. Cars holds the table of selected cars (a row puts that car in focus), the placement of compared cars and the size of each car; Camera is left with the camera. The panel's Help has a button to the full help.
+4. **Telemetry**: Charts along the lap, Summary, Sectors, Sections are four tabs (`S.teleTab`; two in the basic view), so the charts start at the top of the page.
+5. **Versions** (detailed view): "Lap times and versions" and "Sectors across versions" are two tabs (`S.verTab`).
+6. A full top bar (many compared cars) clips its chips instead of widening the page (`grid-template-columns: minmax(0, 1fr)` on `body`).
+7. The tour has eleven steps: Settings and Help are separate ones.
 
 **The full specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`** (added 2026-10-07). Read the phase there before building it. Where the user has since asked for something different on a built phase, the user's later word stands: the delta bar is solid green or red and compares with the fastest recorded lap (not white-centred, not the previous best); the sector table uses the same reference; the gear chart has no filled areas; the colour keys are top right. **Work one phase at a time and stop after each for the user to test** (user, 2026-10-07).
 

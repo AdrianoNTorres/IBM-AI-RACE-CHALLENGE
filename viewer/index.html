@@ -17,7 +17,7 @@
   root.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=p12d">
+<link rel="stylesheet" href="css/app.css?v=p13">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
@@ -40,6 +40,7 @@
     <button data-m="basic">Basic view</button>
     <button data-m="detailed">Detailed view</button>
   </div>
+  <button class="tab" id="helpTab" data-t="ph"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M9.4 9.3a2.7 2.7 0 1 1 3.9 2.4c-.9.5-1.3 1-1.3 2.1"/><path d="M12 17.2v.3"/></svg>Help</button>
   <button class="tab" id="settingsTab" data-t="ps">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5Z"/></svg>
     Settings
@@ -62,6 +63,7 @@
   </section>
   <section id="pt" class="page" aria-label="Telemetry"></section>
   <section id="ps" class="page" aria-label="Settings"></section>
+  <section id="ph" class="page" aria-label="Help"></section>
   <section id="pe" class="page" aria-label="Status"></section>
 </main>
 
@@ -83,19 +85,20 @@
 <div id="toast" role="alert"></div>
 <input id="dirInput" type="file" webkitdirectory multiple hidden>
 
-<script src="js/core.js?v=p12d"></script>
-<script src="js/keys.js?v=p12d"></script>
-<script src="js/theme.js?v=p12d"></script>
-<script src="js/track.js?v=p12d"></script>
-<script src="js/data.js?v=p12d"></script>
-<script src="js/app.js?v=p12d"></script>
-<script src="js/sectors.js?v=p12d"></script>
-<script src="js/versions.js?v=p12d"></script>
-<script src="js/map.js?v=p12d"></script>
-<script src="js/inputs.js?v=p12d"></script>
-<script src="js/telemetry.js?v=p12d"></script>
-<script src="js/settings.js?v=p12d"></script>
-<script src="js/tutorial.js?v=p12d"></script>
+<script src="js/core.js?v=p13"></script>
+<script src="js/keys.js?v=p13"></script>
+<script src="js/theme.js?v=p13"></script>
+<script src="js/track.js?v=p13"></script>
+<script src="js/data.js?v=p13"></script>
+<script src="js/app.js?v=p13"></script>
+<script src="js/sectors.js?v=p13"></script>
+<script src="js/versions.js?v=p13"></script>
+<script src="js/map.js?v=p13"></script>
+<script src="js/inputs.js?v=p13"></script>
+<script src="js/telemetry.js?v=p13"></script>
+<script src="js/settings.js?v=p13"></script>
+<script src="js/help.js?v=p13"></script>
+<script src="js/tutorial.js?v=p13"></script>
 <script>RV.boot();</script>
 </body>
 </html>

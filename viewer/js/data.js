@@ -80,7 +80,7 @@
     if (header.length < 2 && !header[0]) throw new RVError('csv', 'This recording is empty.');
     const missing = REQUIRED.filter(c => header.indexOf(c) < 0);
     if (missing.length) throw new RVError('csv', 'This recording lacks the column' + (missing.length > 1 ? 's ' : ' ') + missing.join(', ') + '.',
-      'See the data format guide in Settings for the columns a run CSV needs.');
+      'Help, Data format, lists the columns a run CSV needs.');
     const want = REQUIRED.concat(['allowed', 'focA', 'clutch']);
     for (let k = 0; k < 19; k++) want.push('track' + k);
     for (let k = 0; k < 5; k++) want.push('foc' + k);
@@ -258,8 +258,8 @@
       let r;
       try { r = await fetch(api, auth()); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
       if (r.status === 404) return new RVError('repo', 'The repository ' + name + ' was not found, or it is private.',
-        token() ? 'Check the spelling of the owner and the repository name, and that your GitHub token (Settings, API keys) may read this repository.'
-          : 'Check the spelling of the owner and the repository name. A private repository needs your own GitHub token: Settings, API keys.');
+        token() ? 'Check the spelling of the owner and the repository name, and that your GitHub token (Settings, Data) may read this repository.'
+          : 'Check the spelling of the owner and the repository name. A private repository needs your own GitHub token: Settings, Data.');
       if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ", and GitHub\u2019s request limit prevented checking why (HTTP " + r.status + ').',
         'Check the link, or wait a few minutes and try again.');
       const info = await r.json();
@@ -269,7 +269,7 @@
           'Its default branch is "' + info.default_branch + '".');
       }
       return new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + name + ' (' + (branch === 'HEAD' ? 'default branch' : 'branch ' + branch) + ').',
-        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
+        'A source needs a docs/CHANGELOG.md. Help, Data format, describes it.');
     }
     /* Reads CHANGELOG.md and, on the way, settles which part of the link is the branch and which a folder. */
     src.readChangelog = async function () {
@@ -311,7 +311,7 @@
         return await (await d.getFileHandle(parts[parts.length - 1])).getFile();
       } catch (e) {
         if (e && (e.name === 'NotFoundError' || e.name === 'TypeMismatchError')) throw new RVError('missing', path + ' was not found.');
-        throw new RVError('access', path + ' could not be read: ' + (e && e.message ? e.message : e), 'Choose the folder again in Settings.');
+        throw new RVError('access', path + ' could not be read: ' + (e && e.message ? e.message : e), 'Choose the folder again under Settings, Data.');
       }
     }
     src.readText = async path => (await file(path)).text();
@@ -381,12 +381,12 @@
     let text;
     try { text = await src.readChangelog(); } catch (e) {
       if (e.code === 'missing') throw new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + src.where() + '.',
-        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
+        'A source needs a docs/CHANGELOG.md. Help, Data format, describes it.');
       throw e;
     }
     const full = parseChangelog(text);
     if (!full.size) throw new RVError('format', 'docs/CHANGELOG.md was found in ' + src.where() + ', but it has no version entries.',
-      'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See the data format guide in Settings.');
+      'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See Help, Data format.');
 
     step('Reading CHANGELOG-simple.md');
     let simple = null;

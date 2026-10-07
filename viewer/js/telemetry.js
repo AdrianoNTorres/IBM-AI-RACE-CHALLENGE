@@ -55,22 +55,26 @@
       ['Damage', r => r.sum.damage.toFixed(0)],
       [sm ? 'Part of the lap spent braking' : 'Braking', r => r.sum.brake + ' %'], [sm ? '% of the lap at full throttle' : '% of the lap at full throttle', r => r.sum.full + ' %'],
     ];
-    let h = '<div class="card sumcard"><div class="cardhead"><h3>Summary</h3></div><div class="tablewrap"><table class="sumt"><thead><tr><th class="l"></th>' +
+    let sum = '<div class="card sumcard"><div class="cardhead"><h3>Summary</h3></div><div class="tablewrap"><table class="sumt"><thead><tr><th class="l"></th>' +
       rs.map((m, k) => '<th>' + sw(m.id) + esc(m.id) + (k === 0 && many ? ' <span class="note">in focus</span>' : '') + '</th>').join('') + '</tr></thead><tbody>';
-    for (const q of rowsS) h += '<tr><td class="l">' + q[0] + '</td>' + rs.map(m => '<td class="num">' + q[1](m.r) + '</td>').join('') + '</tr>';
-    if (many) h += '<tr><td class="l">' + (sm ? 'Against the car in focus' : 'Lap vs the run in focus') + '</td><td></td>' + S.CM.map(m => {
+    for (const q of rowsS) sum += '<tr><td class="l">' + q[0] + '</td>' + rs.map(m => '<td class="num">' + q[1](m.r) + '</td>').join('') + '</tr>';
+    if (many) sum += '<tr><td class="l">' + (sm ? 'Against the car in focus' : 'Lap vs the run in focus') + '</td><td></td>' + S.CM.map(m => {
       if (m.r.sum.lap == null || R.sum.lap == null) return '<td></td>';
       const df = m.r.sum.lap - R.sum.lap;
       return '<td class="num ' + (df < 0 ? 'faster' : df > 0 ? 'slower' : '') + '">' + (sm ? Math.abs(df).toFixed(3) + ' s ' + (df > 0 ? 'slower' : 'faster') : sgn(df, 3) + ' s') + '</td>';
     }).join('') + '</tr>';
-    h += '</tbody></table></div></div>';
+    sum += '</tbody></table></div></div>';
 
-    if (!sm) h += sectorCard();
 
-    /* detailed view: charts and the section table share the space, one at a time */
-    if (sm) S.teleTab = 'charts';
-    else h += '<div class="seg subtabs" role="tablist" id="ttabs"><button role="tab" data-t="charts" class="' + (S.teleTab === 'charts' ? 'on' : '') + '">Charts along the lap</button><button role="tab" data-t="sect" class="' + (S.teleTab === 'sect' ? 'on' : '') + '">' + sectGap + '\u202fm sections</button></div>';
-
+    /* One thing at a time, so the charts are in sight without scrolling: the charts, the summary of the runs and,
+       in the detailed view, the sector times and the table of sections. */
+    const sec = sm ? '' : sectorCard();
+    const tabs = [['charts', 'Charts along the lap'], ['summary', 'Summary']].concat(sm ? [] : (sec ? [['sectors', 'Sectors']] : []).concat([['sect', sectGap + '\u202fm sections']]));
+    if (!tabs.some(t => t[0] === S.teleTab)) S.teleTab = 'charts';
+    let h = '<div class="seg subtabs" role="tablist" id="ttabs">' + tabs.map(t => '<button role="tab" data-t="' + t[0] + '" class="' + (S.teleTab === t[0] ? 'on' : '') + '">' + t[1] + '</button>').join('') + '</div>';
+    if (S.teleTab === 'summary') h += sum;
+    else if (S.teleTab === 'sectors') h += sec;
+    else
     if (S.teleTab === 'charts') {
       /* step range input */
       h += '<div class="tblbar" id="chartBar"><p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'

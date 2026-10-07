@@ -1,5 +1,5 @@
 /* Run viewer: the welcome and the guided tour. Shown once, on the first visit; "Redo the tutorial" on the
-   Help tab of Settings runs it again. Each step points at one part of the page and says what it is for. */
+   Help page runs it again. Each step points at one part of the page and says what it is for. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$;
@@ -24,8 +24,10 @@
       text: 'Speed, throttle and brake along the lap. Click a chart to move the car to that point. With several versions selected, their lines are drawn together so you can see where one gains on another.' },
     { sel: '#viewsw', title: 'Two levels of detail',
       text: 'Basic view explains things in plain language and shows the main controls. Detailed view adds the technical record, every channel, sector times and all the controls.' },
-    { sel: '#settingsTab', title: 'Settings and help',
-      text: 'Theme, data source and replay preferences live here. The Help tab has a summary of everything, and a button to see this tour again.' },
+    { sel: '#settingsTab', title: 'Settings',
+      text: 'Theme and colours, the replay keys, how a replay starts, and where the data comes from.' },
+    { sel: '#helpTab', title: 'Help',
+      text: 'Everything explained, one subject at a time, with a search box. \u201cStart here\u201d has a button to see this tour again.' },
   ];
 
   let at = -1, open = false, lastFocus = null;
@@ -85,7 +87,7 @@
         '<p>This site replays the laps of a self-driving racing car and shows how its driver improved, version by version. Nothing here needs installing, and nothing you do changes the data.</p>' +
         '<p>A short tour shows where everything is. It takes about a minute.</p>' +
         '<div class="tour-acts"><button class="btn prim" id="tourNext">Take the tour</button><button class="btn" id="tourSkip">Skip for now</button></div>' +
-        '<p class="note">You can run it again at any time: Settings, Help, “Redo the tutorial”.</p>';
+        '<p class="note">You can run it again at any time: Help, Start here, “Redo the tutorial”.</p>';
     } else {
       c.innerHTML = '<div class="tour-count">Step ' + (k + 1) + ' of ' + STEPS.length + '</div><h2 id="tourTitle">' + st.title + '</h2><p>' + st.text + '</p>' +
         '<div class="tour-acts"><button class="btn prim" id="tourNext">' + (k === STEPS.length - 1 ? 'Finish' : 'Next') + '</button>' +
@@ -104,6 +106,7 @@
     start(welcome) {
       if (open) return;
       open = true; lastFocus = document.activeElement;
+      S.verTab = 'overview'; S.teleTab = 'charts';         /* the steps point at the chart, the list and the charts */
       root().hidden = false;
       addEventListener('keydown', onKey, true);
       addEventListener('resize', place);

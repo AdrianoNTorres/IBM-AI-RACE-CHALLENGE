@@ -88,7 +88,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; overflow: hidden;
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); overflow: hidden;   /* the column never grows past the window: a full top bar clips its chips instead */
   background: var(--bg); color: var(--ink-2); font: 14px/1.5 var(--font-ui);
 }
 .num { font-variant-numeric: tabular-nums; }
@@ -191,7 +191,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .tab:hover { color: var(--ink); }
 .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
 .tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
-#settingsTab { margin-left: 4px; border-left: 1px solid var(--line); padding-left: 18px; }
+#helpTab { margin-left: 4px; border-left: 1px solid var(--line); padding-left: 18px; }
 #sel { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
 #viewsw { align-self: center; margin-left: 8px; }
 #chips { display: flex; align-items: center; gap: 6px; overflow: hidden; }
@@ -215,7 +215,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .page.on { display: block; }
 
 /* status (loading, errors, empty) */
-#pe, #pt, #ps { overflow: auto; padding: 26px 28px 40px; }
+#pe, #pt, #ps, #ph { overflow: auto; padding: 26px 28px 40px; }
 .card.status { max-width: 640px; margin: 6vh auto 0; padding: 28px 30px; }
 .card.status h2 { margin-bottom: 8px; }
 .steps { list-style: none; padding: 0; margin: 14px 0 0; }
@@ -474,7 +474,15 @@ ul.keyfeat small { display: block; color: var(--mute); font-size: 13px; }
 .keyhelp { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: 700 14px var(--font-ui); cursor: pointer; }
 .keycard .warn { margin: 10px 0 0; } .keycard .warn ul { margin: 6px 0; padding-left: 20px; }
 
-/* ---------- help tab, welcome and tour ---------- */
+/* ---------- the Help page: subjects on the left, one at a time on the right ---------- */
+.setgrid.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.helpgrid { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; }
+.helpnav { display: grid; gap: 4px; position: sticky; top: 0; } .helpnav input { margin-bottom: 8px; width: 100%; } .helpnav .note { margin: 0 0 6px; }
+.helpnav button[data-v] { text-align: left; border: 0; background: transparent; color: var(--ink-2); padding: 9px 12px; border-radius: 9px; font-weight: 600; cursor: pointer; }
+.helpnav button[data-v]:hover { background: var(--surface-2); color: var(--ink); } .helpnav button[data-v].on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.helpmain { display: grid; gap: 18px; min-width: 0; max-width: 860px; }
+
+/* ---------- help cards, welcome and tour ---------- */
 #sTabs { margin-bottom: 18px; }
 .helpcard p:last-child, .helpcard ul:last-child, .helpcard dl:last-child, .helpcard table:last-child { margin-bottom: 0; }
 .helpcard .acts { margin: 6px 0 0; }
@@ -543,7 +551,7 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 @media (max-width: 1080px) {
   #chips .chip em, #chips .chip span.num { display: none; }
   #clr { display: none !important; }
-  .setgrid, .custgrid { grid-template-columns: 1fr; }
+  .setgrid, .setgrid.even, .custgrid { grid-template-columns: 1fr; }
 }
 /* phone: the Versions tab stacks; the replay asks for a wider screen */
 @media (max-width: 820px) {
@@ -556,7 +564,8 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
   .tiles { grid-template-columns: 1fr 1fr; gap: 10px; } .tile .big { font-size: 26px; } .tile.hero .big { font-size: 30px; }
   .xcol { display: none; } th, td { padding: 8px; } #vt td.w { min-width: 150px; }
   #pm.on { display: block; } #mapwrap { height: 62vh; } #mini, #leg, #inputs, #sectorLive, #lapDeltaBar { display: none !important; }
-  #pe, #pt, #ps { padding: 16px 14px; overflow: visible; }
+  #pe, #pt, #ps, #ph { padding: 16px 14px; overflow: visible; }
+  .helpgrid { grid-template-columns: 1fr; } .helpnav { position: static; }
   #bar { position: sticky; bottom: 0; flex-wrap: wrap; } #pos { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

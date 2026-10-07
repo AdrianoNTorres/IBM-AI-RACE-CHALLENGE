@@ -102,7 +102,16 @@
       top: 'The ten highest top speeds.',
     };
     const lists = LISTS.concat(S.ds.extras.length ? [['extra', 'Other recordings (' + S.ds.extras.length + ')']] : []);
-    let h = tiles() + sectorGrid() +
+    /* detailed view: the sector times of the opened versions have a tab of their own, so the chart and the list stay near the top */
+    const vtabs = sm ? '' : '<div class="seg subtabs" role="tablist" id="vtabs">' + [['overview', 'Lap times and versions'], ['sectors', 'Sectors across versions']].map(t =>
+      '<button role="tab" data-v="' + t[0] + '" class="' + (S.verTab === t[0] ? 'on' : '') + '" aria-selected="' + (S.verTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
+    const wireTabs = () => box.querySelectorAll('#vtabs button').forEach(b => { b.onclick = () => { S.verTab = b.dataset.v; RV.uiSet('verTab', S.verTab); render(); }; });
+    if (!sm && S.verTab === 'sectors') {
+      box.innerHTML = tiles() + vtabs + (sectorGrid() || '<div class="card"><p class="lead">No sector times to compare yet.</p><p class="note">Sector times come from a version\u2019s recording. Open two or more versions (select one, or compare several) and they are listed here side by side.</p></div>');
+      wireTabs(); RV.sectors.wire(box); renderDetail();
+      return;
+    }
+    let h = tiles() + vtabs +
       '<div class="card chartcard"><div class="cardhead"><h3>' + (sm ? 'Lap time, version by version' : 'Lap time by version') + '</h3>' +
       '<div class="key">' + Object.keys(CLS).map(k => '<span><i class="' + (CLS[k][1] ? 'dot' : 'ring') + ' c-' + CLS[k][0] + '"></i>' + CLS[k][2] + '</span>').join('') + '<span><i class="ln"></i>Best lap so far</span></div></div>' +
       '<canvas id="prog" tabindex="0" aria-label="Lap time of every version; lower is faster"></canvas>' +
@@ -135,7 +144,7 @@
     box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; RV.uiSet('listMode', S.listMode); render(); }; });
     /* the full list starts with every version; the rankings start with the kept ones */
     if ($('ko')) $('ko').onchange = e => { if (S.listMode === 'all') S.keptAll = e.target.checked; else S.keptOnly = e.target.checked; RV.uiSet('keptAll', S.keptAll); RV.uiSet('keptOnly', S.keptOnly); render(); };
-    RV.sectors.wire(box);
+    wireTabs();
     paintRows(); setupProg(); renderDetail();
     wireBulk();
   }
