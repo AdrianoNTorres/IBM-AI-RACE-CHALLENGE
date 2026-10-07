@@ -456,13 +456,18 @@
     tb.innerHTML = '<thead><tr><th class="l">Car</th><th>Lap time</th><th>' + (sm ? 'Position' : 'Gap') + '</th><th>Speed</th></tr></thead><tbody></tbody>';
     S.sel.forEach((id, k) => {
       const run = k === 0 ? S.R : S.CM[k - 1].r;
-      const tr = el('tr', k === 0 ? 'foc' : null, '<td class="l"><i style="background:' + RV.col(id) + '"></i><b>' + esc(id) + '</b></td><td class="num">' + RV.fmtLap(RV.lapOf(id)) + '</td><td class="num"></td><td class="num"></td>');
+      const tr = el('tr', k === 0 ? 'foc' : null, '<td class="l">' + (k > 0 ? '<input type="checkbox" class="cmpck"' + (S.cmpOff[id] ? '' : ' checked') + ' title="Count ' + esc(id) + ' in the delta on the map and show it on the charts" aria-label="Count ' + esc(id) + ' in the deltas">' : '') + '<i style="background:' + RV.col(id) + '"></i><b>' + esc(id) + '</b></td><td class="num">' + RV.fmtLap(RV.lapOf(id)) + '</td><td class="num"></td><td class="num"></td>');
+      if (k > 0) {
+        const ck = tr.querySelector('.cmpck');
+        ck.onclick = e => e.stopPropagation();              /* the tick is not a click on the row */
+        ck.onchange = () => { RV.map.setCmp(id, ck.checked); };
+      }
       if (k > 0) { tr.tabIndex = 0; tr.title = 'Put ' + id + ' in focus'; tr.onclick = () => RV.sel.makeRef(id); tr.onkeydown = e => { if (e.key === 'Enter') RV.sel.makeRef(id); }; }
       tb.lastChild.appendChild(tr);
       carCells.push({ r: run, gap: tr.cells[2], spd: tr.cells[3], foc: k === 0 });
     });
     gp.appendChild(tb);
-    gp.appendChild(el('p', 'note', 'Click a row to put that car in focus. ' + (sm ? 'Position' : 'Gap') + ' is measured against the car in focus, at the same point on the track.'));
+    gp.appendChild(el('p', 'note', 'Click a row to put that car in focus. Untick a car to leave it out of the delta on the map and off the charts. ' + (sm ? 'Position' : 'Gap') + ' is measured against the car in focus, at the same point on the track.'));
     return gp;
   }
   function maxZoomRow(desc) {
@@ -554,7 +559,7 @@
         continue;
       }
       for (const L of items) {
-        const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; count(); });
+        const r = toggleRow(L.label, L.d, L.on, v => { L.on = v; count(); legend(); });
         if (L.id === 'beams') r.title = BEAMS_TIP;
         slider(r, 'Opacity', 0, 1, 0.05, L.alpha, v => Math.round(v * 100) + ' %', v => { L.alpha = v; });
         if (L.w != null) slider(r, 'Width', WMIN, WMAX, 0.1, L.w, v => v.toFixed(1) + ' px', v => { L.w = v; });
@@ -977,6 +982,7 @@
         ? '<div class="cap">' + (sm ? 'Path colour: braking' : 'Driven line: brake') + '</div><div class="grad brakegrad"></div><div class="ends num"><span>none</span><span>brake</span><span>full</span></div>'
         : '<div class="cap">' + (sm ? 'Path colour: speed' : 'Driven line: speed') + '</div><div class="grad" style="background:' + RV.speedGradient + '"></div><div class="ends num"><span>' + S.vmin.toFixed(0) + '</span><span>km/h</span><span>' + S.vmax.toFixed(0) + '</span></div>') +
       (R.beams ? '<div class="cap">' + (sm ? 'Sensor colour: distance to the road edge' : 'Beams: distance to the edge') + '</div><div class="grad" style="background:' + RV.beamGradient + '"></div><div class="ends num"><span>0</span><span>m</span><span>200</span></div>' : '') +
+      (RV.analysis ? RV.analysis.legend() : '') +
       (S.CM.length && !OVER[2].solo ? '<div class="cap">Compared runs</div>' + S.CM.map(m => '<div><i class="sw" style="background:' + RV.col(m.id) + '"></i>' + esc(m.id) + '</div>').join('') : '');
   }
 
@@ -1106,6 +1112,8 @@
       buildSide();
     },
     LAYERS: LAYERS, PANELS: OVER,
+    /* switches a compared car on or off for the deltas and the charts; every place that shows it follows */
+    setCmp(id, on) { if (on) delete S.cmpOff[id]; else S.cmpOff[id] = true; legend(); S.chartsDirty = true; RV.tele.build(); if (S.sideTab === 'cars') buildSide(); },
     /* the reference lap of the sector table, the delta bar and the analysis: the fastest lap recorded */
     fastest: () => (S.ds ? fastestRun() : null),
     /* fn(x, y) is asked on every click and mouse move over the map (pixels in the map); it returns a function to run on a click, or null */

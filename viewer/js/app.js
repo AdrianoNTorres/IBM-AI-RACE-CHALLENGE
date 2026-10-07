@@ -11,6 +11,8 @@
     applied: [],                     /* the selection whose runs are loaded and shown */
     R: null, CM: [],                 /* the run in focus and the compared runs [{r, id}] */
     i: 0, t: 0, playing: true,       /* replay: row index, lap time, running */
+    cmpOff: {},                      /* compared cars that are switched off: left out of the delta on the map and hidden on the charts (id to true) */
+    cmpAlpha: RV.uiGet('cmpAlpha', 0.85),   /* opacity of the compared cars' lines on the charts */
     over: 0,                         /* seconds the clock has run on past the end of the lap in focus, while slower compared cars finish (auto loop) */
     camFrac: 0,                      /* fractional progress 0..1 between step i and i+1 (smoothing at ≤1×) */
     hold: { dir: 0, start: 0, rate: 0 },
@@ -25,6 +27,8 @@
   /* Basic view needs the simplified changelog; without it the page uses the detailed view. */
   RV.simple = () => RV.prefs.view === 'basic' && !!S.ds && S.ds.hasSimple;
   RV.col = id => RV.pal.run[S.selCol[id]];
+  /* the compared cars that count: in the delta on the map and on the charts (Telemetry, Compared cars; Track, Cars) */
+  RV.cmpShown = () => S.CM.filter(m => !S.cmpOff[m.id]);
   RV.colMap = id => RV.pal.runMap[S.selCol[id]];
   /* a version's lap time is the changelog's; a recording without an entry has only its own */
   RV.lapOf = id => { const v = S.ds.byId[id]; return v.lap != null ? v.lap : (v.sum ? v.sum.lap : null); };

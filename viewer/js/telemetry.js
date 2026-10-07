@@ -78,6 +78,7 @@
     else
     if (S.teleTab === 'charts') {
       /* step range input */
+      if (many) h += cmpTable();
       h += '<div class="tblbar" id="chartBar"><p class="note">' + (sm ? 'The charts run from the start line on the left to the finish on the right. The vertical line marks where the car is now; click anywhere on a chart to move the car there. Hold and drag across a chart to play that section on a loop.'
         : 'Drag: play that section on a loop (Esc, or the Loop button below, ends it). Wheel: zoom the distance axis. Shift-drag: pan. Click: move the car there. Double-click: the whole lap. A coloured band is a stretch where time is lost to the fastest lap: click its numbered tag for why.') + ' &nbsp; ' + rs.map(m => '<span class="lg">' + sw(m.id) + esc(m.id) + '</span>').join(' ') + '</p>' +
         '<label class="lbl" for="teleRange">Range (m)</label><div class="inrow sm"><input type="text" id="teleRange" spellcheck="false" style="width:120px" placeholder="0\u2013' + Math.round(R.total) + '" value="' + Math.round(xr[0]) + '\u2013' + Math.round(xr[1]) + '"><button class="btn sm" id="teleReset">Full lap</button></div></div>';
@@ -102,6 +103,8 @@
       };
       $('teleRange').onkeydown = e => { if (e.key === 'Enter') $('teleRange').dispatchEvent(new Event('change')); };
     }
+    box.querySelectorAll('[data-cmp]').forEach(ck => { ck.onchange = () => RV.map.setCmp(ck.dataset.cmp, ck.checked); });
+    if ($('cmpAlpha')) $('cmpAlpha').oninput = e => { S.cmpAlpha = +e.target.value; RV.uiSet('cmpAlpha', S.cmpAlpha); $('cmpAlphaV').textContent = Math.round(S.cmpAlpha * 100) + ' %'; S.chartsDirty = true; };
     if ($('teleReset')) $('teleReset').onclick = () => { xr = [0, R.total]; if ($('teleRange')) $('teleRange').value = '0\u2013' + Math.round(R.total); S.chartsDirty = true; };
     box.querySelectorAll('#sect tr[data-m]').forEach(tr => {
       const f = () => { RV.play.set(false); RV.play.go(RV.idxAtD(R, +tr.dataset.m)); box.querySelectorAll('#sect tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel'); };
@@ -123,6 +126,25 @@
     }
     box.querySelectorAll('canvas').forEach(wireChart);
     S.chartsDirty = true;
+  }
+
+  /* The compared cars, above the charts: each can be switched off for every chart at once (and for the delta on
+     the map), with its lap and its gap to the car in focus; and how faint their lines are drawn. */
+  function cmpTable() {
+    const R = S.R, id = S.sel[0], shown = RV.cmpShown();
+    const row = m => {
+      let pk = 0;
+      if (gapS && m.gap) for (let k = 1; k < gapS.length; k++) if (Math.abs(m.gap[k]) > Math.abs(m.gap[pk])) pk = k;
+      const lapD = m.r.sum.lap != null && R.sum.lap != null ? m.r.sum.lap - R.sum.lap : null, on = !S.cmpOff[m.id];
+      return '<tr class="' + (on ? '' : 'off') + '"><td class="l"><label class="check"><input type="checkbox" data-cmp="' + esc(m.id) + '"' + (on ? ' checked' : '') + ' aria-label="Show ' + esc(m.id) + ' on the charts">' + sw(m.id) + '<b>' + esc(m.id) + '</b></label></td>' +
+        '<td class="num">' + fmtLap(m.r.sum.lap) + '</td><td class="num ' + (lapD == null ? '' : lapD < 0 ? 'faster' : lapD > 0 ? 'slower' : '') + '">' + (lapD == null ? '' : sgn(lapD, 3) + ' s') + '</td>' +
+        '<td class="num">' + (gapS && m.gap ? sgn(m.gap[pk], 2) + ' s <span class="note">at ' + RV.fmtInt(gapS[pk]) + ' m</span>' : '') + '</td></tr>';
+    };
+    const G = RV.analysis ? RV.analysis.cmpGap(R) : null;
+    return '<div class="card cmpcard"><div class="cardhead"><h3>Compared cars</h3><span class="note">Deltas are the time gap to ' + sw(id) + '<b>' + esc(id) + '</b>, the car in focus, at the same point of the track. A minus sign: that car is ahead.</span></div>' +
+      '<div class="cmpgrid"><div class="tablewrap"><table class="cmpt"><thead><tr><th class="l">On the charts</th><th>Lap</th><th>Lap delta</th><th>Largest gap</th></tr></thead><tbody>' + S.CM.map(row).join('') + '</tbody></table></div>' +
+      '<div class="cmpside"><label for="cmpAlpha">Opacity of their lines</label><div class="setsl"><input type="range" id="cmpAlpha" min="0.15" max="1" step="0.05" value="' + S.cmpAlpha + '"><span class="num" id="cmpAlphaV">' + Math.round(S.cmpAlpha * 100) + ' %</span></div>' +
+      '<p class="note">' + (G ? shown.length + ' of ' + S.CM.length + ' counted. ' + esc(id) + ' is at most ' + G.max.toFixed(2) + ' s from ' + (shown.length === 1 ? esc(shown[0].id) : 'their average') + ' (at ' + RV.fmtInt(G.maxAt) + ' m). The same gap can be drawn on the map: Track, Layers, Compared runs, \u201cDelta to the compared cars\u201d.' : 'Every compared car is switched off.') + '</p></div></div></div>';
   }
 
   /* ---------- configurable sections: one object per section, shown as a sortable table and exported as CSV ---------- */
@@ -327,8 +349,9 @@
       x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, W, H);
       const T = 8, B = 22, pw = W - PL - PR, ph = H - T - B, X = d => PL + (d - xr[0]) / (xr[1] - xr[0]) * pw;
       const series = [];
-      if (q.gap) { if (!gapS) return; for (const m of S.CM) series.push({ s: gapS, v: m.gap, col: RV.col(m.id), w: 2 }); }
-      else { series.push({ s: R.d, v: R[q.k], col: RV.col(S.sel[0]), w: 2.2 }); for (const m of S.CM) series.push({ s: m.r.d, v: m.r[q.k], col: RV.col(m.id), w: 1.6 }); }
+      const shown = RV.cmpShown();                       /* compared cars that are switched on */
+      if (q.gap) { if (!gapS) return; for (const m of shown) series.push({ s: gapS, v: m.gap, col: RV.col(m.id), w: 2 }); }
+      else { series.push({ s: R.d, v: R[q.k], col: RV.col(S.sel[0]), w: 2.2 }); for (const m of shown) series.push({ s: m.r.d, v: m.r[q.k], col: RV.col(m.id), w: 1.6, cmp: true }); }
       let lo = 1e9, hi = -1e9;
       for (const se of series) { const k0 = RV.bsearch(se.s, xr[0]), k1 = RV.bsearch(se.s, xr[1]); for (let k = k0; k <= k1; k++) { const v = se.v[k]; if (v < lo) lo = v; if (v > hi) hi = v; } }
       if (q.fixed) { lo = q.fixed[0]; hi = q.fixed[1]; }
@@ -390,12 +413,13 @@
           x.lineCap = 'butt';
           continue;
         }
+        x.globalAlpha = se.cmp ? S.cmpAlpha : 1;          /* the compared cars' lines can be made fainter */
         x.strokeStyle = se.col; x.lineWidth = se.w; x.lineJoin = 'round'; x.beginPath();
         for (let k = k0; k <= k1; k++) { const xx = X(se.s[k]), yy = Y(se.v[k]); if (k === k0) x.moveTo(xx, yy); else { if (q.step) x.lineTo(xx, Y(se.v[k - 1])); x.lineTo(xx, yy); } }
-        x.stroke();
+        x.stroke(); x.globalAlpha = 1;
       }
       if (q.gap && gapS !== null) {                      /* where each compared run's gap is largest */
-        for (const m of S.CM) {
+        for (const m of shown) {
           let pk = 0;
           for (let k = 1; k < gapS.length; k++) if (Math.abs(m.gap[k]) > Math.abs(m.gap[pk])) pk = k;
           const px = X(gapS[pk]), py = Y(m.gap[pk]);

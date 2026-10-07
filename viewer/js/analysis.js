@@ -201,6 +201,60 @@
     return h ? () => loop(h[2]) : null;
   });
 
+  /* ---------- the delta to the compared cars ----------
+     The time gap of the car in focus to the compared cars at every point of its lap, as official timing shows a
+     delta: the difference in lap clock at the same place on the track. With several compared cars it is the gap to
+     their mean; cars switched off (S.cmpOff) are left out. Positive: the car in focus is behind. */
+  function cmpGap(R) {
+    const shown = RV.cmpShown().filter(m => m.r && m.r.t);
+    if (!R || !shown.length) return null;
+    const key = shown.map(m => m.id).join();
+    if (R._gap && R._gap.key === key) return R._gap;
+    const g = new Float32Array(R.n), js = shown.map(() => 0), end = Math.min(S.ds.trk ? S.ds.trk.total : 1e9, R.d[R.n - 1], ...shown.map(m => m.r.d[m.r.n - 1]));   /* up to the line: rows logged after it do not count */
+    let max = 0, maxAt = 0;
+    for (let k = 0; k < R.n; k++) {
+      if (R.d[k] > end) { g[k] = k ? g[k - 1] : 0; continue; }           /* past the line: the last gap stands */
+      let sum = 0;
+      shown.forEach((m, q) => {
+        const r = m.r;
+        let j = js[q];
+        while (j < r.n - 1 && r.d[j + 1] <= R.d[k]) j++;
+        js[q] = j;
+        const d0 = r.d[j], d1 = j < r.n - 1 ? r.d[j + 1] : d0;
+        sum += d1 > d0 && R.d[k] > d0 ? r.t[j] + (r.t[j + 1] - r.t[j]) * (R.d[k] - d0) / (d1 - d0) : r.t[j];
+      });
+      g[k] = R.t[k] - sum / shown.length;
+      if (Math.abs(g[k]) > max) { max = Math.abs(g[k]); maxAt = R.d[k]; }
+    }
+    return (R._gap = { key: key, g: g, max: max, maxAt: maxAt, ids: shown.map(m => m.id) });
+  }
+  const deltaLayer = RV.map.addLayer({
+    id: 'cmpdelta', g: 'Compared runs', label: 'Delta to the compared cars', on: false, alpha: 1, w: 4, cmp: true,
+    d: 'The line of the car in focus coloured by its time gap to the compared cars at each point: green where they are level, red where the gap is largest. With several compared cars it is the gap to their average; switch single cars off under Cars, or on the Telemetry page.',
+    draw(ctx, z) {
+      const R = S.R, G = cmpGap(R);
+      if (!G) return;
+      const top = Math.max(G.max, 0.02), st = Math.max(1, Math.floor(1.2 / z));
+      ctx.lineWidth = this.w / z; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (let b = 0; b < NB; b++) {
+        let any = false;
+        ctx.beginPath();
+        for (let k = 0; k < R.n - st; k += st) {
+          if (RV.clamp(Math.floor(Math.abs(G.g[k]) / top * NB), 0, NB - 1) !== b) continue;
+          ctx.moveTo(R.x[k], R.y[k]); ctx.lineTo(R.x[k + st], R.y[k + st]); any = true;
+        }
+        if (any) { ctx.strokeStyle = RV.colorScale((b + 0.5) / NB, 0, 1, -1); ctx.stroke(); }
+      }
+    },
+  });
+  /* its entry in the colour keys on the map, while it is on */
+  function legend() {
+    const G = deltaLayer.on && S.CM.length ? cmpGap(S.R) : null;
+    if (!G) return '';
+    return '<div class="cap">Delta to ' + (G.ids.length === 1 ? esc(G.ids[0]) : 'the ' + G.ids.length + ' compared cars (average)') + '</div><div class="grad" style="background:linear-gradient(90deg,var(--scale-good),var(--scale-bad))"></div>' +
+      '<div class="ends num"><span>0</span><span>s</span><span>' + G.max.toFixed(2) + '</span></div>';
+  }
+
   /* ---------- in the side panel (Sectors): health of each sector, the problem areas, the line ---------- */
   function sideCard() {
     const R = S.R, A = of(R), box = RV.el('div', 'ancard');
@@ -239,5 +293,5 @@
     return A.zones.find(z => d >= z.d0 && d <= Math.max(z.d1, z.d0 + 14 / pxPerM)) || null;
   }
 
-  RV.analysis = { of: of, K: K, sideCard: sideCard, bands: bands, tagAt: tagAt, popup: popup, closePopup: closePopup, loop: loop, WORD: WORD };
+  RV.analysis = { of: of, cmpGap: cmpGap, legend: legend, K: K, sideCard: sideCard, bands: bands, tagAt: tagAt, popup: popup, closePopup: closePopup, loop: loop, WORD: WORD };
 })();
