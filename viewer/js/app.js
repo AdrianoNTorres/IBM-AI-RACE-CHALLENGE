@@ -232,6 +232,7 @@
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === id));
     showBar();
     $('tip').style.display = 'none';
+    RV.theme.closePick();
     S.chartsDirty = true; S.progDirty = true;
     if (id === 'pm') RV.map.size();
     if (id === 'ps') RV.settings.render();

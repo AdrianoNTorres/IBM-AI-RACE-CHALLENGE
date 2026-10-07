@@ -34,7 +34,15 @@
   --runmap-1: #5aa5ff; --runmap-2: #ff7a3d; --runmap-3: #2fd3a0; --runmap-4: #f2b72c; --runmap-5: #ff6fa8; --runmap-6: #a99bff;
   --in-throttle: #0e9f4f; --in-brake: #d92d20; --in-clutch: #2f6fe4;      /* the pedal graph on the map */
   /* speed on the telemetry chart (slow to fast) and braking on the map (none to full) */
-  --speed-slow: #d92d20; --speed-mid: #d99a00; --speed-fast: #0e9f4f; --brake-none: #2f6fe4; --brake-full: #e02b2b;
+  --brake-none: #2f6fe4; --brake-full: #e02b2b;
+  /* the driven line by speed (slowest to fastest) and the sensor beams (close to far): bright, for the dark road */
+  --sp-1: #ff4038; --sp-2: #ff8c2c; --sp-3: #ffde3c; --sp-4: #96e254; --sp-5: #2cd66e;
+  --beam-near: #ff4676; --beam-mid: #ffd042; --beam-far: #3ce2d2;
+  /* the two ends of the good / bad scale: chart lines coloured by value, delta bars, delta cells */
+  --scale-bad: #d92d20; --scale-good: #0e9f4f;
+  /* the dark panels over the map (sector table, delta bar) and the speed label beside the car */
+  --panel-bg: rgba(13, 15, 20, .82); --panel-ink: #ffffff; --panel-live: #ff8a55; --label-bg: rgba(13, 15, 20, .88); --label-ink: #ffffff;
+  --helmet: #f4f2ec;
   --shadow: 0 1px 2px rgba(20, 22, 27, .06), 0 8px 24px -12px rgba(20, 22, 27, .18);
   --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --font-display: Bahnschrift, "DIN Alternate", "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
@@ -69,7 +77,7 @@
   --road: #272d39; --road-edge: #f4f2ec; --road-mark: #8d93a1; --tyre: #050608; --car-line: #0c0e13;
   --run-1: #5aa5ff; --run-2: #ff7a3d; --run-3: #2fd3a0; --run-4: #f2b72c; --run-5: #ff6fa8; --run-6: #a99bff;
   --in-throttle: #35d07f; --in-brake: #ff5a4d; --in-clutch: #5aa5ff;
-  --speed-slow: #ff5a4d; --speed-mid: #f2c230; --speed-fast: #35d07f; --brake-none: #5aa5ff; --brake-full: #ff4d4d;
+  --brake-none: #5aa5ff; --brake-full: #ff4d4d;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -14px rgba(0, 0, 0, .7);
   color-scheme: dark;
 }
@@ -325,29 +333,29 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 #pm.side-closed #side { display: none; }
 
 /* live sector table and lap delta bar: under the overview map, white on a dark panel in both themes (as the speed label) */
-#sectorLive, #lapDeltaBar { width: 216px; background: rgba(13, 15, 20, .82); border-radius: var(--r); padding: 8px 10px; }
+#sectorLive, #lapDeltaBar { width: 216px; background: var(--panel-bg); border-radius: var(--r); padding: 8px 10px; }
 #sectorLive table { width: 100%; margin: 0; border-collapse: collapse; }
 #sectorLive th, #sectorLive td { border: 0; }
-#sectorLive th { padding: 3px 7px; font-size: 10px; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .06em; }
-#sectorLive td { padding: 3px 7px; font-size: 13px; font-weight: 700; color: #fff; }
+#sectorLive th { padding: 3px 7px; font-size: 10px; color: color-mix(in srgb, var(--panel-ink) 60%, transparent); text-transform: uppercase; letter-spacing: .06em; }
+#sectorLive td { padding: 3px 7px; font-size: 13px; font-weight: 700; color: var(--panel-ink); }
 #sectorLive tr.slv-future td { opacity: .3; }
 #sectorLive td.slv-delta { border-radius: 4px; transition: background-color .25s; min-width: 52px; text-align: right; }
 #sectorLive td.slv-time { font-variant-numeric: tabular-nums; }
-#sectorLive td.slv-live { color: #ff8a55; font-style: italic; }
-#sectorLive tr.slv-lap td { border-top: 1px solid rgba(255,255,255,.2); padding-top: 5px; font-size: 14px; }
+#sectorLive td.slv-live { color: var(--panel-live); font-style: italic; }
+#sectorLive tr.slv-lap td { border-top: 1px solid color-mix(in srgb, var(--panel-ink) 20%, transparent); padding-top: 5px; font-size: 14px; }
 
 #lapDeltaBar { display: flex; flex-direction: column; gap: 6px; }
-.ldb-ref { font-size: 11px; color: rgba(255,255,255,.6); line-height: 1.3; }
+.ldb-ref { font-size: 11px; color: color-mix(in srgb, var(--panel-ink) 60%, transparent); line-height: 1.3; }
 .ldb-row { display: flex; align-items: center; gap: 6px; }
 /* the car in focus: its bar and its name a fifth larger than the others */
-.ldb-label { display: flex; align-items: center; width: 54px; flex: none; font-size: 11px; font-weight: 600; color: rgba(255,255,255,.8); }
-.ldb-row.focused .ldb-label { font-size: 13.2px; color: #fff; }
+.ldb-label { display: flex; align-items: center; width: 54px; flex: none; font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--panel-ink) 80%, transparent); }
+.ldb-row.focused .ldb-label { font-size: 13.2px; color: var(--panel-ink); }
 .ldb-label .sw { width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; flex: none; }
 .ldb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ldb-track { position: relative; flex: 1; height: 15px; border-radius: 3px; background: rgba(255,255,255,.14); }
+.ldb-track { position: relative; flex: 1; height: 15px; border-radius: 3px; background: color-mix(in srgb, var(--panel-ink) 14%, transparent); }
 .ldb-row.focused .ldb-track { height: 18px; } .ldb-row.focused .ldb-delta { font-size: 13.2px; }
 .ldb-fill { position: absolute; inset: 0; border-radius: 3px; transition: background-color .15s; }
-.ldb-delta { position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; padding: 0 4px; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.ldb-delta { position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: var(--panel-ink); white-space: nowrap; padding: 0 4px; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
 .carsize { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
 .carsize .sw { margin-right: 0; flex: none; } .carsize b { color: var(--ink); min-width: 46px; }
 .carsize input[type=range] { flex: 1; min-width: 0; } .carsize .num { min-width: 38px; text-align: right; color: var(--ink-2); font-size: 13px; }
@@ -407,7 +415,7 @@ dl.keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin:
   font-size: 0.75rem; color: var(--ink-2); }
 .chart-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .clg { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
-.clg .gsw { width: 26px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--speed-slow), var(--speed-mid), var(--speed-fast)); }
+.clg .gsw { width: 26px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--scale-bad), var(--scale-good)); }
 .clg .dsw { width: 26px; height: 0; border-top: 2px dashed var(--ink-2); }
 .brakegrad { background: linear-gradient(90deg, var(--brake-none), var(--brake-full)); }
 .tblbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; } .tblbar .note { margin: 0; }
@@ -487,6 +495,19 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.err { background: var(--err); color: #fff; }
 
+/* ---------- customization: the list of colours and the colour picker ---------- */
+.custgrid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); }
+.crow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.cswatch { width: 44px; height: 30px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; flex: none; padding: 0; box-shadow: inset 0 0 0 2px var(--surface); }
+.cname { flex: 1; min-width: 0; } .cname b { display: block; color: var(--ink); } .cname small { color: var(--mute); font-size: 12px; }
+.crow code { white-space: nowrap; }
+.cpick { position: fixed; z-index: 46; width: 318px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 14px; }
+.cpsw { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; } .cpsw button { aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.cpwheel { display: flex; gap: 12px; align-items: center; margin: 12px 0 4px; } #cpWheel { width: 176px; height: 176px; cursor: crosshair; touch-action: none; border-radius: 50%; flex: none; }
+.cpwheel label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--mute); flex: 1; min-width: 0; } .cpwheel input { width: 100%; }
+.cpick .lbl { margin-top: 8px; } .cpick .inrow { margin-bottom: 6px; } #cpText.bad { border-color: var(--slower); outline: 1px solid var(--slower); }
+.cpnow { width: 40px; border-radius: 8px; border: 1px solid var(--line); flex: none; } .cpick .tour-acts { margin-top: 8px; }
+
 /* ---------- narrower windows ---------- */
 @media (max-width: 1280px) {
   #brand span { display: none; }
@@ -499,7 +520,7 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 @media (max-width: 1080px) {
   #chips .chip em, #chips .chip span.num { display: none; }
   #clr { display: none !important; }
-  .setgrid { grid-template-columns: 1fr; }
+  .setgrid, .custgrid { grid-template-columns: 1fr; }
 }
 /* phone: the Versions tab stacks; the replay asks for a wider screen */
 @media (max-width: 820px) {

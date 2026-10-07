@@ -66,7 +66,7 @@
   }
   let stepCols = null, stepColsKey = '';
   function colours() {
-    const key = opt.colour + document.documentElement.dataset.theme;
+    const key = opt.colour + RV.themeRev;
     if (key !== stepColsKey) { stepCols = []; for (let b = 0; b < NB; b++) stepCols.push(opt.colour === 'brake' ? RV.brakeCol((b + 0.5) / NB) : RV.speedCol((b + 0.5) / NB)); stepColsKey = key; }
     return stepCols;
   }
@@ -125,7 +125,7 @@
     ctx.beginPath(); ctx.moveTo(2.3, 0.10); ctx.lineTo(0.95, 0.22); ctx.lineTo(0.6, 0.62); ctx.lineTo(-0.95, 0.62); ctx.lineTo(-2.0, 0.24);
     ctx.lineTo(-2.0, -0.24); ctx.lineTo(-0.95, -0.62); ctx.lineTo(0.6, -0.62); ctx.lineTo(0.95, -0.22); ctx.lineTo(2.3, -0.10); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = P['car-line']; ctx.beginPath(); ctx.ellipse(0.15, 0, 0.55, 0.24, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#f4f2ec'; ctx.beginPath(); ctx.arc(0.05, 0, 0.15, 0, 7); ctx.fill();
+    ctx.fillStyle = P.helmet; ctx.beginPath(); ctx.arc(0.05, 0, 0.15, 0, 7); ctx.fill();
     ctx.restore();
   }
   /* Where a run's car is, frac of the way from step k to step k + 1: [x, y, yaw, steering].
@@ -223,8 +223,8 @@
       const R = S.R, p = w2s(fp[0], fp[1]), s = R.v[S.i].toFixed(0) + ' km/h';
       ctx.font = '600 14px ' + RV.pal.fontNum;
       const w = ctx.measureText(s).width, o = 12 + 1.3 * view.z;
-      ctx.fillStyle = 'rgba(13,15,20,.88)'; ctx.beginPath(); ctx.roundRect(p[0] + o, p[1] - 11, w + 14, 22, 5); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.fillText(s, p[0] + o + 7, p[1] + 5);
+      ctx.fillStyle = RV.pal['label-bg']; ctx.beginPath(); ctx.roundRect(p[0] + o, p[1] - 11, w + 14, 22, 5); ctx.fill();
+      ctx.fillStyle = RV.pal['label-ink']; ctx.fillText(s, p[0] + o + 7, p[1] + 5);
     } },
     { id: 'beams', g: 'Sensors', label: 'Track beams', d: 'The 19 distance sensors. Each line runs from the car to the track edge it measures; pink is close, cyan is far, faint means nothing within 200 m.', on: true, alpha: 0.95, draw(ctx, z) {
       const R = S.R; if (!R.beams) return;
@@ -245,7 +245,7 @@
         if (d < 0) continue;
         const a = R.yaw[fk] - (q[0] + k - 2) * Math.PI / 180, ex = R.x[fk] + d * Math.cos(a), ey = R.y[fk] + d * Math.sin(a);
         ctx.beginPath(); ctx.moveTo(R.x[fk], R.y[fk]); ctx.lineTo(ex, ey); ctx.lineWidth = this.w / z; ctx.strokeStyle = RV.beamCol(d, 1); ctx.stroke();
-        if (d < 199.5) { ctx.save(); ctx.setLineDash([]); ctx.beginPath(); ctx.arc(ex, ey, 4 / z, 0, 7); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2 / z; ctx.stroke(); ctx.restore(); }
+        if (d < 199.5) { ctx.save(); ctx.setLineDash([]); ctx.beginPath(); ctx.arc(ex, ey, 4 / z, 0, 7); ctx.strokeStyle = RV.pal['label-ink']; ctx.lineWidth = 1.2 / z; ctx.stroke(); ctx.restore(); }
       }
       ctx.setLineDash([]);
     } },
@@ -633,7 +633,7 @@
     if (view.follow) paint(g, STATIC);                    /* the camera moves every frame: nothing to keep */
     else {
       /* the camera stands still: the track is painted once into a spare canvas and copied from it each frame */
-      const key = [c.width, c.height, z, view.ox, view.oy, ce[0], ce[1], a, document.documentElement.dataset.theme, RV.simple(), trk().total, STATIC.map(L => L.on + ':' + L.alpha + ':' + L.w).join()].join('|');
+      const key = [c.width, c.height, z, view.ox, view.oy, ce[0], ce[1], a, RV.themeRev, RV.simple(), trk().total, STATIC.map(L => L.on + ':' + L.alpha + ':' + L.w).join()].join('|');
       if (key !== bufKey) {
         buf.width = c.width; buf.height = c.height;
         bg.setTransform(r, 0, 0, r, 0, 0); bg.fillStyle = P['map-bg']; bg.fillRect(0, 0, W, H);
@@ -695,7 +695,7 @@
     if (mini.width !== Math.round(cw * r)) { mini.width = Math.round(cw * r); mini.height = Math.round(chh * r); }
     const ms = Math.min((cw - 20) / (B[1] - B[0]), (chh - 20) / (B[3] - B[2]));
     const place = ctx => { ctx.setTransform(r, 0, 0, r, 0, 0); ctx.translate(cw / 2, chh / 2); ctx.scale(ms, -ms); ctx.translate(-(B[0] + B[1]) / 2, -(B[2] + B[3]) / 2); };
-    const key = [mini.width, mini.height, trk().total, document.documentElement.dataset.theme, RV.simple()].join('|');
+    const key = [mini.width, mini.height, trk().total, RV.themeRev, RV.simple()].join('|');
     if (key !== miniKey) {                                /* the outline is painted once and copied each frame */
       miniBuf.width = mini.width; miniBuf.height = mini.height;
       const mb = miniBuf.getContext('2d');
@@ -789,7 +789,7 @@
       const timeTxt = secTime != null ? secTime.toFixed(2) + ' s' : '\u2014';
       const deltaTxt = delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(2) : '\u2014';
       const dcol = delta != null ? RV.deltaColor(delta) : null;
-      const deltaStyle = dcol ? 'background:' + dcol + ';color:#fff' : '';
+      const deltaStyle = dcol ? 'background:' + dcol + ';color:var(--panel-ink)' : '';
       const rowDim = future ? ' slv-future' : '';
       const timeCls = 'slv-time' + (live ? ' slv-live' : '');
       html += '<tr class="' + rowDim + '"><td class="l num">S' + (k + 1) + '</td><td class="' + timeCls + '">' + timeTxt + '</td>'
@@ -803,7 +803,7 @@
     const lapTimeTxt = lapTime != null ? RV.fmtLap(lapTime) : '\u2014';
     const lapDeltaTxt = lapDelta != null ? (lapDelta > 0 ? '+' : '') + lapDelta.toFixed(2) : '\u2014';
     const lapDcol = lapDelta != null ? RV.deltaColor(lapDelta) : null;
-    const lapDeltaStyle = lapDcol ? 'background:' + lapDcol + ';color:#fff' : '';
+    const lapDeltaStyle = lapDcol ? 'background:' + lapDcol + ';color:var(--panel-ink)' : '';
     const lapRowCls = lapDone ? '' : ' slv-lap-live';
     html += '<tr class="slv-lap' + lapRowCls + '"><td class="l num">Lap</td>'
       + '<td class="slv-time' + (lapDone ? '' : ' slv-live') + '">' + lapTimeTxt + '</td>'

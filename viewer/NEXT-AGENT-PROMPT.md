@@ -1,7 +1,7 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `experimental_hosting`
-**Last updated:** after Phase 11 (2026-10-07)
+**Last updated:** after Phase 12 (2026-10-07)
 
 ---
 
@@ -94,6 +94,14 @@ Published on GitHub Pages from the branch `experimental_hosting` by `.github/wor
 
 ### Phase 11 (COMPLETE) — tag: `phase-11`
 The overlay framework in `map.js`: every layer (`LAYERS`) and every panel (`OVER`) gets a switch and an opacity slider, a layer with a line width (`w`, defaults in `WIDTHS`) a width slider too, and all of it is saved and restored. New features register with `RV.map.addLayer({ id, g, label, d, draw(ctx, zoom), screen(ctx, w2s), w, cmp, still })` (a new `g` makes a new group; `still: true` layers are painted once into the track buffer) and `RV.map.addPanel({ id, label, d, draw(R, i) })` (the element is made in `#overlay` if missing). Phases 14 and 16 should add their pins and windows this way.
+
+### Phase 12 (COMPLETE) — tag: `phase-12`
+Customization and themes (`js/theme.js`, Settings > Customization).
+1. **One central list**: every colour of the site is a CSS token in `css/app.css` and an entry in `RV.theme.TOKENS` (66 of them, each with a label and a sub-tab). The colours that were constants in the scripts became tokens (`--sp-1..5` driven line, `--beam-*`, `--scale-bad` / `--scale-good`, `--panel-*`, `--label-*`, `--helmet`); the only colour left in a script is the black of the loop dimming, which is a setting. A new colour: add the token to the stylesheet and to `TOKENS`, use `var(--token)` or `RV.pal[token]`.
+2. **Themes**: `RV.prefs.themes` = `[{id, name, base: light | dark, colors: {token: colour}}]`, `RV.prefs.theme` = `light | dark | system | custom:<id>`. `RV.applyTheme` (`core.js`) sets the base, then the changed tokens on the root element, reads everything into `RV.pal`, rebuilds the scales and raises `RV.themeRev` (cached canvases compare it). The inline script in `index.html` applies a custom theme before the first paint. Built-in themes cannot be changed: the first change makes a copy ("My theme"). Themes survive "Reset to defaults".
+3. **Basic and Advanced**: Advanced lists every token of a sub-tab. Basic lists `RV.theme.GROUPS`: one colour that writes several tokens (backgrounds, text, buttons, good / bad, the low and high end of each scale, one row per car, ...), so the two are always in sync and the theme stores per-token values only.
+4. **Colour input**: preset swatches, a colour wheel with a brightness slider, and a typed value (HEX, RGB, HSL, names, rgba for see-through), in both modes.
+5. Sub-tabs: Menus and UI, Track map, Overlays and panels, Telemetry and scales, Cars.
 
 **The full specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`** (added 2026-10-07). Read the phase there before building it. Where the user has since asked for something different on a built phase, the user's later word stands: the delta bar is solid green or red and compares with the fastest recorded lap (not white-centred, not the previous best); the sector table uses the same reference; the gear chart has no filled areas; the colour keys are top right. **Work one phase at a time and stop after each for the user to test** (user, 2026-10-07).
 

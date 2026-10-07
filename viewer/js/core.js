@@ -53,6 +53,7 @@
     smooth: true,                                      /* smooth motion between steps at 1x and slower */
     loopDim: 0.55,                                     /* how dark the map outside a looped section is, 0 to 0.9 */
     carSize: 1,                                        /* size of every car that has no size of its own (1 = true scale) */
+    themes: [],                                        /* the reader's own themes: {id, name, base: light | dark, colors: {token: colour}} (js/theme.js); theme is then 'custom:<id>' */
     apiKeys: {},                                       /* the reader's own keys for outside services, by service id (js/keys.js) */
     uid: '',                                           /* this browser's id: random, made on the first visit, sent nowhere */
     keys: {},                                          /* replay keys the reader changed: action id to key (see RV.KEYS) */
@@ -71,6 +72,7 @@
     if (!p.keys || typeof p.keys !== 'object') p.keys = {};
     if (!p.ui || typeof p.ui !== 'object') p.ui = {};
     if (!p.apiKeys || typeof p.apiKeys !== 'object') p.apiKeys = {};
+    p.themes = (Array.isArray(p.themes) ? p.themes : []).filter(t => t && t.id && t.colors && typeof t.colors === 'object');
     if (!['fit', 'follow', 'up'].includes(p.camera)) p.camera = 'fit';
     if (!(p.loopDim >= 0 && p.loopDim <= 0.9)) p.loopDim = 0.55;
     if (!(p.carSize >= 0.3 && p.carSize <= 4)) p.carSize = 1;
@@ -78,8 +80,8 @@
     return p;
   };
   RV.savePrefs = function () { try { localStorage.setItem(KEY, JSON.stringify(RV.prefs)); } catch (e) { /* not saved */ } };
-  /* everything back to its default, except the id (it stays the same browser) and the reader's keys (they are not settings) */
-  RV.resetPrefs = function () { const uid = RV.prefs.uid, keys = RV.prefs.apiKeys; RV.prefs = DEFAULTS(); RV.prefs.uid = uid; RV.prefs.apiKeys = keys; RV.savePrefs(); };
+  /* everything back to its default, except the id (it stays the same browser) and what the reader made: the keys and the themes (the theme in use goes back to System) */
+  RV.resetPrefs = function () { const uid = RV.prefs.uid, keys = RV.prefs.apiKeys, themes = RV.prefs.themes; RV.prefs = DEFAULTS(); RV.prefs.uid = uid; RV.prefs.apiKeys = keys; RV.prefs.themes = themes; RV.savePrefs(); };
   RV.prefs = RV.loadPrefs();
   if (fresh) RV.savePrefs();
   /* What was last chosen on the pages (RV.prefs.ui). Written a moment after the last change, so a slider being
@@ -112,30 +114,30 @@
   RV.keyLabel = k => ({ ' ': 'Space', ArrowRight: '\u2192', ArrowLeft: '\u2190', ArrowUp: '\u2191', ArrowDown: '\u2193', Escape: 'Esc', '-': '\u2212' }[k] || (k.length === 1 ? k.toUpperCase() : k));
   RV.kbd = id => '<kbd>' + RV.esc(RV.keyLabel(RV.keyOf(id))) + '</kbd>';
 
-  /* ---------- theme ---------- */
+  /* ---------- theme ----------
+     Every colour is a CSS token (css/app.css), listed in RV.theme.TOKENS (js/theme.js). A built-in theme is the
+     token values of :root (light) or :root[data-theme="dark"]; a custom theme is one of those plus the tokens the
+     reader changed, set on the root element. The canvases cannot use CSS variables directly, so the tokens are
+     read into RV.pal whenever the colours change. */
   RV.pal = {};
+  RV.baseVals = {};                     /* every token's colour in the base theme, without the reader's changes */
+  RV.themeRev = 0;                      /* goes up whenever colours change: drawings kept in spare canvases compare it */
+  /* the custom theme in use, or null when a built-in theme is */
+  RV.customTheme = function () { const m = /^custom:(.+)$/.exec(RV.prefs.theme || ''); return m ? (RV.prefs.themes.find(t => t.id === m[1]) || null) : null; };
   RV.themeNow = function () {
+    const c = RV.customTheme();
+    if (c) return c.base === 'dark' ? 'dark' : 'light';
     if (RV.prefs.theme === 'light' || RV.prefs.theme === 'dark') return RV.prefs.theme;
     return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   };
-  /* The canvases cannot use CSS variables directly, so the tokens are read into RV.pal once per theme change. */
-  RV.applyTheme = function () {
-    document.documentElement.dataset.theme = RV.themeNow();
-    const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
-    const P = RV.pal;
-    for (const k of ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'mute', 'line', 'grid', 'accent', 'best', 'kept', 'faster', 'slower', 'v-best', 'v-kept', 'v-rej',
-      'map-bg', 'map-grid', 'map-ink', 'road', 'road-edge', 'road-mark', 'tyre', 'car-line',
-      'speed-slow', 'speed-mid', 'speed-fast', 'brake-none', 'brake-full']) P[k] = v('--' + k);
-    P['warn'] = v('--warn-ink');
-    P.run = []; P.runMap = [];
-    for (let k = 1; k <= RV.MAX_RUNS; k++) { P.run.push(v('--run-' + k)); P.runMap.push(v('--runmap-' + k)); }
-    P.font = v('--font-ui'); P.fontNum = v('--font-display');
-    if (RV.onTheme) RV.onTheme();
-  };
-
-  /* ---------- colour scales (the road is dark in both themes, so one scale serves both) ----------
-     Speed goes red, orange, yellow, light green, green (slow to fast), bright enough to read on the dark road;
-     beam length goes pink, yellow, cyan (close to far). Both also get lighter along the way. */
+  function hexRGB(c) {
+    c = (c || '').trim();
+    const m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(c);
+    if (m) return [+m[1], +m[2], +m[3]];
+    c = c.replace('#', '');
+    if (c.length === 3) c = c.split('').map(h => h + h).join('');
+    return [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16) || 0);
+  }
   function ramp(stops) {
     return function (f) {
       f = RV.clamp(f, 0, 1) * (stops.length - 1);
@@ -143,72 +145,51 @@
       return [0, 1, 2].map(n => Math.round(a[n] + (b[n] - a[n]) * u));
     };
   }
-  const SPEED = [[255, 64, 56], [255, 140, 44], [255, 222, 60], [150, 226, 84], [44, 214, 110]];
-  const BEAM = [[255, 70, 118], [255, 208, 66], [60, 226, 210]];
-  const speedRGB = ramp(SPEED), beamRGB = ramp(BEAM);
+  /* the scales, rebuilt from the tokens by applyTheme: the driven line by speed (slow to fast) and by brake (none
+     to full), the beams (close to far), and the two ends of the good / bad scale */
+  let speedRGB = ramp([[0, 0, 0], [0, 0, 0]]), beamRGB = speedRGB, brakeRGB = speedRGB, GOOD = [0, 0, 0], BAD = [0, 0, 0];
+  const grad = names => 'linear-gradient(90deg,' + names.map(n => RV.pal[n]).join(',') + ')';
+  RV.applyTheme = function () {
+    const root = document.documentElement, th = RV.customTheme(), toks = RV.theme.TOKENS, P = RV.pal;
+    root.dataset.theme = RV.themeNow();
+    for (const t of toks) root.style.removeProperty('--' + t.id);
+    const cs = getComputedStyle(root), v = n => cs.getPropertyValue(n).trim();
+    RV.baseVals = {};
+    for (const t of toks) RV.baseVals[t.id] = v('--' + t.id);
+    if (th) for (const k in th.colors) if (RV.baseVals[k] !== undefined) root.style.setProperty('--' + k, th.colors[k]);
+    for (const t of toks) P[t.id] = v('--' + t.id);
+    P.warn = P['warn-ink'];
+    P.run = []; P.runMap = [];
+    for (let k = 1; k <= RV.MAX_RUNS; k++) { P.run.push(P['run-' + k]); P.runMap.push(P['runmap-' + k]); }
+    P.font = v('--font-ui'); P.fontNum = v('--font-display');
+    const stops = names => names.map(n => hexRGB(P[n]));
+    speedRGB = ramp(stops(['sp-1', 'sp-2', 'sp-3', 'sp-4', 'sp-5'])); beamRGB = ramp(stops(['beam-near', 'beam-mid', 'beam-far'])); brakeRGB = ramp(stops(['brake-none', 'brake-full']));
+    GOOD = hexRGB(P['scale-good']); BAD = hexRGB(P['scale-bad']);
+    RV.speedGradient = grad(['sp-1', 'sp-2', 'sp-3', 'sp-4', 'sp-5']); RV.beamGradient = grad(['beam-near', 'beam-mid', 'beam-far']);
+    RV.themeRev++;
+    if (RV.onTheme) RV.onTheme();
+  };
+  /* f runs from 0 to 1 */
   RV.speedCol = f => 'rgb(' + speedRGB(f).join(',') + ')';
+  RV.brakeCol = f => 'rgb(' + brakeRGB(f).join(',') + ')';
   RV.beamCol = (d, a) => 'rgba(' + beamRGB(d / 200).join(',') + ',' + a + ')';
-  /* Scales whose colours are theme tokens: the speed chart (red slow, green fast) and braking on the map
-     (blue none, red full). f runs from 0 to 1. */
-  function hexRGB(c) {
-    c = (c || '').trim();
-    /* browsers normalise CSS custom-property values to rgb(...) — handle both formats */
-    const rgb = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/.exec(c);
-    if (rgb) return [+rgb[1], +rgb[2], +rgb[3]];
-    c = c.replace('#', '');
-    if (c.length === 3) c = c.split('').map(h => h + h).join('');
-    return [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16));
-  }
-  const tokenRamp = (names, f) => 'rgb(' + ramp(names.map(n => hexRGB(RV.pal[n])))(f).join(',') + ')';
-  RV.speedChartCol = f => tokenRamp(['speed-slow', 'speed-mid', 'speed-fast'], f);
-  RV.brakeCol = f => tokenRamp(['brake-none', 'brake-full'], f);
 
-  /* ---------- shared red/green color-scale utility ----------
-     RV.colorScale(value, min, max, direction)
-       direction  1 = high is green (throttle, speed)
-                 -1 = low is green (brake, lap delta where negative = faster)
-     Returns a CSS rgb() string.
-
-     RV.deltaColor(delta)
-       delta < 0 = faster (solid green), delta > 0 = slower (solid red), within 5 ms of 0 = null (no colour).
-
-     RV.gearColor(gear)
-       Returns a CSS rgb() colour for gears -1 through 6.
-  */
-  const GREEN_RGB = [14, 159, 79];    /* --in-throttle light */
-  const RED_RGB   = [217, 45, 32];    /* --in-brake light */
+  /* ---------- the shared good / bad colour scale ----------
+     RV.colorScale(value, min, max, direction): direction 1 = high is good (throttle, speed), -1 = low is good
+     (brake). Returns a CSS rgb() string between the tokens --scale-bad and --scale-good.
+     RV.deltaColor(delta): delta < 0 = faster (the good colour), delta > 0 = slower (the bad colour), within 5 ms
+     of 0 = null (no colour). */
   function lerpRGB(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
   RV.colorScale = function (value, min, max, direction) {
     const f = RV.clamp((value - min) / (max - min || 1), 0, 1);
-    const t = direction >= 0 ? f : 1 - f;             /* t=1 → green, t=0 → red */
-    const rgb = lerpRGB(RED_RGB, GREEN_RGB, t);
-    return 'rgb(' + rgb.join(',') + ')';
+    return 'rgb(' + lerpRGB(BAD, GOOD, direction >= 0 ? f : 1 - f).join(',') + ')';
   };
   RV.deltaColor = function (delta) {
-    /* solid green = faster, solid red = slower, null = dead even (within 5 ms) → transparent */
     if (Math.abs(delta) < 0.005) return null;
-    return 'rgb(' + (delta < 0 ? GREEN_RGB : RED_RGB).join(',') + ')';
-  };
-  /* Sequential palette for gears: -1 (reverse) through 6 */
-  const GEAR_COLORS = [
-    [140, 100, 200],   /* -1: reverse — purple */
-    [100, 120, 200],   /* 0:  neutral — blue-grey */
-    [44,  150, 220],   /* 1 */
-    [50,  190, 170],   /* 2 */
-    [80,  190, 80],    /* 3 */
-    [200, 185, 50],    /* 4 */
-    [220, 130, 40],    /* 5 */
-    [210, 60,  50],    /* 6 */
-  ];
-  RV.gearColor = function (gear) {
-    const k = RV.clamp(gear + 1, 0, GEAR_COLORS.length - 1);
-    return 'rgb(' + GEAR_COLORS[k].join(',') + ')';
+    return 'rgb(' + (delta < 0 ? GOOD : BAD).join(',') + ')';
   };
   /* the name TORCS, with its explanation on hover */
   RV.TORCS = '<abbr title="The Open Racing Car Simulator \u2014 the physics engine used to train the driver">TORCS</abbr>';
-  const css = stops => 'linear-gradient(90deg,' + stops.map(s => 'rgb(' + s.join(',') + ')').join(',') + ')';
-  RV.speedGradient = css(SPEED);
-  RV.beamGradient = css(BEAM);
 
   /* ---------- messages ---------- */
   let toastTimer = null;

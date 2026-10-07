@@ -222,11 +222,20 @@
     if (srcKind == null) srcKind = ds && ds.src.kind === 'local' ? 'local' : 'github';
     const noBasic = ds && !ds.hasSimple ? RV.NO_BASIC : '';
     const current = ds ? esc(ds.src.label()) : 'nothing is loaded';
-    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['controls', 'Controls'], ['help', 'Help'], ['format', 'Data format']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
+    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['custom', 'Customization'], ['controls', 'Controls'], ['help', 'Help'], ['format', 'Data format']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
     if (S.setTab !== 'controls') capturing = null;
     const guideCard = () => '<div class="card guidecard"><div class="cardhead"><h3>Data format</h3><span class="note">What a repository or folder must contain</span></div>' +
       '<div class="seg wrap subtabs" id="sGuide" role="tablist">' + Object.keys(GUIDE).map(k => '<button role="tab" data-v="' + k + '" class="' + (k === S.guideTab ? 'on' : '') + '" aria-selected="' + (k === S.guideTab) + '">' + GUIDE[k][0] + '</button>').join('') + '</div>' +
       '<div class="guidebody">' + GUIDE[S.guideTab][1] + '</div></div>';
+    if (S.setTab !== 'custom') RV.theme.closePick();
+    if (S.setTab === 'custom') {
+      const keep0 = box.scrollTop;
+      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Customization</h1><p class="lead">The colour of everything on the site, saved as themes of your own.</p></div>' + tabs + '<div id="custBody"></div></div>';
+      box.scrollTop = keep0;
+      box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
+      RV.theme.ui($('custBody'));
+      return;
+    }
     if (S.setTab === 'controls' || S.setTab === 'format') {
       const ctl = S.setTab === 'controls', keep0 = box.scrollTop;
       box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>' + (ctl ? 'Controls' : 'Data format') + '</h1><p class="lead">' +
@@ -252,7 +261,7 @@
 
       '<div class="setgrid"><div class="col">' +
       '<div class="card"><div class="cardhead"><h3>Appearance</h3></div>' +
-      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], P.theme, 'Theme') + '</div>' +
+      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system. ' + (RV.customTheme() ? 'In use now: your theme \u201c' + esc(RV.customTheme().name) + '\u201d. ' : '') + 'Themes of your own are made on the <button class="link" id="sCustom">Customization</button> tab.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], P.theme, 'Theme') + '</div>' +
       '<div class="field"><div><b>View</b><p class="note">' + (noBasic ? '<span class="warn">' + noBasic + '</span>' : 'Basic view: plain-language descriptions and the main controls. Detailed view: technical titles, every channel and every control.') + '</p></div>' +
       seg('sView', [['basic', 'Basic view', noBasic], ['detailed', 'Detailed view']], RV.simple() || (!ds && P.view === 'basic') ? 'basic' : 'detailed', 'View') + '</div></div>' +
 
@@ -265,7 +274,7 @@
       '<div class="field"><div><b>Car size</b><p class="note">For every car without a size of its own (Track, Camera). 1 is true scale.</p></div><div class="setsl"><input type="range" id="sCar" min="0.3" max="4" step="0.1" value="' + P.carSize + '" aria-label="Car size"><span class="num" id="sCarV">' + P.carSize.toFixed(1) + '×</span></div></div>' +
       '<div class="field"><div><b>Dimming outside a loop</b><p class="note">How dark the rest of the map is while a section is played on a loop.</p></div><div class="setsl"><input type="range" id="sDim" min="0" max="0.9" step="0.05" value="' + P.loopDim + '" aria-label="Dimming outside a loop"><span class="num" id="sDimV">' + Math.round(P.loopDim * 100) + ' %</span></div></div></div>' +
 
-      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed and the other replay values, the default keys, layers, panels, lists and car sizes. The viewer ID and your API keys stay.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
+      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed and the other replay values, the default keys, layers, panels, lists and car sizes. The viewer ID, your API keys and your own themes stay.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
       '</div><div class="col">' +
 
       '<div class="card"><div class="cardhead"><h3>Data source</h3><span class="note">Now showing: ' + current + '</span></div>' +
@@ -305,6 +314,7 @@
     box.querySelectorAll('[data-keyclear]').forEach(b => { b.onclick = () => { RV.apiKeys.clear(b.dataset.keyclear); shown = null; RV.toast('The key was deleted from this browser.'); render(); }; });
     box.querySelectorAll('[data-keyshow]').forEach(b => { b.onclick = () => { shown = shown === b.dataset.keyshow ? null : b.dataset.keyshow; render(); }; });
     on('sKind', v => { srcKind = v; result = null; render(); });
+    if ($('sCustom')) $('sCustom').onclick = () => { S.setTab = 'custom'; render(); box.scrollTop = 0; };
     if ($('sFormat')) $('sFormat').onclick = () => { S.setTab = 'format'; render(); box.scrollTop = 0; };
     $('sAuto').onchange = e => { P.autoplay = e.target.checked; RV.savePrefs(); };
     $('sReset').onclick = () => {
