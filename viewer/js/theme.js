@@ -205,6 +205,51 @@
     $('cpText').focus(); $('cpText').select();
   }
 
+  /* The fourth choice beside Light, Dark and System: "Custom", a drop-down of the reader's own themes by name.
+     However many there are, the row stays four wide. */
+  function customSelect(id) {
+    const th = current(), list = themes();
+    return '<select id="' + id + '" class="thsel' + (th ? ' on' : '') + '" aria-label="Your own themes"' + (list.length ? '' : ' title="No themes of your own yet. Change a colour on the Customization tab and one is made."') + '>' +
+      '<option value=""' + (th ? '' : ' selected') + ' disabled hidden>Custom</option>' +
+      (list.length ? list.map(t => '<option value="custom:' + esc(t.id) + '"' + (th === t ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') : '<option value="" disabled>No themes of your own yet</option>') + '</select>';
+  }
+
+  /* ---------- previews ----------
+     One card per theme with three small windows: the Versions page, the Track page and the Telemetry page, drawn
+     with that theme's colours. A card takes its colours from the class th-light or th-dark (css/app.css gives
+     those the whole set of tokens) plus the theme's own changes; the card of the theme in use has neither, so it
+     shows the page's colours as they are and follows a colour while it is being changed. */
+  let prevN = 0;
+  function preview(sel, name, base, colors, on) {
+    const n = ++prevN, style = on ? '' : Object.keys(colors || {}).filter(k => TOK[k]).map(k => '--' + k + ':' + colors[k]).join(';');
+    const dot = (c, ring) => '<i style="' + (ring ? 'box-shadow:inset 0 0 0 2px var(--' + c + ')' : 'background:var(--' + c + ')') + '"></i>';
+    return '<button class="thcard' + (on ? ' on' : ' th-' + base) + '" data-th="' + esc(sel) + '" style="' + esc(style) + '" aria-pressed="' + on + '" title="Use the theme ' + esc(name) + '">' +
+      '<span class="thname">' + esc(name) + (on ? '<em>in use</em>' : '') + '</span><span class="thwins">' +
+      /* Versions: the best-lap tile, the lap-time dots, two rows with a time difference, a button */
+      '<span class="thwin tv"><b class="thero"></b><span class="tdots">' + dot('v-best') + dot('v-best') + dot('v-kept') + dot('v-rej', 1) + dot('v-best') + dot('v-rej') + dot('warn-ink') + '</span>' +
+      '<span class="trow"><u></u><s style="background:var(--faster)"></s></span><span class="trow sel"><u></u><s style="background:var(--slower)"></s></span><span class="tbtn"></span><small>Versions</small></span>' +
+      /* Track: the road, the driven line in the speed colours, the car, a dark panel */
+      '<span class="thwin tm"><svg viewBox="0 0 120 70" aria-hidden="true"><defs><linearGradient id="thg' + n + '" x1="0" x2="1">' + [1, 2, 3, 4, 5].map((k, i) => '<stop offset="' + i * 25 + '%" style="stop-color:var(--sp-' + k + ')"/>').join('') + '</linearGradient></defs>' +
+      '<path d="M14 54 C14 20 40 12 60 22 S92 44 106 18" fill="none" style="stroke:var(--road-edge)" stroke-width="11" stroke-linecap="round"/>' +
+      '<path d="M14 54 C14 20 40 12 60 22 S92 44 106 18" fill="none" style="stroke:var(--road)" stroke-width="9" stroke-linecap="round"/>' +
+      '<path d="M14 54 C14 20 40 12 60 22 S92 44 96 30" fill="none" stroke="url(#thg' + n + ')" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<path d="M96 30 L112 8 M96 30 L116 22 M96 30 L104 4" fill="none" style="stroke:var(--beam-far)" stroke-width="0.9"/><circle cx="96" cy="30" r="3.4" style="fill:var(--runmap-1)"/>' +
+      '<rect x="6" y="6" width="34" height="20" rx="3" style="fill:var(--panel-bg)"/><rect x="10" y="11" width="16" height="3" rx="1" style="fill:var(--panel-ink)"/><rect x="10" y="17" width="26" height="4" rx="1" style="fill:var(--scale-good)"/></svg><small>Track</small></span>' +
+      /* Telemetry: a card with the grid, two cars' lines, the throttle and brake colours */
+      '<span class="thwin tt"><svg viewBox="0 0 120 70" aria-hidden="true"><rect x="5" y="5" width="110" height="60" rx="4" style="fill:var(--surface);stroke:var(--line)"/>' +
+      [20, 35, 50].map(y => '<path d="M10 ' + y + ' H110" style="stroke:var(--grid)" stroke-width="1"/>').join('') +
+      '<path d="M10 48 L26 22 L40 30 L54 14 L70 40 L86 20 L110 26" fill="none" style="stroke:var(--run-1)" stroke-width="2.2" stroke-linejoin="round"/>' +
+      '<path d="M10 50 L26 27 L40 34 L54 19 L70 44 L86 25 L110 30" fill="none" style="stroke:var(--run-2)" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<rect x="10" y="56" width="42" height="4" rx="2" style="fill:var(--in-throttle)"/><rect x="58" y="56" width="20" height="4" rx="2" style="fill:var(--in-brake)"/></svg><small>Telemetry</small></span>' +
+      '</span></button>';
+  }
+  function previews() {
+    const th = current(), P = RV.prefs, now = RV.themeNow();
+    return '<div class="card"><div class="cardhead"><h3>Previews</h3><span class="note">Versions, Track and Telemetry in each theme. Click one to use it.</span></div><div class="thcards">' +
+      preview('light', 'Light', 'light', null, !th && now === 'light') + preview('dark', 'Dark', 'dark', null, !th && now === 'dark') +
+      themes().map(t => preview('custom:' + t.id, t.name, t.base === 'dark' ? 'dark' : 'light', t.colors, th === t)).join('') + '</div></div>';
+  }
+
   /* ---------- the Customization tab ---------- */
   let host = null;
   const mode = () => RV.uiGet('custMode', 'basic'), tab = () => RV.uiGet('custTab', 'ui');
@@ -218,9 +263,9 @@
         '<div class="cname"><b>' + esc(x.label) + '</b><small>' + (adv ? '--' + x.id : 'sets ' + Object.keys(x.set(val, value)).length + ' colour' + (Object.keys(x.set(val, value)).length === 1 ? '' : 's')) + '</small></div>' +
         '<code>' + esc(val) + '</code><button class="btn sm" data-reset="' + x.id + '"' + (own ? '' : ' disabled') + ' title="Back to the colour of the ' + (th ? th.base : RV.themeNow()) + ' theme">Reset</button></div>';
     };
-    box.innerHTML = '<div class="setgrid custgrid"><div class="col"><div class="card"><div class="cardhead"><h3>Theme</h3><span class="note">Saved in this browser, under your viewer ID</span></div>' +
+    box.innerHTML = previews() + '<div class="setgrid custgrid"><div class="col"><div class="card"><div class="cardhead"><h3>Theme</h3><span class="note">Saved in this browser, under your viewer ID</span></div>' +
       '<div class="seg wrap" id="cThemes" role="group" aria-label="Theme">' + pill('light', 'Light', P.theme === 'light') + pill('dark', 'Dark', P.theme === 'dark') + pill('system', 'System', P.theme === 'system' || (!th && !['light', 'dark'].includes(P.theme))) +
-      themes().map(t => pill('custom:' + t.id, t.name, th === t)).join('') + '</div>' +
+      customSelect('cCustom') + '</div>' +
       (th ? '<label class="lbl" for="cName">Name of this theme</label><div class="inrow"><input type="text" id="cName" maxlength="40" value="' + esc(th.name) + '"></div>' +
           '<div class="field"><div><b>Starts from</b><p class="note">Every colour you have not changed comes from this theme.</p></div><div class="seg" id="cBase">' + ['light', 'dark'].map(b => '<button data-v="' + b + '" class="' + (th.base === b ? 'on' : '') + '" aria-pressed="' + (th.base === b) + '">' + (b === 'light' ? 'Light' : 'Dark') + '</button>').join('') + '</div></div>' +
           '<p class="note">' + Object.keys(th.colors).length + ' of ' + TOKENS.length + ' colours changed.</p>' : '<p class="note" style="margin-top:12px">Light, Dark and System cannot be changed themselves. Change any colour and a copy is made for you, or start one here.</p>') +
@@ -231,6 +276,8 @@
       '<p class="note">' + (adv ? 'Every colour of the site, one by one (' + TOKENS.length + ' in all). Click a swatch to change it.' : 'Each row changes several related colours at once. Advanced shows every one of them and lets you fine-tune.') + '</p>' +
       '<div class="crows">' + rows.map(row).join('') + '</div></div></div></div>';
     box.querySelectorAll('#cThemes button').forEach(b => { b.onclick = () => { closePick(); select(b.dataset.th); ui(box); }; });
+    $('cCustom').onchange = e => { closePick(); select(e.target.value); ui(box); };
+    box.querySelectorAll('.thcard').forEach(b => { b.onclick = () => { closePick(); select(b.dataset.th); ui(box); }; });
     box.querySelectorAll('#cMode button').forEach(b => { b.onclick = () => { closePick(); RV.uiSet('custMode', b.dataset.v); ui(box); }; });
     box.querySelectorAll('#cTabs button').forEach(b => { b.onclick = () => { closePick(); RV.uiSet('custTab', b.dataset.v); ui(box); }; });
     box.querySelectorAll('#cBase button').forEach(b => { b.onclick = () => { th.base = b.dataset.v; RV.savePrefs(); RV.applyTheme(); ui(box); }; });
@@ -259,5 +306,5 @@
   }
 
   RV.theme = { TABS: TABS, TOKENS: TOKENS, GROUPS: GROUPS, norm: norm, value: value, current: current, create: create, remove: remove, select: select,
-    setToken: setToken, setGroup: setGroup, reset: reset, ui: ui, closePick: closePick, ramp: ramp, mix: mix };
+    setToken: setToken, setGroup: setGroup, reset: reset, ui: ui, customSelect: customSelect, closePick: closePick, ramp: ramp, mix: mix };
 })();

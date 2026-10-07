@@ -261,7 +261,7 @@
 
       '<div class="setgrid"><div class="col">' +
       '<div class="card"><div class="cardhead"><h3>Appearance</h3></div>' +
-      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system. ' + (RV.customTheme() ? 'In use now: your theme \u201c' + esc(RV.customTheme().name) + '\u201d. ' : '') + 'Themes of your own are made on the <button class="link" id="sCustom">Customization</button> tab.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], P.theme, 'Theme') + '</div>' +
+      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system. Custom lists the themes of your own; they are made on the <button class="link" id="sCustom">Customization</button> tab.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], RV.customTheme() ? '' : P.theme, 'Theme').replace(/<\/div>$/, RV.theme.customSelect('sThemeCustom') + '</div>') + '</div>' +
       '<div class="field"><div><b>View</b><p class="note">' + (noBasic ? '<span class="warn">' + noBasic + '</span>' : 'Basic view: plain-language descriptions and the main controls. Detailed view: technical titles, every channel and every control.') + '</p></div>' +
       seg('sView', [['basic', 'Basic view', noBasic], ['detailed', 'Detailed view']], RV.simple() || (!ds && P.view === 'basic') ? 'basic' : 'detailed', 'View') + '</div></div>' +
 
@@ -303,6 +303,7 @@
     const on = (id, fn) => box.querySelectorAll('#' + id + ' button').forEach(b => { b.onclick = () => fn(b.dataset.v, b); });
     on('sTabs', v => { S.setTab = v; render(); box.scrollTop = 0; });
     on('sTheme', v => { P.theme = v; RV.savePrefs(); RV.applyTheme(); render(); });
+    $('sThemeCustom').onchange = e => { RV.theme.select(e.target.value); render(); };
     on('sView', v => { RV.setView(v); });
     on('sSpeed', v => { P.speed = +v; RV.savePrefs(); $('spd').value = v; render(); });
     on('sSync', v => { P.sync = v; RV.savePrefs(); RV.map.buildSide(); render(); });
