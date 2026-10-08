@@ -1964,6 +1964,8 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 
 ## v1.11 — Planned line (track memory): a whole-lap racing line computed offline from the track's geometry, followed by the steering inside two zones (60–2,150 m and 2,600–3,160 m), with the line's speed as a cap on the sensor plan
 
+> **Rules note (open question for the user / the competition officials, raised 2026-10-07).** The officials allow a pre-mapped track to anticipate turns, "but it should still use the sensor data to know what is happening in real time", with "the sensors as the main input" and the track information "as an improvement/optimization" (2026-10-04). From this version on, inside the two line zones (60–2,150 m and 2,600–3,160 m) the track beams no longer steer the car: it steers toward the stored line and corrects every step from its measured position (`trackPos`), angle and sideways slide. Since v1.12 the corner table also adds 36–65 km/h to the sensor plan's allowed speed in the four fast bends. Braking, ABS and traction control are still sensor-driven, and no stored controls are replayed. Whether that still counts as "sensors as the main input" has not been confirmed. **v1.10 (1:12.54) is the last version in which the sensors steer everywhere.**
+
 | Field | Detail |
 |---|---|
 | **Version** | v1.11 |
@@ -1981,6 +1983,8 @@ The driver lives in a single file, `snakeoil3_v1.py`. Each version is a Git comm
 ---
 
 ## v1.12 — Corner table re-tuned on the planned line: the rows of the four fast bends inside the line's zones (1,042 / 1,931 / 2,700 / 2,988 m) raised by 24–40 km/h and ended 35–45 m later
+
+> **Rules note:** see the note under v1.11. This version raises the corner table's share of the allowed speed (+36 to +65 km/h in the four fast bends); whether that fits "sensors as the main input" is an open question for the user / the officials.
 
 | Field | Detail |
 |---|---|
