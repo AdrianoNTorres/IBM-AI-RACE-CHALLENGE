@@ -121,3 +121,34 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.19 | U2 | 2,700 m | handed down: stored speed of the 2,700 m stretch x1.02, no guard | 12 (screen) | -0.019 | 0.008 | 0 of 12 | 0.834 @ 1,932 m | lost | 0.817 at 2,803 m; 7 of 12 off with `plan_vs` 1.04 |
 | v1.19 | U4 | 2,700 m | stored speed of the 2,700 m stretch x1.04, no guard | 12 (screen) | -0.035 | 0.012 | 5 of 12 | 0.994 @ 2,804 m | lost | 5 of 12 off at 2,803 m |
 | v1.19 | GU4t | 2,700 m | the same x1.04 under the guard (`plan_x0` 0.3, 0.2 s) | 12 (screen) | +0.159 | 0.014 | 0 of 12 | 0.834 @ 1,932 m | lost | 0 off, 0.644 at 2,803 m, but slower: the exit has no speed to give |
+| v1.20 | **chosen** | see title | Brake pedal ahead of the falling stored speed, with steeper braking passes above 200 km/h into 446 m, 770 m and 1,042 m: slower in every form | 70 (full) | +0.046 | 0.007 | 0 of 70 | 0.844 @ 1,932 m | rejected | Fails the bar on lap time (0.046 s slower over 70 runs); nothing measured in the braking zones is faster than v1.19. |
+| v1.20 | P4k3 | 446 / 770 / 1,042 m | the chosen pair on the 12 screen runs | 12 (screen) | +0.084 | 0.012 | 0 of 12 | 0.844 @ 1,932 m | lost | slower in 12 of 12 |
+| v1.20 | P4k3_vdm10 | 770 m exit | the chosen pair with the stored speed read 10 m late | 12 (screen) | +0.743 | 0.021 | 0 of 12 | 0.845 @ 1,931 m | lost | 836 m 0.830 (v1.19 0.881), 1,106 m 0.764 (0.800): the pedal buys margin there |
+| v1.20 | P4k3_vd10 | 770 m apex | the chosen pair with the stored speed read 10 m early | 12 (screen) | +0.386 | 0.012 | 0 of 12 | 0.891 @ 767 m | lost | 0.891 at the 770 m apex (v1.19 0.877) |
+| v1.20 | P4k3_vs104 | chosen | the chosen pair with `plan_vs` 1.04 | 12 (screen) | +0.413 | 0.019 | 0 of 12 | 0.847 @ 1,932 m | lost | margins as v1.19 (0.843) |
+| v1.20 | B_vd10 | v1.19 | v1.19 with the stored speed read 10 m early, for reference | 12 (screen) | +0.346 | 0.014 | 0 of 12 | 0.877 @ 767 m | lost | reference |
+| v1.20 | B_vdm10 | v1.19 | v1.19 with the stored speed read 10 m late, for reference | 12 (screen) | +0.807 | 0.012 | 0 of 12 | 0.881 @ 836 m | lost | reference |
+| v1.20 | B_vs104 | v1.19 | v1.19 with `plan_vs` 1.04, for reference | 12 (screen) | +0.394 | 0.022 | 0 of 12 | 0.843 @ 1,932 m | lost | reference |
+| v1.20 | F10b15 | all five zones | handed down in its plain form: the whole pedal ahead (`plan_bk` 1) with every braking pass x1.15 | 12 (screen) | +0.087 | 0.016 | 0 of 12 | 0.833 @ 1,931 m | lost | slower; 1 of 12 faster |
+| v1.20 | P2k5 | 446 / 770 / 1,042 m | `plan_bk` 0.5 with passes x1.3 above 200 km/h | 12 (screen) | +0.092 | 0.015 | 0 of 12 | 0.847 @ 1,932 m | lost | slower in 12 of 12 |
+| v1.20 | P3k10 | 446 / 770 / 1,042 m | `plan_bk` 1 with whole passes x1.15, single lap | 1 (single) | +0.174 | n/a | 0 of 1 | 0.825 @ 1,931 m | lost | 770 m +0.03, 1,042 m +0.04 |
+| v1.20 | F10 | all five zones | part 1 alone: the whole pedal ahead on v1.19's table, single lap | 1 (single) | +0.182 | n/a | 0 of 1 | 0.845 @ 767 m | lost | brakes earlier: 446 m +0.09, 770 m +0.06 |
+| v1.20 | Fzk3 | 446 / 770 / 1,042 m | part 1 alone at the chosen share (`plan_bk` 0.3), single lap | 1 (single) | +0.078 | n/a | 0 of 1 | 0.818 @ 1,932 m | lost | slower without the passes too |
+| v1.20 | hall_15 | all five zones | part 2 alone: passes x1.15 above 200 km/h, v1.19's pedal, single lap | 1 (single) | +0.294 | n/a | 0 of 1 | 0.818 @ 1,931 m | lost | 446 m -0.02 then +0.04; 1,528 m +0.24 |
+| v1.20 | h446_50 | 446 m | pass x1.5 above 200 km/h, single lap | 1 (single) | +0.068 | n/a | 0 of 1 | 0.819 @ 1,932 m | lost | -0.08 s to 400 m, +0.13 s to 600 m |
+| v1.20 | b446_15 | 446 m | whole pass x1.15, single lap | 1 (single) | +0.118 | n/a | 0 of 1 | 0.814 @ 1,932 m | lost | -0.07 s to 400 m, +0.15 s to 600 m |
+| v1.20 | b770_15 | 770 m | whole pass x1.15, single lap | 1 (single) | +0.170 | n/a | 0 of 1 | 0.822 @ 826 m | lost | +0.04 s by 1,000 m |
+| v1.20 | b1042_15 | 1,042 m | whole pass x1.15, single lap | 1 (single) | +0.048 | n/a | 0 of 1 | 0.823 @ 1,931 m | lost | +0.02 s in the bend |
+| v1.20 | b1528_15 | 1,528 m | pass x0.98 for x0.85, single lap | 1 (single) | +0.480 | n/a | 0 of 1 | 0.820 @ 1,932 m | lost | +0.39 s by 1,800 m: this bend needs its gentle pass |
+| v1.20 | b2700_15 | 2,700 m | pass x1.15, single lap | 1 (single) | +0.000 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | the same lap: this bend's entry is not a braking pass |
+| v1.20 | g446_93 | 446 m | own: gentler pass x0.93, single lap | 1 (single) | +0.128 | n/a | 0 of 1 | 0.815 @ 1,932 m | lost | +0.04 s to 400 m, -0.03 s to 600 m |
+| v1.20 | g446_85 | 446 m | own: gentler pass x0.85, single lap | 1 (single) | +0.140 | n/a | 0 of 1 | 0.823 @ 1,931 m | lost | +0.09 s |
+| v1.20 | g770_93 | 770 m | own: gentler pass x0.93, single lap | 1 (single) | +0.020 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | +0.01, -0.01: flat |
+| v1.20 | g1528_93 | 1,528 m | own: pass x0.79 for x0.85, single lap | 1 (single) | +0.008 | n/a | 0 of 1 | 0.823 @ 1,932 m | lost | +0.01, -0.02: flat |
+| v1.20 | U446b | 446 m | own: stored speed of 330-520 m x1.04, single lap | 1 (single) | +0.008 | n/a | 0 of 1 | 0.824 @ 1,931 m | lost | 400 m section +0.10 s, 500 m -0.06 s |
+| v1.20 | U446c | 446 m | own: stored speed of 330-520 m x1.06, single lap | 1 (single) | +0.040 | n/a | 0 of 1 | 0.813 @ 1,931 m | lost | 400 m section +0.14 s |
+| v1.20 | U2a | 446 m, second arc | own: stored speed of 470-520 m x1.03, single lap | 1 (single) | +0.078 | n/a | 0 of 1 | 0.827 @ 1,931 m | lost | 500 m section +0.04 s |
+| v1.20 | Vb3 | every bend | own: 30 % less steering feed-forward at full brake pedal, single lap | 1 (single) | +0.402 | n/a | 0 of 1 | 0.781 @ 1,931 m | lost | 1,931 m apex 0.781 (0.814), 770 m 0.698 (0.761), but slower in every bend |
+| v1.20 | Vb10 | every bend | own: no feed-forward at full brake pedal, single lap | 1 (single) | +1.070 | n/a | 0 of 1 | 0.859 @ 3,048 m | lost | 1,931 m 0.636, 3,047 m 0.859 |
+| v1.20 | Vd3 | every bend | own: 30 % less feed-forward per 30 m/s^2 of measured deceleration, single lap | 1 (single) | +0.518 | n/a | 0 of 1 | 0.826 @ 1,105 m | lost | slower; 1,105 m 0.826 |
+| v1.20 | Vd10 | every bend | own: no feed-forward at 30 m/s^2 of deceleration, single lap | 1 (single) | n/a | n/a | 1 of 1 | none on track | lost | off the track at 1,103 m |
