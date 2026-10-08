@@ -677,6 +677,30 @@ def drive_example(c):
         (2900, 2926),   # 2,988 m right-hander (v1.10, entry from the left, corner row +20: 2,929 / 2,928 / 2,926 / 2,924 m: 0.04 / 0.05 / 0.06-0.07 / 0.07-0.08 s gained; 2,932 m: 0.03 s slower; 2,920 m: 0.26 s slower)
         (3170, 3237),   # hairpin, with its corner-table row at -9 (3,236 / 3,238 m the same; 3,232 / 3,234 / 3,240 m: 0.005-0.009 s gained only)
     )
+    # v1.11: planned line (track memory): a whole-lap racing line computed offline from the track's geometry by
+    # tools/raceline.py (the segments of corkscrew.xml rebuilt as TORCS builds them, then a curvature-smoothing
+    # line inside |trackPos| 0.65, 0.5 at the apexes of the two fast right-handers at 1,042 m and 2,988 m:
+    # `python tools/raceline.py --limit 0.65 --zone 990:1090:0.5 --zone 2940:3030:0.5 --table plan.txt`).
+    # One row every plan_ds metres of distFromStart: the line's trackPos, its curvature (1/km, + = left) and the
+    # speed the line allows there (km/h: sideways grip 15.5*(1 + 5e-4*v^2) m/s^2 fitted to our laps and the
+    # braking distance to the corners ahead; no drive limit). Inside plan_zones the steering follows the line:
+    # the live trackPos and the car's direction of travel (angle and speedY/speedX) are held to the line's
+    # position and direction, with the line's curvature as feed-forward; the braking plan is still the
+    # sensors' (beams, corner table, S-bend look), capped by the line's speed. Outside the zones (start, the
+    # flick / Corkscrew, the hairpin and the finish straight) the sensor steering of v1.10 drives unchanged.
+    plan_zones= ((60, 2150), (2600, 3160))   # from m, to m: where the planned line steers (to 2,100 / 2,220 m the same; 2,250 m: damage over the crest at 2,351 m at 280 km/h; second zone ending 2,860 / 3,120 / 3,200 m: 0.09 s less / the same / the same; lap-wide: off at the flick, 1.5 s lost at the hairpin)
+    plan_ramp=30        # m over which the planned steering fades in and out at a zone's ends (50: 0.03 s slower)
+    plan_kp=.5          # steer per unit of trackPos away from the line (.3: 0.88 of the edge at the start kink; .8: 0.15 s slower)
+    plan_kh=4.77        # steer per radian between the car's direction of travel and the line's direction (15/PI, the sensor steering's own; 4 the same, 6: 0.26 s slower)
+    plan_slipmax=5      # deg: most slip angle (atan(speedY/speedX)) counted in the direction of travel; beyond it the nose counts, so a slide is still caught by counter-steer (3: 0.24 s slower; 7 the same; no limit: 3 of 12 perturbed runs off; nose only, 0: off at 566 m, the car runs 0.3 wide of the line in every bend)
+    plan_ff=8.0         # feed-forward: steer per 1/m of the line's curvature at low speed ...
+    plan_ffv=9e-4       # ... rising by this share per (m/s)^2 (the fronts slip more at speed; 6e-4 / 7e-4: 0.3 s slower, the car runs wide of the line; 11e-4: 0.12 s faster on 12 runs, but it cuts inside the line at the fast apexes)
+    plan_la=.15         # s: the feed-forward reads the curvature this far ahead (0: 0.12 s slower; .3 the same)
+    plan_vs=1.0         # share of the line's speed the braking plan may reach (.97: 0.18 s slower; 1.03: 0.03 s faster on 12 runs, flick 0.81; 1.06 / 1.10: 0.06 / 0.13 s slower)
+    plan_ds= 10
+    plan_pos= (0.003, 0.123, 0.145, 0.072, -0.064, -0.19, -0.303, -0.401, -0.484, -0.548, -0.589, -0.603, -0.588, -0.541, -0.458, -0.339, -0.179, 0.022, 0.268, 0.519, 0.64, 0.622, 0.459, 0.211, -0, -0.173, -0.312, -0.421, -0.503, -0.563, -0.604, -0.63, -0.643, -0.649, -0.65, -0.65, -0.65, -0.649, -0.622, -0.509, -0.241, 0.203, 0.499, 0.623, 0.65, 0.627, 0.559, 0.46, 0.572, 0.65, 0.605, 0.483, 0.302, 0.064, -0.246, -0.505, -0.622, -0.65, -0.644, -0.649, -0.616, -0.521, -0.388, -0.231, -0.061, 0.109, 0.27, 0.413, 0.529, 0.612, 0.65, 0.609, 0.455, 0.141, -0.25, -0.494, -0.615, -0.65, -0.618, -0.496, -0.249, 0.139, 0.422, 0.574, 0.638, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.647, 0.625, 0.563, 0.439, 0.231, -0.053, -0.266, -0.401, -0.475, -0.499, -0.479, -0.388, -0.181, 0.164, 0.416, 0.563, 0.633, 0.65, 0.641, 0.612, 0.56, 0.482, 0.379, 0.247, 0.086, -0.101, -0.27, -0.405, -0.51, -0.584, -0.631, -0.65, -0.641, -0.603, -0.532, -0.459, -0.411, -0.384, -0.376, -0.384, -0.403, -0.433, -0.468, -0.507, -0.546, -0.582, -0.613, -0.635, -0.648, -0.648, -0.617, -0.522, -0.333, -0.031, 0.234, 0.426, 0.555, 0.63, 0.65, 0.619, 0.558, 0.476, 0.377, 0.262, 0.125, -0.04, -0.241, -0.446, -0.569, -0.629, -0.648, -0.65, -0.65, -0.649, -0.648, -0.646, -0.645, -0.643, -0.642, -0.642, -0.641, -0.641, -0.642, -0.643, -0.644, -0.645, -0.646, -0.647, -0.649, -0.649, -0.65, -0.65, -0.645, -0.612, -0.519, -0.335, -0.027, 0.412, 0.637, 0.578, 0.216, -0.198, -0.461, -0.603, -0.649, -0.627, -0.545, -0.402, -0.299, -0.31, -0.41, -0.47, -0.479, -0.449, -0.414, -0.379, -0.348, -0.323, -0.308, -0.306, -0.319, -0.318, -0.298, -0.261, -0.212, -0.146, -0.041, 0.102, 0.278, 0.435, 0.552, 0.623, 0.65, 0.629, 0.578, 0.503, 0.4, 0.263, 0.088, -0.131, -0.398, -0.585, -0.647, -0.639, -0.637, -0.649, -0.635, -0.514, -0.175, 0.291, 0.569, 0.65, 0.369, -0.28, -0.649, -0.556, -0.258, 0.18, 0.524, 0.646, 0.61, 0.451, 0.289, 0.211, 0.256, 0.434, 0.585, 0.648, 0.596, 0.438, 0.397, 0.493, 0.588, 0.633, 0.648, 0.65, 0.65, 0.65, 0.646, 0.626, 0.576, 0.482, 0.326, 0.095, -0.183, -0.362, -0.443, -0.444, -0.377, -0.26, -0.109, 0.062, 0.235, 0.396, 0.528, 0.617, 0.65, 0.61, 0.474, 0.216, -0.111, -0.327, -0.449, -0.497, -0.49, -0.42, -0.252, 0.047, 0.358, 0.54, 0.627, 0.65, 0.636, 0.595, 0.53, 0.444, 0.344, 0.233, 0.115, -0.006, -0.126, -0.243, -0.353, -0.452, -0.535, -0.599, -0.639, -0.649, -0.601, -0.383, 0.149, 0.562, 0.647, 0.437, -0.142, -0.529, -0.641, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.65, -0.648, -0.647, -0.646, -0.646, -0.646, -0.641, -0.627, -0.599, -0.558, -0.508, -0.458, -0.42, -0.407, -0.413, -0.41, -0.368, -0.273, -0.134)
+    plan_curv= (0.77, 0.6, 0.71, 0.81, 0.8, 0.77, 0.81, 0.95, 1.15, 1.38, 1.59, 1.77, 1.94, 2.09, 2.22, 2.35, 2.48, 2.62, 2.77, 2.9, 2.97, 2.89, 2.7, 2.48, 2.24, 2.01, 1.79, 1.57, 1.35, 1.14, 0.92, 0.71, 0.49, 0.27, 0.05, 0, 0, 1.48, 5.2, 8.92, 12.76, 16.78, 20.88, 24.84, 27.86, 27.05, 26.52, 26.93, 28.17, 29.04, 25.91, 22.34, 18.73, 15.21, 11.79, 8.52, 5.28, 1.99, -0.9, -3.56, -3.84, -3.72, -3.7, -3.75, -3.84, -3.98, -4.18, -4.39, -4.58, -4.69, -4.89, -6.85, -9.09, -11.38, -13.75, -16.05, -18.12, -19.67, -17.71, -15.11, -12.57, -10.08, -7.7, -5.36, -3, -0.63, 0, 0, 0, 0, 0, 0, 0, 0, -0.09, -1.15, -2.41, -3.69, -5.01, -6.37, -7.81, -9.34, -10.89, -12.34, -13.45, -12.43, -10.92, -9.36, -7.77, -6.21, -4.65, -3.07, -1.48, -1.25, -1.39, -1.5, -1.58, -1.65, -1.72, -1.79, -1.86, -1.93, -2, -2.08, -2.16, -2.22, -2.23, -2.1, -1.9, -1.7, -1.5, -1.31, -1.12, -0.93, -0.75, -0.56, -0.37, -0.19, -0.01, 0.16, 0.32, 0.47, 0.61, 0.73, 1.83, 3.77, 5.7, 7.59, 9.42, 11.27, 13.27, 15.41, 17.46, 18.6, 17.13, 15.43, 13.74, 12.14, 10.64, 9.21, 7.83, 6.47, 5.13, 3.79, 2.44, 1.05, 0.06, 0.03, 0.02, 0.01, 0, -0.01, -0.01, -0.02, -0.02, -0.03, -0.02, -0.02, -0.02, -0.01, -0, 0, 0.01, 0.02, 0.02, 0.02, 0.14, 1.76, 3.56, 5.35, 7.18, 9.05, 10.86, 12.39, 11.69, 10.19, 8.65, 7.14, 5.59, 4.01, 3.69, 3.68, 3.61, 3.5, 3.38, 3.24, 3.09, 2.93, 2.76, 2.58, 2.39, 2.2, 2, 1.8, 1.59, 1.39, 1.18, 0.98, 0.78, 0.58, 0.4, 0.22, 0.03, -0.17, -0.37, -0.55, -0.7, -0.85, -1.13, -1.42, -1.7, -2, -2.3, -2.58, -2.89, -3.28, -3.72, -4.12, -2.87, -0.82, 1.28, 6.39, 12.85, 19.7, 27.16, 34.92, 40.6, 20.53, -4.33, -25.95, -27.26, -21.79, -17.09, -13.08, -9.32, -7.36, -5.52, -3.56, -1.59, 0.37, 2.3, 4.11, 5.77, 6.92, 7.92, 8.95, 10.05, 11.24, 12.42, 13.47, 14.15, 14.17, 13.84, 12.93, 11.87, 10.78, 9.73, 8.71, 7.73, 6.77, 5.83, 4.9, 3.96, 3.02, 2.07, 1.12, 0.18, -0.76, -1.68, -2.58, -3.41, -4.23, -5.73, -7.28, -8.91, -10.67, -12.45, -14.08, -15.45, -15.09, -13.19, -11.29, -9.4, -7.54, -5.71, -3.83, -2.02, -1.69, -1.44, -1.18, -0.9, -0.64, -0.41, -0.19, 0.02, 0.22, 0.43, 0.67, 0.91, 1.15, 1.46, 1.78, 3.06, 10.12, 18.26, 27.61, 38.04, 42.9, 33.85, 24.61, 15.47, 6.29, 0.14, 0, 0, 0, 0, -0, -0.01, -0, 0.01, 0.03, 0.05, 0.02, -0.04, -0.06, 0.02, 0.25, 0.59, 0.84, 0.8, 0.53, 0.04, -0.78, -1.51, -1.18, 0.48, 2.43, 3.24, 2.65, 1.49)
+    plan_v= (360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 353, 341, 328, 314, 300, 285, 269, 253, 234, 215, 194, 173, 154, 138, 123, 112, 103, 99, 102, 104, 102, 98, 97, 105, 117, 135, 164, 210, 247, 314, 360, 352, 343, 337, 329, 320, 310, 300, 288, 276, 263, 248, 232, 214, 196, 179, 163, 150, 140, 132, 128, 142, 165, 201, 227, 260, 311, 360, 360, 360, 360, 360, 360, 360, 348, 335, 322, 308, 293, 278, 264, 250, 236, 223, 210, 198, 189, 184, 204, 218, 235, 258, 289, 334, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 353, 340, 327, 313, 299, 283, 268, 251, 234, 217, 199, 182, 168, 155, 145, 137, 135, 146, 162, 183, 207, 221, 237, 257, 283, 318, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 357, 344, 331, 317, 303, 288, 273, 257, 243, 229, 217, 207, 201, 210, 225, 245, 270, 304, 356, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 350, 338, 326, 313, 300, 286, 271, 256, 240, 223, 204, 183, 162, 141, 122, 106, 92, 81, 76, 116, 108, 92, 101, 120, 147, 194, 238, 265, 307, 320, 308, 293, 278, 264, 252, 241, 229, 218, 206, 195, 186, 179, 177, 177, 181, 197, 209, 219, 231, 244, 259, 277, 298, 325, 360, 355, 345, 332, 319, 305, 290, 276, 261, 245, 230, 214, 198, 184, 172, 163, 157, 165, 192, 214, 235, 262, 302, 357, 360, 360, 360, 360, 349, 336, 323, 309, 294, 279, 263, 245, 227, 206, 185, 164, 143, 122, 104, 88, 76, 76, 88, 109, 161, 293, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360, 360)
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -826,6 +850,30 @@ def drive_example(c):
                    + (line_target - S['trackPos'])*.021*line_ki*fi, -line_imax, line_imax)
     R['steer']+= c.line_i
     c.line_side= side   # kept between steps
+    # Planned Line (v1.11, track memory): inside plan_zones the steering above is replaced by a follower of the
+    # precomputed line (see the knob block). The table says where the line is and how it bends; the loop is
+    # closed on the live readings: trackPos against the line's position, the direction of travel (the nose
+    # angle less the slip angle, limited to plan_slipmax) against the line's direction, plus the steering the
+    # line's curvature needs at this speed. Measuring the direction at the nose alone left the car 0.3 wide
+    # of the line in every bend (the nose points inside the direction of travel by the slip angle); with no
+    # limit on the slip angle a slide was no longer counter-steered (38 of 70 perturbed runs off).
+    from math import atan, atan2
+    pd= S['distFromStart']
+    pn= len(plan_pos)
+    def plan_at(tb, dd):   # table value at a distance, interpolated (the lap is closed)
+        x= (dd/plan_ds) % pn; i= int(x); f= x-i
+        return tb[i]*(1-f) + tb[(i+1)%pn]*f
+    pw= clip(max(min(pd-z0, z1-pd) for z0, z1 in plan_zones)/plan_ramp, 0, 1)   # 1 inside a zone, fading over plan_ramp at its ends
+    if pw > 0:
+        pv= max(S['speedX'], 0)/3.6
+        p0= plan_at(plan_pos, pd)
+        p_dir= -atan(6*(plan_at(plan_pos, pd+plan_ds/2) - plan_at(plan_pos, pd-plan_ds/2))/plan_ds)   # the line's direction as an 'angle' reading (half-width 6 m)
+        p_slip= atan2(S['speedY'], max(S['speedX'], 10))
+        p_steer= ((S['angle'] - clip(p_slip, -plan_slipmax*PI/180, plan_slipmax*PI/180) - p_dir)*plan_kh
+                  + (p0 - S['trackPos'])*plan_kp
+                  + plan_at(plan_curv, pd + plan_la*pv)/1000*plan_ff*(1 + plan_ffv*pv*pv))
+        R['steer']= pw*p_steer + (1-pw)*R['steer']
+        line_target= p0
     c.aim, c.line_target, c.ahead= aim, line_target, ahead   # kept for telemetry only
     # Steering Cap At Speed (v0.94): above ~100 km/h the front tyres are past
     # their grip well before full lock. At bend detection under braking the
@@ -990,6 +1038,11 @@ def drive_example(c):
     # table says which bend this is; the offset is added to whatever the sensors
     # plan, through the braking zone and the bend, so the brake point, the lift
     # band, ABS and the steering still react to the live readings.
+    # Planned Line's Speed (v1.11): on the planned line the beams look across the bend and the sensor plan
+    # reads more speed than the line can carry (450 m: 122 km/h allowed at 420 m, the line's limit is 107);
+    # inside plan_zones the plan is capped by the line's own speed. The corner table's offsets still apply.
+    if pw > 0:
+        allowed_speed= min(allowed_speed, plan_at(plan_v, pd)*plan_vs + 300*(1-pw))
     for z0, z1, zo in corner_table:
         if z0 <= S['distFromStart'] < z1: allowed_speed+= zo
     c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
