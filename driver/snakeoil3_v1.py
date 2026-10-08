@@ -592,6 +592,16 @@ def drive_example(c):
     # 2-3-2-3 on the wheelspin out of the hairpin and at the start. Without the throttle condition (any step with no
     # brake): no faster, and the 2,700 m exit goes to 0.87-0.88.
     drive_ds_rpm=19000  # on the throttle, shift down as soon as the lower gear would land below this (0 or downshift_rpm = off; 70 runs: 0.197 s gained, SE 0.011, 70 of 70 faster; the 2,700 m exit 0.67 -> 0.85 of the edge at most, 0.853 at 18,000-20,000 on 80 runs; nothing else moves)
+    # Gear Into The Bend (v1.23). Raising downshift_rpm everywhere (v1.22's alternative) was 0.07 s faster but spent
+    # margin. Measured place by place: the earlier downshift under braking turns the car in harder (engine braking on
+    # the rear wheels), so it runs 0.07-0.10 inside the line at the apex: a shorter path, paid for at the inside edge
+    # (770 m 0.837 -> 0.903 and 1,528 m 0.862 -> 0.900 with the stored speed read 5 / 10 m early; 1,931 m 0.832 ->
+    # 0.852; the 2,700 m exit 0.827 -> 0.873; hairpin slower). Kept only where the margin does not move: the upper
+    # gears on the straight part of the braking for 446 m (to 385 m: 0.889 -> 0.863 read 5 m early), the flick
+    # approach and 2,988 m. The same threshold gated on |steer| < 0.05 / 0.10 / 0.15 instead of places: 0.04 / 0.08 /
+    # 0.13 s, but 0.906 at 767 m and 0.894-0.899 at 1,527 m with the stored speed read early.
+    entry_ds_rpm=19000  # braking or coasting inside entry_ds_zones, shift down as soon as the lower gear would land below this (rpm reading; downshift_rpm or less = off; 12 runs: 17,000 / 18,000 / 18,500 / 19,000 / 19,500: 0.06 / 0.05 / 0.05 / 0.08 / 0.07 s)
+    entry_ds_zones= ((340, 385), (2320, 2420), (2950, 3000))   # from m, to m: braking for 446 m (5th -> 4th -> 3rd only), the flick approach, 2,988 m
     drive_ds_wait=5     # steps since the last shift before that downshift (15: the same to 0.007 s)
     brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
     brake_ds_over=20    # km/h: ... the car is behind the braking plan by more than this (pedal demand at its 1.0 limit: flick approach 20-50 km/h over; the other braking zones run 10-16 over and keep downshift_rpm).
@@ -1380,6 +1390,7 @@ def drive_example(c):
     elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
           and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < (brake_ds_rpm if R['brake'] > 0 and S['speedX']-allowed_speed > brake_ds_over
              else max(drive_ds_rpm, downshift_rpm) if R['brake'] == 0 and c.throttle > 0 and getattr(c, 'sh_t', 99) >= drive_ds_wait   # Gear For The Exit (v1.22)
+             else max(entry_ds_rpm, downshift_rpm) if any(z0 <= pd < z1 for z0, z1 in entry_ds_zones)   # Gear Into The Bend (v1.23)
              else downshift_rpm)):
         gear-= 1
     # First Gear At Full Lock (v0.90): at full lock (hairpin, the flick's left
