@@ -1399,6 +1399,13 @@
       else if (tourSaved) { LY.beams.on = tourSaved[0]; LY.hits.on = tourSaved[1]; LY.focus.on = tourSaved[2]; tourSaved = null; }
       buildSide();
     },
+    /* a panel the tutorial is about to point at: switched on and unfolded, if the reader closed or folded it */
+    showPanel(id) {
+      const L = OVER.find(x => x.id === id);
+      if (!L || (L.on && !L.min)) return;
+      L.on = true; L.min = false; panels(); paintWin(L); placeWins();
+      if (S.sideTab === 'layers') buildSide();
+    },
     LAYERS: LAYERS, PANELS: OVER,
     /* switches a compared car on or off for the deltas and the charts; every place that shows it follows */
     setCmp(id, on) { if (on) delete S.cmpOff[id]; else S.cmpOff[id] = true; legend(); S.chartsDirty = true; RV.tele.build(); if (S.sideTab === 'cars') buildSide(); },
