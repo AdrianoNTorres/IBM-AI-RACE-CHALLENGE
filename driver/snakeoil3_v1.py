@@ -601,7 +601,7 @@ def drive_example(c):
     # approach and 2,988 m. The same threshold gated on |steer| < 0.05 / 0.10 / 0.15 instead of places: 0.04 / 0.08 /
     # 0.13 s, but 0.906 at 767 m and 0.894-0.899 at 1,527 m with the stored speed read early.
     entry_ds_rpm=19000  # braking or coasting inside entry_ds_zones, shift down as soon as the lower gear would land below this (rpm reading; downshift_rpm or less = off; 12 runs: 17,000 / 18,000 / 18,500 / 19,000 / 19,500: 0.06 / 0.05 / 0.05 / 0.08 / 0.07 s)
-    entry_ds_zones= ((340, 385), (2320, 2420), (2950, 3000))   # from m, to m: braking for 446 m (5th -> 4th -> 3rd only), the flick approach, 2,988 m
+    entry_ds_zones= ((340, 385), (1500, 1530), (2320, 2420), (2950, 3000))   # from m, to m: braking for 446 m (5th -> 4th -> 3rd only), the last gear of 1,528 m (v1.24: 3rd -> 2nd at 1,510 m, after the braking, instead of 1,533 m on the throttle: 0.020 s over 70 runs, the apex where it was; from 1,490 / 1,510 m: 0.013 / 0.016 s on 12 runs; the upper gears too, from 1,430 m: 0.059 s but the apex at 0.913 with the stored speed read 10 m early), the flick approach, 2,988 m
     drive_ds_wait=5     # steps since the last shift before that downshift (15: the same to 0.007 s)
     brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
     brake_ds_over=20    # km/h: ... the car is behind the braking plan by more than this (pedal demand at its 1.0 limit: flick approach 20-50 km/h over; the other braking zones run 10-16 over and keep downshift_rpm).
