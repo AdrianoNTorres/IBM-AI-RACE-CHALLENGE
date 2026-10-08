@@ -167,14 +167,16 @@ class Line:
 
 # ---------------------------------------------------------------- speed model
 def speed_profile(px, py, grip0=15.5, aero=5e-4, grip_max=40.0, brake0=14.0, brake_aero=0.0065, brake_max=34.0,
-                  power=17.0, vtop=90.0, v0=None, drive=True, vmax=None):
+                  power=17.0, vtop=90.0, v0=None, drive=True, vmax=None, vscale=None, bscale=None):
     """Point mass on a closed path. Sideways grip grip0*(1 + aero*v^2) capped at grip_max; braking
     brake0 + brake_aero*v^2 capped; drive ~power/v, fading out toward vtop (rough: the model's lap
     times only rank lines, they are not a prediction of the car's lap time);
     drive and braking share the grip with cornering (friction circle). Returns v (m/s) per point and
     the time for the lap. v0: speed at point 0 (standing start = 0), None = flying lap.
     vmax: optional most speed per point (m/s; None = no cap), e.g. a crest the model does not know;
-    the braking pass brings the speed down to it."""
+    the braking pass brings the speed down to it. vscale: optional factor per point on the cornering
+    speed (None = 1: grip x factor^2; a bend the car takes faster or slower than the model, from our laps);
+    bscale: optional factor per point on the braking deceleration (None = 1)."""
     N = len(px)
     ks = [abs(curv(px[i - 1], py[i - 1], px[i], py[i], px[(i + 1) % N], py[(i + 1) % N])) for i in range(N)]
     ds = [math.hypot(px[(i + 1) % N] - px[i], py[(i + 1) % N] - py[i]) for i in range(N)]
@@ -188,6 +190,10 @@ def speed_profile(px, py, grip0=15.5, aero=5e-4, grip_max=40.0, brake0=14.0, bra
             v = math.sqrt(grip_max / k)
         return min(v, vtop)
     v = [vlim(k) for k in ks]
+    gs = [1.0 if f is None else f for f in vscale] if vscale is not None else [1.0] * N
+    bs = [1.0 if f is None else f for f in bscale] if bscale is not None else [1.0] * N
+    if vscale is not None:
+        v = [min(u * f, vtop) for u, f in zip(v, gs)]
     if vmax is not None:
         v = [u if m is None else min(u, m) for u, m in zip(v, vmax)]
     lat = lambda u: min(grip0 * (1 + aero * u * u), grip_max)
@@ -197,8 +203,8 @@ def speed_profile(px, py, grip0=15.5, aero=5e-4, grip_max=40.0, brake0=14.0, bra
             if v0 is not None and j == 0:
                 continue
             u = v[j]
-            a = min(brake0 + brake_aero * u * u, brake_max)
-            used = min(1.0, u * u * ks[j] / lat(u))
+            a = min(brake0 + brake_aero * u * u, brake_max) * bs[j]
+            used = min(1.0, u * u * ks[j] / (lat(u) * gs[j] ** 2))
             a *= math.sqrt(max(0.0, 1 - used * used))
             v[i] = min(v[i], math.sqrt(u * u + 2 * a * ds[i]))
     if v0 is not None:
@@ -272,6 +278,9 @@ def main():
     ap.add_argument('--brake', type=float, default=34.0, help='most braking deceleration, m/s^2')
     ap.add_argument('--vcap', action='append', default=[], help='from:to:km/h, most speed of the line in a stretch (repeatable): '
                     'what the geometry does not show, e.g. a crest; the braking of the line leads up to it')
+    ap.add_argument('--vscale', action='append', default=[], help='from:to:factor on the cornering speed of the line in a stretch (repeatable): '
+                    'a bend the car takes faster or slower than the point-mass model, fitted to our laps')
+    ap.add_argument('--bscale', action='append', default=[], help='from:to:factor on the braking deceleration in a stretch (repeatable)')
     ap.add_argument('--geometry', action='store_true', help='print the segment list and stop')
     ap.add_argument('--every', type=float, default=50.0, help='spacing of the comparison rows, m')
     a = ap.parse_args()
@@ -298,6 +307,10 @@ def main():
     if a.vcap:
         caps = [tuple(float(x) for x in c.split(':')) for c in a.vcap]
         mdl['vmax'] = [min([c[2] / 3.6 for c in caps if c[0] <= s < c[1]], default=None) for s in ln.S]
+    for opt, key in ((a.vscale, 'vscale'), (a.bscale, 'bscale')):
+        if opt:
+            zs = [tuple(float(x) for x in c.split(':')) for c in opt]
+            mdl[key] = [([c[2] for c in zs if c[0] <= s < c[1]] or [None])[-1] for s in ln.S]
     v_c, t_c, _ = speed_profile(cx, cy, **mdl)
     v_o, t_o, k_o = speed_profile(ln.px, ln.py, **mdl)
     print('track %.1f m, %d stations; limit |trackPos| %.2f%s%s' % (total, N, a.limit, ''.join(' [%g-%g: %g]' % z for z in zones),
