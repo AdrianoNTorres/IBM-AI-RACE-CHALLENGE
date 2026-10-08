@@ -392,3 +392,24 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.27 | B_vs- | reference | v1.26 with `plan_vs` 1.0 | 12 (screen) | +0.282 | 0.012 | 0 of 12 | 0.840 @ 2,462 m | lost | reference: left apex 0.840, wall side 0.550, hairpin apex 0.725 |
 | v1.27 | B_vs98 | reference | v1.26 with `plan_vs` 0.98 | 12 (screen) | +0.668 | 0.008 | 0 of 12 | 0.951 @ 2,461 m | lost | reference: left apex 0.951 at 2,461 m: v1.26's line relies on the slide |
 | v1.27 | B_vd+ | reference | v1.26 with the stored speed read 10 m late | 12 (screen) | +0.414 | 0.015 | 0 of 12 | 0.875 @ 767 m | lost | reference: 446 m 0.823 |
+| v1.28 | **chosen** | see title | More speed allowed through two fast bends: the corner rows at 1,931 m (+110 -> +120) and 2,988 m (+52 -> +60), each raised to the last value that does not move the car further out at the exit | 70 (full) | -0.126 | 0.006 | 0 of 70 | 0.833 @ 2,803 m | kept | Kept: 0.126 s over 70 runs (SE 0.006), 67 of 70 faster, every check 0 off with its worst run where it was (follower 0.874 at 2,463 m, braking-plan 0.875 at 767 m). Margin used: 0.03 at the 1,931 m exit and 0.05 at the 2,988 m exit, both still under 0.80 over the 70; the all-30 worst run is 0.833 for 0.822 at the 2,700 m exit, a place neither row touches (chaotic there). +125 at 1,931 m is left for the user to decide: 0.066 s more on 12 runs, on the track in every screen, but 10 km/h under a setting where half the runs leave it. |
+| v1.28 | R60 | 2,988 m row alone | +60 for +52, 1,931 m at +110 | 12 (screen) | -0.064 | 0.014 | 0 of 12 | 0.817 @ 2,804 m | lost | part of the chosen; worst run unchanged, exit 0.748 on 12 runs |
+| v1.28 | R65 | 2,988 m row alone | inherited conclusion re-checked: +65 | 12 (screen) | -0.051 | 0.022 | 0 of 12 | 0.830 @ 3,046 m | lost | no faster than +60, exit 0.830 at 3,045 m, 3,300 m section +0.017 |
+| v1.28 | R115 | 1,931 m row alone | +115 for +110, 2,988 m at +52 | 12 (screen) | -0.026 | 0.009 | 0 of 12 | 0.819 @ 2,803 m | lost | half of +120's gain for the same exit |
+| v1.28 | R120 | 1,931 m row alone | +120 | 12 (screen) | -0.059 | 0.009 | 0 of 12 | 0.818 @ 2,804 m | lost | part of the chosen; 12 of 12 faster |
+| v1.28 | R125 | 1,931 m row alone | +125 | 12 (screen) | -0.121 | 0.011 | 0 of 12 | 0.839 @ 1,991 m | lost | faster, exit 0.839 at 1,991 m: 10 km/h under the cliff |
+| v1.28 | R130 | 1,931 m row alone | +130 | 12 (screen) | -0.029 | 0.011 | 0 of 12 | 0.890 @ 1,990 m | lost | last setting on the track: exit 0.890, slower than +125 (2,000 m section +0.017) |
+| v1.28 | R135 | 1,931 m row alone | +135 | 12 (screen) | +0.081 | 0.018 | 6 of 12 | 1.000 @ 1,992 m | lost | 6 of 12 off at 1,991 m: the cliff (recorded before as +145) |
+| v1.28 | R140 | 1,931 m row alone | +140 | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | 12 of 12 off |
+| v1.28 | C115 | both rows | 1,931 m +115 with 2,988 m +60 | 12 (screen) | -0.100 | 0.013 | 0 of 12 | 0.819 @ 2,803 m | lost | 1,931 m exit 0.755, the same as +120 for 0.025 s less |
+| v1.28 | C122 | both rows | 1,931 m +122 with 2,988 m +60 | 12 (screen) | -0.149 | 0.015 | 0 of 12 | 0.814 @ 2,805 m | lost | 0.024 s more than the chosen, exit 0.795: the slope has begun |
+| v1.28 | C122_ff- | both rows | `C122` with `plan_ff` 10.8 | 12 (screen) | +0.063 | 0.016 | 0 of 12 | 0.865 @ 1,990 m | lost | exit 0.865 |
+| v1.28 | C125 | both rows | 1,931 m +125 with 2,988 m +60 | 12 (screen) | -0.191 | 0.018 | 0 of 12 | 0.839 @ 1,991 m | lost | fastest design on the track with room: exit 0.839, judged lap's maximum 0.818 at 2,803 m (66.142 s); open, for the user |
+| v1.28 | C125_ff- | both rows | `C125` with `plan_ff` 10.8 | 12 (screen) | +0.171 | 0.015 | 0 of 12 | 0.910 @ 1,990 m | lost | exit 0.910 |
+| v1.28 | C125_ff+ | both rows | `C125` with `plan_ff` 13.2 | 12 (screen) | -0.210 | 0.020 | 0 of 12 | 0.852 @ 1,035 m | lost | 0.852 at 1,035 m as the base with it |
+| v1.28 | C125_vs04 | both rows | `C125` with `plan_vs` 1.04 | 12 (screen) | +0.260 | 0.023 | 0 of 12 | 0.874 @ 1,991 m | lost | exit 0.874 |
+| v1.28 | C125_vd10 | both rows | `C125` with the stored speed read 10 m late | 12 (screen) | +0.225 | 0.013 | 0 of 12 | 0.875 @ 767 m | lost | worst 0.875 at 767 m as the base with it |
+| v1.28 | C125_kh- | both rows | `C125` with `plan_kh` 3.8 | 12 (screen) | -0.287 | 0.009 | 0 of 12 | 0.846 @ 1,035 m | lost | 1,931 m apex 0.825, 0.846 at 1,035 m |
+| v1.28 | C125_la- | both rows | `C125` with `plan_la` 0.25 | 12 (screen) | -0.002 | 0.019 | 0 of 12 | 0.884 @ 1,931 m | lost | 0.884 at the 1,931 m apex |
+| v1.28 | C120_ff- | both rows | the chosen with `plan_ff` 10.8 | 12 (screen) | +0.066 | 0.012 | 0 of 12 | 0.853 @ 1,989 m | lost | exit 0.853 |
+| v1.28 | C120_ff+ | both rows | the chosen with `plan_ff` 13.2 | 12 (screen) | -0.161 | 0.015 | 0 of 12 | 0.852 @ 1,035 m | lost | 0.852 at 1,035 m as the base with it |
