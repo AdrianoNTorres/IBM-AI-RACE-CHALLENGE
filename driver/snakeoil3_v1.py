@@ -646,7 +646,7 @@ def drive_example(c):
         (2585, 2648, 12),   # 2,600 m, downhill out of the Corkscrew: the car lifted on the plan at 192-200 km/h
         (2648, 2760, 17),   # 2,700 m left-hander
         (2880, 3005, 17),   # 2,988 m right-hander (+8 / +14 / +20: 0.06 / 0.13 / 0.13 s)
-        (3175, 3275, -3),   # hairpin: slower in (+3: 0.95-0.96 of the edge at the exit, 1 of 70 off; -3: exit 0.90 -> 0.77, no time lost)
+        (3175, 3275, -9),   # hairpin: slower in (+3: 0.95-0.96 of the edge at the exit, 1 of 70 off; -3: exit 0.90 -> 0.77, no time lost; v1.08: -9 with the turn table's row, one clean turn-in from the right at ~100 instead of ~115 km/h; -7 measures the same)
     )
     # v1.07: line table (track memory, hand-written from our telemetry): on the approach to a corner the sensors
     # cannot see in time, the car is pulled toward this trackPos (+1 = left edge) with line_gain, by at most the row's
@@ -658,6 +658,21 @@ def drive_example(c):
     line_table= (        # from m, to m, trackPos, most steer
         (1700, 1890, -.7, .3),    # 1,931 m left-hander: from the right (reaches -0.45 to -0.50 by 1,846 m); -.55 / -.85 and ends at 1,870 / 1,905 m gain 0.03-0.06 s less
         (3020, 3240, -.85, .3),   # hairpin (left): from the right (reaches -0.57 at 3,196 m; the 2,988 m exit leaves the car on the left); -.7: 0.008 s less
+    )
+    # v1.08: turn table (track memory, hand-written from our telemetry): while distFromStart is inside a row no bend
+    # is detected, so the sensors' turn-in (bend detection from the look-ahead bearing) cannot come before the row's
+    # end. Under braking the bearing first passes 2 deg 10-25 m early, the wheel steps to 0.4-0.6, the nose turns, the
+    # bearing falls under 1 deg and the bend is dropped again (a "false start": 705-710, 968-974, 1,454-1,461,
+    # 1,879-1,888 m; three times before the hairpin, which drifted the car from -0.57 back to the centre before the
+    # real turn-in). The row ends where the turn-in should come; after it the sensors detect and steer as before.
+    # Ends are sensitive on the early side (3-6 m earlier: 0.06-0.25 s slower, the false start is back) and flat for
+    # ~3 m on the late side (6-12 m later: 0.08-0.18 s slower). Left out: 2,988 m (2,929 m: 0.016 s, +-3 m slower).
+    turn_table= (        # from m, to m
+        ( 690,  716),   # 770 m right-hander (712 / 719 m: no gain; 722 m: 0.08 s slower)
+        ( 940,  982),   # 1,042 m right-hander (980 m: 0.06 s gained, 977 m: 0.25 s slower; 983 / 986 m: 0.03 gained / 0.09 slower)
+        (1430, 1464),   # 1,528 m left-hander (1,461 m the same; 1,458 m: 0.11 s slower; 1,468 m: no gain)
+        (1850, 1891),   # 1,931 m left-hander (1,888 m the same; 1,885 m: 0.06 s slower; 1,896 m: no gain)
+        (3170, 3237),   # hairpin, with its corner-table row at -9 (3,236 / 3,238 m the same; 3,232 / 3,234 / 3,240 m: 0.005-0.009 s gained only)
     )
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
@@ -695,6 +710,9 @@ def drive_example(c):
         side= 1 if aim > 0 else -1
     elif abs(aim) < line_aim_off:
         side= 0
+    # Turn Table (v1.08, track memory): no bend before the row's end (see the knob block).
+    for t0, t1 in turn_table:
+        if t0 <= S['distFromStart'] < t1: side= 0
     line_target= 0
     road= max(beam_at(S['track'], track_dir+d) for d in (-.5, 0, .5))   # along the track direction
     # Corner set-up: the bend is only detected (bearing over 2 deg) some 35 m
