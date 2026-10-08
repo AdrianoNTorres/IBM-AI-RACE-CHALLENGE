@@ -167,12 +167,14 @@ class Line:
 
 # ---------------------------------------------------------------- speed model
 def speed_profile(px, py, grip0=15.5, aero=5e-4, grip_max=40.0, brake0=14.0, brake_aero=0.0065, brake_max=34.0,
-                  power=17.0, vtop=90.0, v0=None, drive=True):
+                  power=17.0, vtop=90.0, v0=None, drive=True, vmax=None):
     """Point mass on a closed path. Sideways grip grip0*(1 + aero*v^2) capped at grip_max; braking
     brake0 + brake_aero*v^2 capped; drive ~power/v, fading out toward vtop (rough: the model's lap
     times only rank lines, they are not a prediction of the car's lap time);
     drive and braking share the grip with cornering (friction circle). Returns v (m/s) per point and
-    the time for the lap. v0: speed at point 0 (standing start = 0), None = flying lap."""
+    the time for the lap. v0: speed at point 0 (standing start = 0), None = flying lap.
+    vmax: optional most speed per point (m/s; None = no cap), e.g. a crest the model does not know;
+    the braking pass brings the speed down to it."""
     N = len(px)
     ks = [abs(curv(px[i - 1], py[i - 1], px[i], py[i], px[(i + 1) % N], py[(i + 1) % N])) for i in range(N)]
     ds = [math.hypot(px[(i + 1) % N] - px[i], py[(i + 1) % N] - py[i]) for i in range(N)]
@@ -186,6 +188,8 @@ def speed_profile(px, py, grip0=15.5, aero=5e-4, grip_max=40.0, brake0=14.0, bra
             v = math.sqrt(grip_max / k)
         return min(v, vtop)
     v = [vlim(k) for k in ks]
+    if vmax is not None:
+        v = [u if m is None else min(u, m) for u, m in zip(v, vmax)]
     lat = lambda u: min(grip0 * (1 + aero * u * u), grip_max)
     for _ in range(2):                       # backward: braking
         for i in range(N - 1, -1, -1):
@@ -266,6 +270,8 @@ def main():
     ap.add_argument('--grip', type=float, default=15.5, help='sideways grip at low speed, m/s^2 (fitted to our laps)')
     ap.add_argument('--grip-aero', type=float, default=5e-4, help='grip rises by this share per (m/s)^2')
     ap.add_argument('--brake', type=float, default=34.0, help='most braking deceleration, m/s^2')
+    ap.add_argument('--vcap', action='append', default=[], help='from:to:km/h, most speed of the line in a stretch (repeatable): '
+                    'what the geometry does not show, e.g. a crest; the braking of the line leads up to it')
     ap.add_argument('--geometry', action='store_true', help='print the segment list and stop')
     ap.add_argument('--every', type=float, default=50.0, help='spacing of the comparison rows, m')
     a = ap.parse_args()
@@ -289,9 +295,13 @@ def main():
     N = ln.N
     cx, cy = ln.X, ln.Y
     mdl = dict(grip0=a.grip, aero=a.grip_aero, brake_max=a.brake)
+    if a.vcap:
+        caps = [tuple(float(x) for x in c.split(':')) for c in a.vcap]
+        mdl['vmax'] = [min([c[2] / 3.6 for c in caps if c[0] <= s < c[1]], default=None) for s in ln.S]
     v_c, t_c, _ = speed_profile(cx, cy, **mdl)
     v_o, t_o, k_o = speed_profile(ln.px, ln.py, **mdl)
-    print('track %.1f m, %d stations; limit |trackPos| %.2f%s' % (total, N, a.limit, ''.join(' [%g-%g: %g]' % z for z in zones)))
+    print('track %.1f m, %d stations; limit |trackPos| %.2f%s%s' % (total, N, a.limit, ''.join(' [%g-%g: %g]' % z for z in zones),
+                                                                  ''.join(' [%s km/h]' % c for c in a.vcap)))
     print('model lap (flying): centre line %.2f s, planned line %.2f s' % (t_c, t_o))
     rows = read_lap(a.csv) if a.csv else None
     if rows:
@@ -312,7 +322,7 @@ def main():
         print(line)
         d += a.every
     if a.table:
-        tb = table(ln, K, a.spacing, total, grip0=a.grip, aero=a.grip_aero, brake_max=a.brake)
+        tb = table(ln, K, a.spacing, total, **mdl)
         with open(a.table, 'w') as f:
             f.write('    plan_ds= %g\n' % a.spacing)
             f.write('    plan_pos= (' + ', '.join('%g' % r[0] for r in tb) + ')\n')
