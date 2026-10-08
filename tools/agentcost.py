@@ -8,7 +8,8 @@ Per agent: turns (model calls), context at the first and the largest turn (thous
 processed = the context summed over all turns (million tokens; what the model read in total,
 nearly all of it from the prompt cache), wall minutes from the first to the last timestamp,
 minutes spent waiting for tools (races) and the rest (the model). --detail adds the tool calls
-by kind, the files read and the characters written.
+by kind, the files read and the characters written. The last column is the model the agent ran on; "by model" below the table adds every agent of the
+session and the orchestrator per model, the figure to watch against the plan's limit.
 
 Why "processed" and not the size reported when an agent ends: every turn reads the whole
 context again, so the cost of a version is turns x context, and the reported size is only the
@@ -31,14 +32,16 @@ def ts(s):
 def analyse(path):
     ctx = collections.OrderedDict(); tools = collections.Counter(); bash = collections.Counter()
     reads = collections.Counter(); calls = {}; t_call = {}
-    wait = 0.0; written = 0; first = last = None
+    wait = 0.0; written = 0; first = last = None; out = {}; llm = collections.Counter()
     for line in open(path, encoding='utf-8'):
         if not line.strip(): continue
         r = json.loads(line); t = r.get('timestamp'); m = r.get('message') or {}
         if t: first = first or t; last = t
         if r.get('type') == 'assistant':
             u = m.get('usage') or {}
+            out[m.get('id')] = max(out.get(m.get('id'), 0), u.get('output_tokens', 0))   # a message's lines repeat its usage
             if m.get('id') not in ctx:
+                llm[short(m.get('model'))] += 1
                 ctx[m.get('id')] = u.get('input_tokens', 0) + u.get('cache_read_input_tokens', 0) + u.get('cache_creation_input_tokens', 0)
             for c in m.get('content') or []:
                 if c.get('type') != 'tool_use': continue
@@ -62,20 +65,28 @@ def analyse(path):
     if not c or not first: return None
     wall = (ts(last) - ts(first)).total_seconds() / 60
     return dict(turns=len(c), first=c[0] / 1e3, peak=max(c) / 1e3, processed=sum(c) / 1e6, wall=wall, wait=wait / 60,
-                model=wall - wait / 60, start=first[:16].replace('T', ' '), tools=tools, bash=bash, reads=reads, written=written)
+                model=wall - wait / 60, out=sum(out.values()) / 1e3, llm=llm.most_common(1)[0][0], start=first[:16].replace('T', ' '), tools=tools, bash=bash, reads=reads, written=written)
+
+def short(model):
+    m = re.match(r'claude-(\w+?)-(\d+)-(\d+)', model or '')
+    return '%s %s.%s' % m.groups() if m else (model or '?')
 
 def row(name, a):
-    return '%-22s %5d %7.0f %7.0f %9.1f %7.1f %7.1f %7.1f' % (name, a['turns'], a['first'], a['peak'], a['processed'], a['wall'], a['wait'], a['model'])
+    return '%-22s %5d %7.0f %7.0f %9.1f %7.1f %7.1f %7.1f %s' % (name, a['turns'], a['first'], a['peak'], a['processed'], a['wall'], a['wait'], a['model'], a['llm'])
 
-HEAD = '%-22s %5s %7s %7s %9s %7s %7s %7s' % ('agent', 'turns', 'first k', 'peak k', 'proc. M', 'wall', 'tools', 'model')
+HEAD = '%-22s %5s %7s %7s %9s %7s %7s %7s %s' % ('agent', 'turns', 'first k', 'peak k', 'proc. M', 'wall', 'tools', 'min.', 'ran on')
 
 def session(path, detail):
     subs = sorted(glob.glob(os.path.join(path, 'subagents', '*.jsonl')), key=os.path.getmtime)
     print('session %s' % os.path.basename(path)); print(HEAD)
-    tot = collections.Counter()
+    tot = collections.Counter(); by = {}
+    def add(a):
+        b = by.setdefault(a['llm'], collections.Counter())
+        b['n'] += 1; b['turns'] += a['turns']; b['processed'] += a['processed']; b['out'] += a['out']
     for f in subs:
         a = analyse(f)
         if not a: continue
+        add(a)
         print(row(a['start'][5:] + ' ' + os.path.basename(f)[6:12], a))
         for k in ('turns', 'processed', 'wall', 'wait', 'model'): tot[k] += a[k]
         tot['n'] += 1
@@ -87,7 +98,9 @@ def session(path, detail):
     main = path + '.jsonl'
     if os.path.exists(main):
         a = analyse(main)
-        if a: print(row('orchestrator', a))
+        if a: print(row('orchestrator', a)); add(a)
+    for k, b in sorted(by.items(), key=lambda x: -x[1]['processed']):
+        print('by model  %-12s %3d agents %5d turns %7.1f M processed' % (k, b['n'], b['turns'], b['processed']))
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])

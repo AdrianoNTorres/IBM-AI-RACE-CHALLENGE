@@ -266,7 +266,9 @@ from the row before.
 **What it does.** Reads a Claude Code session's transcripts and prints per sub-agent
 and for the orchestrator: turns, context at the first and largest turn, the context
 summed over all turns ("processed" tokens), wall minutes, minutes waiting for tools
-(races) and minutes of model time. `--all` prints one line per session; `--detail` adds
+(races), minutes of model time and the model it ran on. Below the table, "by model" adds
+up every agent and the orchestrator per model (agents, turns, tokens processed): the
+figure to watch against the plan's limit, Opus first. `--all` prints one line per session; `--detail` adds
 tool calls, files read and characters written. Times are UTC.
 
 **Where it is used.** By the orchestrator at batch end, for the batch's cost line, and
