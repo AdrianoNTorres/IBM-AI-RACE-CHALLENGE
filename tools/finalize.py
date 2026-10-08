@@ -28,7 +28,7 @@ def main():
     runs = lambda: set(glob.glob(os.path.join(REPO, 'runs', '*.csv')))
     before = runs()
     prev = sorted(before)[-1] if before else None
-    r = subprocess.run([sys.executable, os.path.join(REPO, 'run_race.py')], cwd=REPO, capture_output=True, text=True)
+    r = subprocess.run([sys.executable, os.path.join(REPO, 'harness', 'run_race.py')], cwd=REPO, capture_output=True, text=True)
     print(r.stdout.strip() or r.stderr.strip())
     new = sorted(runs() - before)
     if not new: sys.exit('no new CSV')

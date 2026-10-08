@@ -1222,7 +1222,7 @@ def beam_at(track, bearing):
 if __name__ == "__main__":
     C= Client(p=3001)
     # Telemetry: one CSV row per step in runs/ (does not affect driving).
-    run_dir= os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runs')
+    run_dir= os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'runs')
     os.makedirs(run_dir, exist_ok=True)
     log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))
     log= open(log_path, 'w', buffering=1)  # line-buffered: rows survive Ctrl-C.
