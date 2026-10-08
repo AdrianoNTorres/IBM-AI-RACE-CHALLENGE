@@ -642,7 +642,7 @@ def drive_example(c):
     corner_table= (      # from m, to m, km/h
         ( 950, 1065, 10),   # 1,042 m right-hander (+4 / +8 / +10: 0.014 / 0.045 / 0.042 s gained)
         (1395, 1585, 10),   # 1,528 m left-hander (flat from +4 to +14: later braking gained, given back mid-bend)
-        (1835, 1945, 17),   # 1,931 m left-hander (+8 / +14 / +17 / +20: 0.07 / 0.09-0.13 / 0.11 / 0.10 s; +28 leaves the track at 1,959 m)
+        (1835, 1945, 29),   # 1,931 m left-hander (v1.06, on the old line: +8 / +14 / +17 / +20: 0.07 / 0.09-0.13 / 0.11 / 0.10 s, +28 left the track at 1,959 m; v1.09, on v1.07's line from the right and v1.08's turn-in, with the turn table's row ending 1,888 m: +17 -> +29; +26 / +29 / +32: 0.09 / 0.11 / 0.11-0.12 s gained, worst exit 0.62 / 0.67 / 0.70 of the edge; +35: 3 of 70 off at 1,975-1,978 m)
         (2585, 2648, 12),   # 2,600 m, downhill out of the Corkscrew: the car lifted on the plan at 192-200 km/h
         (2648, 2760, 17),   # 2,700 m left-hander
         (2880, 3005, 17),   # 2,988 m right-hander (+8 / +14 / +20: 0.06 / 0.13 / 0.13 s)
@@ -671,7 +671,7 @@ def drive_example(c):
         ( 690,  716),   # 770 m right-hander (712 / 719 m: no gain; 722 m: 0.08 s slower)
         ( 940,  982),   # 1,042 m right-hander (980 m: 0.06 s gained, 977 m: 0.25 s slower; 983 / 986 m: 0.03 gained / 0.09 slower)
         (1430, 1464),   # 1,528 m left-hander (1,461 m the same; 1,458 m: 0.11 s slower; 1,468 m: no gain)
-        (1850, 1891),   # 1,931 m left-hander (1,888 m the same; 1,885 m: 0.06 s slower; 1,896 m: no gain)
+        (1850, 1888),   # 1,931 m left-hander (v1.08, corner row +17: 1,891 m, 1,888 m the same; 1,885 m: 0.06 s slower; 1,896 m: no gain. v1.09, corner row +29: 1,891 / 1,889 / 1,888 / 1,887 / 1,886 m: 0.08 / 0.10 / 0.11 / 0.11-0.13 / 0.12-0.13 s gained; 1,885 m: the false start is back, 0.97 of the edge at 1,964 m)
         (3170, 3237),   # hairpin, with its corner-table row at -9 (3,236 / 3,238 m the same; 3,232 / 3,234 / 3,240 m: 0.005-0.009 s gained only)
     )
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
