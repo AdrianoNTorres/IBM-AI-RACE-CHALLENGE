@@ -58,7 +58,8 @@ def analyse(rows):
     shifts = [(i, rows[i-1]['gear'], rows[i]['gear']) for i in range(1, n) if rows[i]['gear'] != rows[i-1]['gear']]
     hunts = sum(1 for (i, a, b), (j, c, d) in zip(shifts, shifts[1:]) if d == a and dt(i, j) < 1.0)
     tc = sum(dt(i-1, i) for i in range(1, n)
-             if 'throttle' in rows[i] and rows[i]['brake'] == 0 and rows[i]['accel'] < rows[i]['throttle'] - .05)
+             if 'throttle' in rows[i] and rows[i]['brake'] == 0 and rows[i]['accel'] < rows[i]['throttle'] - .05
+             and dt(i-1, i) > 0)   # a row logged after the finish line restarts curLapTime at 0: not a step of -70 s
     return dict(rows=rows, rev=rev, flip=flip, ep=ep, lap=max(x['curLapTime'] for x in rows),
                 reversals=sum(rev), osc_time=sum(dt(a, b) for a, b in ep), flips=sum(flip),
                 plan_jumps=sum(plan), brake_apps=len(apps),
