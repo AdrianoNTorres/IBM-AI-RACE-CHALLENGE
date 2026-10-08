@@ -578,7 +578,21 @@ def drive_example(c):
     steer_cap_v0=95     # km/h: ... no cap up to this speed (hairpin and the flick's arcs need full lock) ...
     steer_cap_vw=10     # km/h: ... full cap from steer_cap_v0 + steer_cap_vw (linear between).
     upshift_rpm=18600   # shift up when the driven wheels' rpm (axle_rpm, since v0.79; not the engine rpm) passes this, just under the limiter (18,700): power still rises to 18,000 and the gears are close.
-    downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak).
+    downshift_rpm=15000 # shift down only if the lower gear would land below this (v0.54: keeps the engine near its 16-18k torque peak; v1.22, re-measured: 16,000 / 16,500 / 17,000 / 17,500 / 18,000 / 18,500: 0.09 / 0.13 / 0.22 / 0.25 / 0.27 / 0.27 s gained on 12 runs, but from 16,500 the gear comes while the car coasts into the 2,700 m bend and its exit goes from 0.67 to 0.85-0.88 of the edge, 446 m from 0.65 to 0.71-0.75; 16,000 on top of drive_ds_rpm below: 0.268 s over 70 runs, but 0.911 of the edge at 441 m with the stored speed read 5 m early, for 0.876, and 0.854 at 2,803 m on the suites).
+    # Gear For The Exit (v1.22). The engine's torque is flat (340-360 N.m from 9,000 to 18,000 rpm), so the thrust at
+    # the wheels goes with the gear ratio: 3rd pulls 23 % harder than 4th, 2nd 26 % harder than 3rd, whatever the rpm.
+    # With downshift_rpm alone the car left the fast bends a gear too high: 185 km/h in 4th at 13,100 rpm out of the
+    # 2,988 m bend (3rd runs to 215), 180 in 4th out of 2,700 m, 201 in 4th out of 1,931 m. On the throttle (no
+    # brake) the car now shifts down as soon as the lower gear would land below drive_ds_rpm (the engine's rpm
+    # reading, 4.7 % high: 19,000 read = 18,150; the upshift comes at 18,600 on the driven wheels), not sooner than
+    # drive_ds_wait steps after the last shift (the rpm reading dips while the clutch closes: without the wait the car
+    # went 4-3-2 at 179 km/h in the 2,700 m bend). Under braking and while coasting nothing changes: the entries are
+    # driven as before. 17,500 / 18,000 / 18,500 / 19,000 / 19,500: 0.12 / 0.12 / 0.16 / 0.16 / 0.15 s gained on 12
+    # runs. Judged on the driven wheels' rpm instead (like the upshift): the gears hunt
+    # 2-3-2-3 on the wheelspin out of the hairpin and at the start. Without the throttle condition (any step with no
+    # brake): no faster, and the 2,700 m exit goes to 0.87-0.88.
+    drive_ds_rpm=19000  # on the throttle, shift down as soon as the lower gear would land below this (0 or downshift_rpm = off; 70 runs: 0.197 s gained, SE 0.011, 70 of 70 faster; the 2,700 m exit 0.67 -> 0.85 of the edge at most, 0.853 at 18,000-20,000 on 80 runs; nothing else moves)
+    drive_ds_wait=5     # steps since the last shift before that downshift (15: the same to 0.007 s)
     brake_ds_rpm=17500  # v0.86: while braking more than brake_ds_over above the allowed speed, shift down as soon as the lower gear would land below this instead (engine braking on the rear wheels; under the 18,700 limiter) ...
     brake_ds_over=20    # km/h: ... the car is behind the braking plan by more than this (pedal demand at its 1.0 limit: flick approach 20-50 km/h over; the other braking zones run 10-16 over and keep downshift_rpm).
     upshift_hold=15     # v0.65: steps (~0.3 s) after an upshift with no downshift unless braking (the rpm dips ~3,000 for 1-2 steps while the clutch engages: 2-3-2-3 hunts).
@@ -1364,7 +1378,9 @@ def drive_example(c):
     elif gear < 6 and axle_rpm > upshift_rpm:
         gear+= 1
     elif (gear > lowest_running_gear and (getattr(c, 'up_t', 99) >= upshift_hold or R['brake'] > 0)
-          and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < (brake_ds_rpm if R['brake'] > 0 and S['speedX']-allowed_speed > brake_ds_over else downshift_rpm)):
+          and S['rpm']*gear_ratios[gear-2]/gear_ratios[gear-1] < (brake_ds_rpm if R['brake'] > 0 and S['speedX']-allowed_speed > brake_ds_over
+             else max(drive_ds_rpm, downshift_rpm) if R['brake'] == 0 and c.throttle > 0 and getattr(c, 'sh_t', 99) >= drive_ds_wait   # Gear For The Exit (v1.22)
+             else downshift_rpm)):
         gear-= 1
     # First Gear At Full Lock (v0.90): at full lock (hairpin, the flick's left
     # arc) the front tyres are saturated and the car drifts to the outside edge
@@ -1379,6 +1395,7 @@ def drive_example(c):
         if gear == 2 and abs(R['steer']) > lock_gear_on and S['speedX'] < lock_gear_v: gear= 1
         elif gear == 1 and abs(R['steer']) < lock_gear_off: gear= 2
     c.up_t= 0 if gear > int(S['gear']) else getattr(c, 'up_t', 99) + 1   # steps since the last upshift
+    c.sh_t= 0 if gear != int(S['gear']) else getattr(c, 'sh_t', 99) + 1   # steps since the last shift (v1.22)
     R['gear']= gear
     # Focus request (v1.04, see S-Bend Look): one integer angle, the centre of
     # the five beams, taken by the server for its next reading.

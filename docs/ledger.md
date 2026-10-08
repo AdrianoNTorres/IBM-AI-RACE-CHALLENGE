@@ -183,3 +183,31 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.21 | tss9 | traction control | `tc_slip_straight` 9, single lap | 1 (single) | +0.000 | n/a | 0 of 1 | 0.818 @ 1,932 m | lost | the same lap time |
 | v1.21 | es15 | straight exits | `exit_steer` 0.15, single lap | 1 (single) | +0.040 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | slower |
 | v1.21 | es5 | straight exits | `exit_steer` 0.5, single lap | 1 (single) | +0.022 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | slower |
+| v1.22 | **chosen** | see title | Gear for the exit: on the throttle the car shifts down as soon as the lower gear fits under the limiter (it left the fast bends a gear too high) | 70 (full) | -0.197 | 0.011 | 0 of 70 | 0.850 @ 2,804 m | kept | Passes every item of the bar; 0.197 s gained over 70 runs (SE 0.011), the largest gain of the batch, for the 2,700 m exit moving from 0.67 to at most 0.85 on one group (bm14 0.832 -> 0.850); the other groups' worst runs are unchanged. |
+| v1.22 | A | every bend | the chosen with `downshift_rpm` 16,000 as well (braking and coasting), full bar | 70 (full) | -0.268 | 0.011 | 0 of 70 | 0.854 @ 2,803 m | lost | 0.07 s more, but 0.911 at 441 m with the stored speed read 5 m early (chosen 0.877) and 0.854 at 2,803 m on the suites: margin spent |
+| v1.22 | F19 | exits | part alone: the chosen design on 12 runs (`downshift_rpm` 15,000) | 12 (screen) | -0.154 | 0.021 | 0 of 12 | 0.832 @ 1,931 m | lost | the chosen, screen |
+| v1.22 | D16 | every bend | part alone: `downshift_rpm` 16,000, no on-throttle rule | 12 (screen) | -0.092 | 0.017 | 0 of 12 | 0.845 @ 1,932 m | lost | 446 m 0.647 -> 0.690; smaller gain |
+| v1.22 | G16F19 | every bend | both parts, 12 runs | 12 (screen) | -0.221 | 0.018 | 0 of 12 | 0.833 @ 1,932 m | lost | the same as `A` |
+| v1.22 | F185 | exits | chosen design at 18,500 | 12 (screen) | -0.134 | 0.021 | 0 of 12 | 0.841 @ 1,932 m | lost | 0.02 s less; no 3rd-gear stint at 1,045 m |
+| v1.22 | F19w15 | exits | chosen design with a wait of 15 steps | 12 (screen) | -0.147 | 0.020 | 0 of 12 | 0.832 @ 1,931 m | lost | the same to 0.007 s |
+| v1.22 | R175 | exits | on the throttle, no wait, 17,500 | 12 (screen) | -0.116 | 0.021 | 0 of 12 | 0.832 @ 1,931 m | lost | smaller gain |
+| v1.22 | R18 | exits | on the throttle, no wait, 18,000 | 12 (screen) | -0.124 | 0.020 | 0 of 12 | 0.841 @ 1,932 m | lost | smaller gain |
+| v1.22 | R19 | exits | on the throttle, no wait, 19,000 | 12 (screen) | -0.157 | 0.017 | 0 of 12 | 0.832 @ 1,931 m | lost | same gain, but 4-3-2 at 179 km/h in the 2,700 m bend (the rpm reading dips during the shift) |
+| v1.22 | R195 | exits | on the throttle, no wait, 19,500 | 12 (screen) | -0.149 | 0.018 | 0 of 12 | 0.845 @ 1,932 m | lost | no more gain than 19,000 |
+| v1.22 | R18t5 | exits | on the throttle above half throttle only, 18,000, single lap | 1 (single) | -0.014 | n/a | 0 of 1 | 0.816 @ 1,931 m | lost | most of the gain lost |
+| v1.22 | C19 | exits and coasting | any step with no brake, 19,000 | 12 (screen) | -0.188 | 0.021 | 0 of 12 | 0.876 @ 2,803 m | lost | 2,700 m exit 0.876 (coasting downshift into the bend) |
+| v1.22 | C18 | exits and coasting | any step with no brake, 18,000 | 12 (screen) | -0.118 | 0.017 | 0 of 12 | 0.873 @ 2,803 m | lost | 2,700 m exit 0.873, no faster than on the throttle only |
+| v1.22 | A175 | exits | second design: judged on the driven wheels' rpm, 17,500 real, single lap | 1 (single) | -0.110 | n/a | 0 of 1 | 0.815 @ 1,932 m | lost | gears hunt 2-3-2-3 on the wheelspin out of the hairpin and at the start |
+| v1.22 | A183 | exits | second design at 18,300 real, single lap | 1 (single) | -0.092 | n/a | 0 of 1 | 0.818 @ 1,932 m | lost | 61 gear changes on the lap for 36 |
+| v1.22 | D17 | every bend | `downshift_rpm` 17,000 everywhere | 12 (screen) | -0.223 | 0.020 | 0 of 12 | 0.840 @ 1,932 m | lost | 2,700 m exit 0.838, 446 m 0.724 |
+| v1.22 | D175 | every bend | `downshift_rpm` 17,500 everywhere | 12 (screen) | -0.247 | 0.019 | 0 of 12 | 0.868 @ 2,804 m | lost | 2,700 m exit 0.868 |
+| v1.22 | D18 | every bend | `downshift_rpm` 18,000 everywhere | 12 (screen) | -0.267 | 0.017 | 0 of 12 | 0.874 @ 2,804 m | lost | fastest on 12 runs with D185, 2,700 m exit 0.874, 770 m exit 0.833, 446 m 0.748 |
+| v1.22 | D185 | every bend | `downshift_rpm` 18,500 everywhere | 12 (screen) | -0.270 | 0.022 | 0 of 12 | 0.876 @ 2,803 m | lost | 2,700 m exit 0.876 |
+| v1.22 | D19 | every bend | `downshift_rpm` 19,000 everywhere | 12 (screen) | -0.268 | 0.031 | 0 of 12 | 0.860 @ 2,804 m | lost | hairpin exit 0.05 s slower |
+| v1.22 | M17R19 | every bend | `downshift_rpm` 17,000 with the on-throttle rule at 19,000 | 12 (screen) | -0.265 | 0.015 | 0 of 12 | 0.856 @ 2,804 m | lost | 2,700 m exit 0.856, 770 m exit 0.892 with the stored speed read 10 m early (v1.21 0.876) |
+| v1.22 | M16_vd10 | every bend | both parts with the stored speed read 10 m early | 12 (screen) | +0.213 | 0.020 | 0 of 12 | 0.888 @ 767 m | lost | 0.888 at 766 m (v1.21 0.876) |
+| v1.22 | R19_vd10 | exits | on-throttle rule with the stored speed read 10 m early | 12 (screen) | +0.238 | 0.019 | 0 of 12 | 0.875 @ 768 m | lost | 0.875 at 767 m (v1.21 0.876); 2,700 m exit 0.862 (0.819) |
+| v1.22 | R19_vdm10 | exits | on-throttle rule with the stored speed read 10 m late | 12 (screen) | +0.607 | 0.023 | 0 of 12 | 0.870 @ 840 m | lost | 0.870 at 839 m (v1.21 0.881); 2,700 m exit 0.782 (0.649) |
+| v1.22 | R19_vs104 | exits | on-throttle rule with `plan_vs` 1.04 | 12 (screen) | +0.248 | 0.017 | 0 of 12 | 0.850 @ 2,802 m | lost | 0.850 at 2,802 m (v1.21 0.855 at 1,932 m, 0.795 at 2,803 m) |
+| v1.22 | S116 | 2,988 m | handed down: 2,988 m on the stored speed, cornering speed x1.16, single lap | 1 (single) | -0.012 | n/a | 0 of 1 | 0.865 @ 3,049 m | lost | 0.012 s for 0.865 at 3,048 m (0.69): spent |
+| v1.22 | S120 | 2,988 m | handed down: the same at x1.20, single lap | 1 (single) | n/a | n/a | 1 of 1 | none on track | lost | leaves the track at 3,050 m |

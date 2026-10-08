@@ -37,6 +37,14 @@
         {"knob": "launch_v", "rel": 0.1},
         {"knob": "launch_slip", "rel": 0.2}
       ]
+    },
+    "gears": {
+      "suites": "1",
+      "perturb": [
+        {"knob": "drive_ds_rpm", "abs": [500, 1000]},
+        {"knob": "drive_ds_wait", "abs": 2},
+        {"knob": "downshift_rpm", "abs": 1000}
+      ]
     }
   }
 }
