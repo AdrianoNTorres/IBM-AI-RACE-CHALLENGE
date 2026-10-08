@@ -4,6 +4,14 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 
 | Task | Command |
 |---|---|
+| **Trial copy of the driver** (never edit the driver to try something): exact text edits, each old text must occur once; `--edits FILE` for multi-line `<<<<` / old / `====` / new / `>>>>` blocks; `--plan plan.txt:from:to` splices `raceline.py --table` rows of a stretch | `python tools/variant.py %TEMP%\vNNN\a.py --rep "old=>new" [--from file-or-git-rev]` |
+| **One lap each** of several candidates against the base (`label[@file.py][: knob=value ...]`, file looked up in `--out`; base = git revision, default HEAD) | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py" --cand "B: plan_vs=1.03" --single` |
+| **Screen** candidates: 12 of the 70 standard runs each, one line per candidate (off, mean, paired difference and SE, worst \|trackPos\| and where, largest section differences) | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py" --cand "B@b.py" --screen` |
+| **The acceptance bar** for the chosen candidate, one call: 70 runs against the base, paired difference, every check in `tools/checks.json` (follower, braking-plan), patterns and width before / after, PASS / FAIL per item. Add a pair to `checks.json` for a new knob the suites do not perturb | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py"` |
+| **Record the version** (changelog entry, batch row, ledger rows, run CSV, commit, tag) from `version.md` + accept's output; format: `python tools/record.py -h`. Write `version.md` with the Write tool, never a shell heredoc | `python tools/record.py %TEMP%\vNNN\version.md --dry-run`, then without `--dry-run` |
+| Step trace of a run against the planned line and its speed | `python tools/trace.py <csv> 2200 2640 [step] [--driver a.py]` |
+| What was measured before (one short row per candidate, all versions) | `grep -i "plan_ff\|1,931" docs/ledger.md` |
+| Races are cached (same driver text + overrides = no race); `--no-cache` to race anyway | `python tools/race.py --cache-info` |
 | One race, current driver (or with overrides) | `python tools/race.py [--set knob=value ...] [--keep out.csv]` |
 | Metrics of a CSV (watch points, `--sections` for 100 m times) | `python tools/metrics.py runs/<file>.csv [--sections]` |
 | **Pattern check** of a CSV: steering reversals and oscillation episodes, line-target flips, allowed-speed jumps, brake touches, gear hunting, TC cut time (`--episodes` lists where the steering oscillates) | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |

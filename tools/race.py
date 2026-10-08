@@ -18,10 +18,18 @@ How it works
   for run_race.py); -n 10 adds slot 0. scr_server has 10 slots: the hard cap.
   Parallel runs were measured byte-identical to serial ones at every n
   (with wtorcs -t, see UDP_TIMEOUT_US).
+- Race cache: the simulation is deterministic, so a finished race's CSV is
+  stored (gzip) in WORK/cache under a hash of the exact driver source raced
+  (knob overrides applied) and of the TORCS files that decide the result
+  (race file, car, track, scr_server set-up). The same race asked for again
+  is copied from the cache and no TORCS is started. Off with --no-cache or
+  the environment variable TORCS_TOOLS_CACHE=0; `python tools/race.py
+  --cache-info` / `--cache-clear` show / empty it. The least recently used
+  entries are dropped beyond CACHE_MAX bytes.
 
 Library use:  from race import run_batch, Job;  run_batch([Job('a', {'tc_slip': 3})])
 '''
-import argparse, os, re, shutil, subprocess, sys, tempfile, threading, time, uuid
+import argparse, gzip, hashlib, os, re, shutil, subprocess, sys, tempfile, threading, time, uuid
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +43,61 @@ TIMEOUT = 120                 # s per race (a lap takes ~2 s)
 UDP_TIMEOUT_US = 1000000      # wtorcs -t: how long the server waits for the client's answer each step
                               # (default 10 ms: under load a late answer is skipped and the last action
                               # reused, which breaks determinism; 1 s means it always waits)
+CACHE_DIR = os.path.join(WORK, 'cache')
+CACHE_VERSION = '1'           # raise when the harness changes what a race writes
+CACHE_MAX = 3e9               # bytes kept (gzip); the least recently used entries are dropped first
+USE_CACHE = os.environ.get('TORCS_TOOLS_CACHE', '1') != '0'
+ENV_FILES = ['config/raceman/practice.xml', 'cars/car1-ow1/car1-ow1.xml', 'drivers/scr_server/scr_server.xml',
+             'tracks/road/corkscrew/corkscrew.xml']
 sys.path.insert(0, HERE)
 from metrics import metrics, line   # noqa: E402
+
+# ---------------------------------------------------------------- race cache
+_env = []
+def env_hash():
+    '''Hash of the TORCS files that decide a race's result (computed once per process).'''
+    if not _env:
+        h = hashlib.sha256((CACHE_VERSION + str(UDP_TIMEOUT_US)).encode())
+        for f in ENV_FILES:
+            p = os.path.join(TORCS_DIR, f)
+            h.update(open(p, 'rb').read() if os.path.exists(p) else b'missing')
+        exe = os.path.join(TORCS_DIR, 'wtorcs.exe')
+        h.update(str(os.path.getsize(exe) if os.path.exists(exe) else 0).encode())
+        _env.append(h.hexdigest())
+    return _env[0]
+
+def cache_path(src):
+    return os.path.join(CACHE_DIR, hashlib.sha256((env_hash() + src).encode('utf-8', 'replace')).hexdigest()[:40] + '.csv.gz')
+
+def cache_get(src, csv_path):
+    '''Copy the cached CSV of this exact driver source to csv_path; False if there is none.'''
+    p = cache_path(src)
+    if not (USE_CACHE and os.path.exists(p)): return False
+    try:
+        with gzip.open(p, 'rb') as f, open(csv_path, 'wb') as g: shutil.copyfileobj(f, g)
+        os.utime(p)
+        return True
+    except (OSError, EOFError):
+        return False
+
+def cache_put(src, csv_path):
+    if not USE_CACHE: return
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    p = cache_path(src); tmp = p + '.%s.tmp' % uuid.uuid4().hex[:8]
+    with open(csv_path, 'rb') as f, gzip.open(tmp, 'wb', compresslevel=5) as g: shutil.copyfileobj(f, g)
+    os.replace(tmp, p)
+
+def cache_prune(limit=None):
+    '''Drop the least recently used entries beyond limit bytes; returns (entries, bytes) left.'''
+    try: fs = sorted(((e.stat().st_mtime, e.stat().st_size, e.path) for e in os.scandir(CACHE_DIR) if e.name.endswith('.csv.gz')), reverse=True)
+    except OSError: return 0, 0
+    tot = kept = 0
+    for _, size, p in fs:
+        if tot + size > (CACHE_MAX if limit is None else limit):
+            try: os.remove(p)
+            except OSError: pass
+        else: tot += size; kept += 1
+    return kept, tot
 
 # ---------------------------------------------------------------- driver source
 KNOB_RE = re.compile(r'^(    )(\w+)=(\s*)([^\s#]+)', re.M)
@@ -171,14 +232,24 @@ def run_batch(jobs, n=DEFAULT_N, verbose=False):
     lock = threading.Lock()
     def work(job):
         src = job.source()            # raises early on a bad knob name
-        slot = claim_slot(SLOTS[:n])
-        try:
-            csv_path = os.path.join(WORK, 'r_%d_%s.csv' % (slot, uuid.uuid4().hex[:8]))
-            out, timeouts, _ = run_one(src, slot, csv_path)
-        finally:
-            release_slot(slot)
+        csv_path = os.path.join(WORK, 'r_c_%s.csv' % uuid.uuid4().hex[:8])
+        cached = cache_get(src, csv_path)
+        if cached:
+            out, timeouts = csv_path, 0
+        else:
+            slot = claim_slot(SLOTS[:n])
+            try:
+                csv_path = os.path.join(WORK, 'r_%d_%s.csv' % (slot, uuid.uuid4().hex[:8]))
+                out, timeouts, _ = run_one(src, slot, csv_path)
+            finally:
+                release_slot(slot)
         m = metrics(out) if out else None
-        if m is not None: m['timeouts'] = timeouts   # server steps that skipped the client (should be 0)
+        if m is not None:
+            m['timeouts'] = timeouts   # server steps that skipped the client (should be 0)
+            m['cached'] = cached
+            # only a deterministic result is stored: no skipped server step (a run the driver ended
+            # early leaves one harmless timeout after the client quit)
+            if not cached and (timeouts == 0 or not m['finished']): cache_put(src, out)
         # A run the driver ended early (damage stop: the damaged step is not logged, so it shows as
         # not finished) leaves the server one harmless timeout after the client quit.
         if timeouts and (m is None or m['finished']):
@@ -210,6 +281,11 @@ def check_no_torcs():
         time.sleep(1)             # a harness race may have just ended; look again
     sys.exit('A TORCS (wtorcs.exe) is already running; close it first (it may hold a slot port).')
 
+def count_raced(res):
+    '''(races run, races taken from the cache) of a run_batch result.'''
+    c = sum(1 for _, m in res if m and m.get('cached'))
+    return len(res) - c, c
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='Run one race (or several identical ones) and print metrics.')
     ap.add_argument('--set', action='append', help='knob=value override (repeatable)')
@@ -217,10 +293,18 @@ if __name__ == '__main__':
     ap.add_argument('--keep', help='save the CSV at this path')
     ap.add_argument('--repeat', type=int, default=1, help='run the same config this many times in parallel')
     ap.add_argument('-n', type=int, default=DEFAULT_N)
+    ap.add_argument('--no-cache', action='store_true', help='race even if this exact race is in the cache, and do not store it')
+    ap.add_argument('--cache-info', action='store_true', help='print the cache size and stop')
+    ap.add_argument('--cache-clear', action='store_true', help='empty the cache and stop')
     a = ap.parse_args()
+    if a.cache_info or a.cache_clear:
+        k, b = cache_prune(0 if a.cache_clear else None)
+        sys.exit('cache %s: %d races, %.1f MB' % (CACHE_DIR, k, b / 1e6))
+    if a.no_cache: USE_CACHE = False
     check_no_torcs()
     ov = parse_sets(a.set)
     jobs = [Job('run%d' % i, ov, a.variant, a.keep if i == 0 else None) for i in range(a.repeat)]
     t0 = time.time()
-    run_batch(jobs, a.n, verbose=True)
-    print('%.1f s' % (time.time() - t0))
+    res = run_batch(jobs, a.n, verbose=True)
+    print('%d raced, %d from the cache, %.1f s' % (count_raced(res) + (time.time() - t0,)))
+    cache_prune()

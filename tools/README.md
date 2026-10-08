@@ -8,7 +8,14 @@ without modifying it directly — each race gets a private copy.
 
 | Task | Command |
 |---|---|
+| **The whole acceptance bar in one call** (70 runs against the base, paired difference, checks, patterns, width) | `python tools/accept.py --out %TEMP%\vNNN [--cand "label[@file.py][: knob=value ...]"] [--base v1.17]` |
+| Screen several candidates (12 runs each) or one lap each | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py" --cand "B: plan_vs=1.03" --screen` (or `--single`) |
+| Trial copy of the driver with exact text edits or spliced table rows | `python tools/variant.py %TEMP%\vNNN\a.py --rep "old=>new" [--edits edits.txt] [--plan plan.txt:from:to]` |
+| Step trace of a run against the planned line | `python tools/trace.py runs/<file>.csv 2200 2640 [step]` |
+| **Record a version once** (changelog entry, batch row, ledger rows, run CSV, commit, tag) | `python tools/record.py %TEMP%\vNNN\version.md [--dry-run]` |
+| What each sub-agent of a session cost (turns, context, minutes) | `python tools/agentcost.py [--all] [--detail]` |
 | One race (optionally with knob overrides) | `python tools/race.py [--set knob=value ...]` |
+| Race cache: size / empty it | `python tools/race.py --cache-info` / `--cache-clear` |
 | Safety suites — 3×10 perturbation runs | `python tools/suite.py [--set knob=value ...]` |
 | Lap metrics from a CSV | `python tools/metrics.py runs/<file>.csv [--sections]` |
 | Control-pattern check of a CSV | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |
@@ -47,6 +54,158 @@ without colliding. A race is launched with `wtorcs -t 1000000` (a 1 s server
 patience timeout), which makes parallel runs byte-identical to serial ones. The knob
 block in the private copy is rewritten with a regex that matches the `    name=value`
 pattern from `drive_example()`'s knob block.
+
+**Race cache.** The simulation is deterministic, so a finished race's CSV is stored
+(gzip, about 0.25 MB) in `%TEMP%\torcs_tools\cache` under a hash of the exact driver
+source that was raced (knob overrides applied) and of the TORCS files that decide the
+result (race file, car, track, `scr_server` set-up). Asking for the same race again
+copies the CSV from the cache and starts no TORCS: a base's 70 runs cost nothing after
+their first run, and a full acceptance run after a screen re-uses the screen's races.
+Checked against the committed v1.17 run: raced, cached and `--no-cache` CSVs are byte
+for byte the same file. `--no-cache` (or `TORCS_TOOLS_CACHE=0`) races regardless;
+`--cache-info` prints the size; `--cache-clear` empties it. The least recently used
+entries are dropped beyond 3 GB (`CACHE_MAX`). Raise `CACHE_VERSION` in `race.py` when
+the harness changes what a race writes.
+
+---
+
+## accept.py — the whole acceptance bar in one call
+
+**What it does.** Runs everything a version is judged on and prints one table: the 70
+standard runs of the base and of each candidate, the paired lap difference (30 / 40 /
+70 runs, with standard error and faster / slower counts), the largest section
+differences, every check in `tools/checks.json` around the candidate's own knob values
+(follower check, braking-plan check), the control patterns and the track-width table of
+base and candidate, and the bar item by item as PASS / FAIL. `--screen` runs only the 12
+screen runs per candidate and prints one line each; `--single` runs one lap each.
+
+    python tools/accept.py --out %TEMP%\v118                               # driver on disk against HEAD's
+    python tools/accept.py --out %TEMP%\v118 --cand "A@a.py" --cand "B@a.py: plan_vs=1.03" --screen
+    python tools/accept.py --out %TEMP%\v118 --cand "A@a.py" --base v1.17  # full bar for one candidate
+
+A candidate is `label[@driver file][: knob=value ...]` (the file is looked up in `--out`
+first). The base is a git revision of the driver (default `HEAD`) or a driver file.
+
+**Where it is used.** By every iteration: `--single` and `--screen` while exploring, the
+full run once on the chosen candidate. `tools/record.py` reads its output. The 70 CSVs
+are kept in `<out>/base` and `<out>/<label>` under the names `tails.py` uses, so
+`python tools/tails.py --dir <out>/<label> --reuse --pair <out>/base` prints the full
+tail and section tables from them without racing.
+
+**Why it exists.** The bar had grown to five separate commands per version (70 runs of
+the base, 70 of the candidate, pairing, a 200-run follower check, an 80-run braking-plan
+check, plus patterns and width), each a model turn, and its exact command lines lived as
+prose in `CLAUDE.md`. One call makes the bar executable and the same for every version;
+`checks.json` makes adding a knob to a check a one-line change.
+
+**Implementation.** Builds one job list (base, candidates, checks) and passes it to
+`race.run_batch()`, so everything shares the four race slots and the race cache.
+Standard runs come from `tails.GROUPS` and `suite.SUITES`; a check entry in
+`checks.json` (`{"knob": ..., "rel": 0.1}` or `"abs": [5, 10]`) is applied in both
+directions around the candidate's value and raced on the listed suites. The bar: 0 of
+30 off and 0 damage, 0 of 40 shifted off, every check 0 off, all-30 mean not above the
+base's, paired gain over the 70 of at least 2 standard errors. Margin is not judged by
+the script: the table shows each group's worst run next to the base's. Writes
+`<out>/<label>.accept.json` (full mode) and appends one line per candidate to
+`<out>/results.jsonl` (every mode). Exit code 1 if a candidate fails the bar. Checked:
+v1.17 against v1.16 reproduces the recorded numbers (all-30 67.460 vs 67.634, paired
+−0.177 s, SE 0.007, 69 / 1; follower worst 0.885; braking-plan worst 0.882) in 201 s
+for 420 races, and in 18 s with 0 races when repeated.
+
+---
+
+## record.py — record a version once
+
+**What it does.** Turns one short file written by the agent (`version.md`: title,
+decision, what changed, why, prediction, learned, variables, alternatives) plus
+`accept.py`'s output into the version's whole record: the `docs/CHANGELOG.md` entry in
+its usual table format, a row in `docs/batch.md`, rows in `docs/ledger.md`, the run CSV
+in `runs/`, the commit and the annotated tag. Every measured number (lap, top speed,
+slowest corner, all-30, paired difference, checks, patterns, and each alternative's
+screen result) is filled in from `accept.py`'s files. `--dry-run` prints everything and
+changes nothing. It never pushes and adds no attribution lines.
+
+**Where it is used.** As the last step of every version, kept or rejected, in place of
+writing the changelog entry, the batch row and the commit message by hand. A rejected
+version is committed and tagged, then the driver is restored from the previous commit
+and that is committed too (working rule 8).
+
+**Why it exists.** The same facts were being written four or five times per version
+(changelog entry of 11–22 thousand characters, batch row, commit message, hand-back
+report, HANDOFF bullet), and four of five batch-15 agents wrote the changelog entry
+twice because a shell heredoc failed. Numbers typed by hand can be mistyped; numbers
+copied by a script cannot, which enforces "real measured values only".
+
+**Implementation.** Parses `version.md` (format in the script's docstring; an
+alternative is `label | where | what was tried | why it lost`, the label being the one
+used with `accept.py`). Before writing anything it runs the driver on disk with
+`harness/run_race.py` and requires that CSV to be byte for byte the accepted
+candidate's unperturbed run (`<out>/<label>/base_s1_p0.csv`); if not, the driver on
+disk is not what was accepted and nothing is recorded. A kept version needs the bar's
+PASS; `decision: enabling` needs 0 off and 0 damage. Line endings of the changelog are
+kept.
+
+---
+
+## variant.py — a trial copy of the driver
+
+**What it does.** Writes a copy of the driver (from disk, from another file or from a
+git revision) with exact text edits applied: `--rep "old=>new"` (the old text must occur
+exactly once), `--edits FILE` for multi-line edits written as `<<<<` / old / `====` /
+new / `>>>>` blocks, and `--plan plan.txt[:from:to]` to take the `plan_pos` /
+`plan_curv` / `plan_v` entries of a `raceline.py --table` file, optionally only inside a
+stretch in metres.
+
+**Where it is used.** For every trial that changes code or tables and cannot be a
+`--set`: the copy is then raced with `accept.py --cand "A@a.py"` or
+`race.py --variant`.
+
+**Why it exists.** Each agent had been rebuilding this as `mk.py` / `gen.py` / `g.py`
+in its `%TEMP%` folder. The driver itself must never be edited to try something, and a
+text edit that silently matches nothing or twice produces a trial of the wrong thing:
+the exactly-once rule stops that. Splicing a stretch keeps the rest of the table byte
+for byte (a full regeneration moves far-away worst runs chaotically, v1.14).
+
+**Implementation.** Reads the base with its line endings preserved, applies `--plan`,
+then `--edits`, then `--rep`, and refuses to write over `driver/snakeoil3_v1.py`.
+
+---
+
+## trace.py — a run against the planned line
+
+**What it does.** Prints a step trace of a run CSV between two distances: speed, the
+plan's allowed speed, the stored line speed, `trackPos` next to the line's, their
+difference, steering, pedals, sideways speed and gear.
+
+**Where it is used.** To see where the car leaves the planned line or its speed (for
+example the Corkscrew's left apex), before and after a change.
+
+**Why it exists.** Replaces the `tr.py` each agent copied from the previous agent's
+`%TEMP%` folder.
+
+**Implementation.** Reads the plan tables from the driver file (`--driver` for a
+variant) and interpolates them at each row's `distFromStart`, as the driver does.
+
+---
+
+## agentcost.py — what a session's agents cost
+
+**What it does.** Reads a Claude Code session's transcripts and prints per sub-agent
+and for the orchestrator: turns, context at the first and largest turn, the context
+summed over all turns ("processed" tokens), wall minutes, minutes waiting for tools
+(races) and minutes of model time. `--all` prints one line per session; `--detail` adds
+tool calls, files read and characters written. Times are UTC.
+
+**Where it is used.** By the orchestrator at batch end, for the batch's cost line, and
+to check whether a workflow change lowered the cost.
+
+**Why it exists.** Every turn reads the whole context again, so a version costs turns
+× context; the figure reported when an agent ends is only its last context size, and
+the minutes agents reported themselves did not match the transcripts.
+
+**Implementation.** Parses `~/.claude/projects/<project>/<session>/subagents/*.jsonl`:
+one usage record per model message, tool waits from the timestamps of each call and
+its result.
 
 ---
 
@@ -183,6 +342,12 @@ run and nothing is learned on track.
     python tools/raceline.py --geometry                       # segment list with distFromStart, length check
     python tools/raceline.py --csv runs/<lap>.csv --every 25  # line next to a driven lap, every 25 m
     python tools/raceline.py --limit 0.65 --zone 990:1090:0.5 --zone 2940:3030:0.5 --table plan.txt   # v1.11's table
+
+Speed options (v1.15–v1.16, all repeatable): `--vcap from:to:km/h` caps the line's speed
+in a stretch (a known brake point: the crest at 2,335–2,360 m is capped at 230);
+`--vscale from:to:factor` scales the cornering speed in a stretch; `--bscale
+from:to:factor` scales the braking deceleration into it. Splice the result into the
+driver per stretch with `tools/variant.py --plan plan.txt:from:to`.
 
 **Where it is used.** Whenever the planned line is changed (v1.11 on): choose the usable half-width
 (`--limit`, as |trackPos|; `--zone from:to:limit` for a stretch that needs a different one), write the table

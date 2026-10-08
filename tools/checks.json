@@ -1,0 +1,30 @@
+{
+  "_comment": "The acceptance bar's run lists, read by tools/accept.py. 'screen' = the 12 of the 70 standard runs used for exploring (names as tools/tails.py writes them). 'checks' = extra safety checks: every perturbation is applied around the candidate's own value of the knob ('rel' = share of the value, 'abs' = amount; a list gives several sizes; both signs are run) and raced on the listed suites. Add a pair here when a version adds a knob the standard suites do not perturb.",
+  "screen": ["base_s1_p0", "base_s1_lo+.1", "base_s1_tss+1", "base_s1_cs+2", "base_s1_lg-.4", "base_s1_tg+.5",
+             "base_s2_mss+.05", "base_s2_up-200", "base_s3_tcs+.2", "bm14_s1_p0", "bm14_s2_bm-2", "lo05_s1_p0"],
+  "checks": {
+    "follower": {
+      "suites": "1",
+      "perturb": [
+        {"knob": "plan_kp", "abs": 0.1},
+        {"knob": "plan_kh", "rel": 0.1},
+        {"knob": "plan_ff", "rel": 0.1},
+        {"knob": "plan_ffv", "rel": 0.1},
+        {"knob": "plan_vs", "abs": 0.02},
+        {"knob": "plan_slipmax", "abs": 1},
+        {"knob": "plan_la", "abs": 0.05},
+        {"knob": "plan_ek", "rel": 0.1},
+        {"knob": "plan_e0", "rel": 0.1},
+        {"knob": "plan_emax", "rel": 0.1}
+      ]
+    },
+    "braking-plan": {
+      "suites": "1",
+      "perturb": [
+        {"knob": "plan_vd", "abs": [5, 10]},
+        {"knob": "brake_gain", "rel": 0.1},
+        {"knob": "lift_pct", "rel": 0.1}
+      ]
+    }
+  }
+}
