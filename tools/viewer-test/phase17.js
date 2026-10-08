@@ -3,6 +3,7 @@
    one step shows a looped section and one keeps a window's buttons in sight. The choosers lead to the other
    tutorials and the Help page starts each one. Phase 17.2: the page stays in use while a tutorial runs, what the
    reader closed is opened again for the step that needs it, and everything is put back when the tutorial ends.
+   Phase 17.3: no step is ever left out.
    Writes phase17-*.png: look at them. */
 const { open } = require('./h.js');
 let bad = 0;
@@ -124,6 +125,12 @@ async function run(p, id, view, shots) {
   await goTo('How the camera follows'); await p.sleep(300);
   await p.shot('phase17-live');
   ok('live: the closed side panel is opened again for its step', !(await p.ev("document.getElementById('pm').classList.contains('side-closed')")) && (await p.ev(state)).hole !== '0x0');
+  /* 17.3: a part that cannot be shown is described all the same, not passed over */
+  await p.ev("RV.map.showPanel = () => {}; document.querySelector('#win-hud .wb.c').click()"); await p.sleep(200);
+  for (let n = 0; n < 40 && (await p.ev(state)).title !== 'The numbers of the moment'; n++) { await p.ev(click('tourBack')); await p.sleep(200); }
+  const gone = await p.ev(state);
+  await p.shot('phase17-absent');
+  ok('a part that is not there keeps its step, with a line that says so', gone.title === 'The numbers of the moment' && gone.hole === '0x0' && gone.inside && (await p.ev("!!document.querySelector('#tourCard .tour-absent')")), gone);
   await p.ev(click('tourSkip')); await ready(p);
   const after = await p.ev(fingerprint.replace('hash: location.hash', 'hash: 0'));
   ok('live: ending the tutorial puts everything back (settings, page, compared versions, windows, layers)', after === before, after === before ? undefined : [before.slice(-300), after.slice(-300)]);

@@ -6,8 +6,8 @@
 
   /* One step. tab: the page it needs; sel: the element it points at; side: where the card prefers to sit;
      click: a control pressed first (a sub-tab) unless it is already on; sideTab: a tab of the Track page's side panel,
-     by its label; loop: a stretch played on a loop while the step shows, as shares of the lap; bar: a window whose buttons stay in sight;
-     det: only in the detailed view; opt: left out when this data has nothing for it (anything the reader closed is opened again). */
+     by its label; loop: a stretch played on a loop while the step shows, as shares of the lap; bar: a window whose buttons stay in sight.
+     Anything the reader closed is opened again for its step, and no step is left out. */
   const SIDE = '#side .sidebody', SIDE_TABS = { view: 'Camera', cars: 'Cars', layers: 'Layers', sectors: 'Sectors', help: 'Help' };
   const GENERAL = [
     { tab: 'pv', sel: '.tiles', title: 'The project at a glance',
@@ -28,7 +28,7 @@
       text: 'Play or pause here, or press Space. The arrow keys move one step at a time; hold one to play slowly. Drag the slider to jump anywhere in the lap.' },
     { tab: 'pm', sel: '#side', side: 'left', title: 'Camera, layers and help',
       text: 'Choose how the camera follows the car and what is drawn on the map. Help lists the keys.' },
-    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'A second look at the same lap',
+    { tab: 'pm', sel: '#twAdd', side: 'left', title: 'A second look at the same lap',
       text: '“+ Track window” opens another view of the replay in a window over the map, with its own camera and layers. Up to four can be open.' },
     { tab: 'pt', sel: '#pt', side: 'inside', title: 'Telemetry',
       text: 'Speed, throttle and brake along the lap. Click a chart to move the car to that point; drag across one to play that stretch on a loop. With several versions selected, their lines are drawn together so you can see where one gains on another.' },
@@ -67,9 +67,9 @@
       text: 'Each box on the map is a little window. Put the mouse on one and three round buttons show up on its edge, as they do here. The first closes the box. The second folds it away into a small tab; click the tab to bring it back. The third puts the box back where it started, at its normal size. You can also drag a box anywhere, and drag its corner to make it bigger or smaller. Try it now: nothing you change here is kept.' },
     { tab: 'pm', sel: '#win-mini', title: 'Where on the track',
       text: 'A small map of the whole track with a dot for the car, so you never lose your place when the big map is zoomed in.' },
-    { tab: 'pm', sel: '#win-sectorLive', opt: true, title: 'The lap in three parts',
+    { tab: 'pm', sel: '#win-sectorLive', title: 'The lap in three parts',
       text: 'The lap is split into three sectors. As the car finishes each one, its time appears here, next to the time of the fastest lap ever recorded. Green means quicker, red means slower.' },
-    { tab: 'pm', sel: '#win-lapDeltaBar', opt: true, title: 'Ahead or behind',
+    { tab: 'pm', sel: '#win-lapDeltaBar', title: 'Ahead or behind',
       text: 'One bar per car. It shows how far ahead of (green) or behind (red) the fastest recorded lap that car is at this exact point of the track.' },
     { tab: 'pm', sel: '#win-inputs', side: 'top', title: 'Steering wheel and pedals',
       text: 'The wheel turns as the car steers. The two bars are the brake and the throttle: the fuller the bar, the harder the pedal is pressed.' },
@@ -77,7 +77,7 @@
       text: 'Works like a video player. Play or pause with the button or the Space key. The arrow buttons move one small step; hold one for slow motion. Drag the slider to jump to any part of the lap, and change “Speed” to watch faster or slower.' },
     { tab: 'pm', sel: '#win-leg', side: 'left', title: 'What the colours mean',
       text: 'The key to the colours on the map. Every box on the map, this one included, can be dragged somewhere else, made bigger from its corner, folded or closed.' },
-    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Two views at once',
+    { tab: 'pm', sel: '#twAdd', side: 'left', title: 'Two views at once',
       text: '“+ Track window” opens a second, smaller view of the same lap on top of the map. Keep one zoomed in on the car and one showing the whole track, for example. Up to four can be open, and each closes with its ×.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Camera', side: 'left', title: 'How the camera follows',
       text: 'Choose whether the view follows the car, and whether the map turns so the car always drives up the screen. “Back to the car” and “Whole track” get you home if you are lost.' },
@@ -85,8 +85,8 @@
       text: 'With several versions chosen, decide which cars are drawn and how they are lined up: at the same moment of the lap, or at the same place on the track so their lines can be compared.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Layers', side: 'left', title: 'Switch things on and off',
       text: 'Everything drawn on the map has a switch here: the trail, the sensor lines, the distance marks and more. Turn off what you do not need; you can always turn it back on.' },
-    { tab: 'pm', sel: SIDE, sideTab: 'Sectors', side: 'left', det: true, title: 'Sector times',
-      text: 'The times of the three parts of the lap for the cars shown, so you can tell in which part one version beats another.' },
+    { tab: 'pm', sel: SIDE, sideTab: 'Sectors', side: 'left', title: 'Sector times',
+      text: 'The times of the three parts of the lap for the cars shown, so you can tell in which part one version beats another. This one belongs to the detailed view: in the basic view the tab offers a button to switch.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="charts"]', title: 'The lap as charts',
       text: 'Each chart runs from the start line on the left to the finish on the right. The top one is speed: valleys are corners, peaks are straights. Click anywhere on a chart and the car jumps to that spot on the track; drag across a chart and that part plays on a loop, just as on the map.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="summary"]', title: 'The lap in a few numbers',
@@ -124,15 +124,15 @@
       text: 'Readout, overview map, colour keys, wheel and pedals, sector table and delta bar are all windows. The three buttons that appear on a window\u2019s edge when the pointer is on it are, left to right: close, fold into a tab (click the tab to unfold), and back to its place at its normal size. While cars are compared a fourth shows only the car in focus. Drag to move, resize by the corner grip; switches and opacity are in the Layers tab, and positions are saved in this browser. Track windows have the same buttons.' },
     { tab: 'pm', sel: '#win-mini', title: 'Overview map',
       text: 'The whole track with every car shown and the sector lines, whatever the main map is zoomed on.' },
-    { tab: 'pm', sel: '#win-sectorLive', opt: true, title: 'Live sector table',
+    { tab: 'pm', sel: '#win-sectorLive', title: 'Live sector table',
       text: 'Sector times of the car in focus as it passes each sector line, against the fastest lap recorded. The fastest lap itself is compared with the next fastest.' },
-    { tab: 'pm', sel: '#win-lapDeltaBar', opt: true, title: 'Lap delta bar',
+    { tab: 'pm', sel: '#win-lapDeltaBar', title: 'Lap delta bar',
       text: 'Every selected car against the fastest lap recorded, as a time gap at the same point of the track: green ahead, red behind. Watching it through a corner shows whether time is won on entry or on exit.' },
     { tab: 'pm', sel: '#win-inputs', side: 'top', title: 'Wheel and pedals',
       text: 'Steering, brake and throttle of every car shown, as sent to the simulator at this step, with a short trace of the last seconds: on-off pedal work and steering reversals show up here first.' },
     { tab: 'pm', sel: '#bar', side: 'top', title: 'Transport',
       text: 'Play and pause, single steps, and slow motion while a step key is held (0.1×, then 0.25×, then 0.5×). Speed runs from 0.1× to 4×. “Auto loop” repeats the lap; while a section is looped, its chip appears here and ends the loop.' },
-    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Track windows',
+    { tab: 'pm', sel: '#twAdd', side: 'left', title: 'Track windows',
       text: 'Up to four more views of the same replay, in windows over the map. Each has its own camera, layers, path colour and cars; “Settings of” beside this button chooses which view the side panel changes. A common set-up is one window per compared car, each following its own.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Camera', side: 'left', title: 'Camera',
       text: 'Follow car, car points up (the map rotates so the car in focus drives toward the top), keep all cars in view, and the jumps back to the car or to the whole track. Camera movement is smoothed, so a follow view does not shake with the steering.' },
@@ -146,9 +146,9 @@
       text: 'Speed, throttle, brake, steering, track position and gear against distance. Drag loops that section, Shift-drag pans, wheel zooms the distance axis, click moves the car there, double-click shows the whole lap. One run is coloured by value; compared runs get one solid colour each.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="summary"]', title: 'Summary',
       text: 'The lap figures of every selected run in one table: lap, top speed, slowest corner, share of the lap braking and at full throttle.' },
-    { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="sectors"]', opt: true, title: 'Sector times',
+    { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="sectors"]', need: true, title: 'Sector times',
       text: 'Sector times of the selected runs with their gaps. Together with the best theoretical lap on the Versions page this shows how much is left by combining the best sectors.' },
-    { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="sect"]', opt: true, title: 'Section table',
+    { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="sect"]', need: true, title: 'Section table',
       text: 'The lap cut into short, equal sections with the time spent in each, per run. This is the finest view of where time is gained: sort out a corner here, then click through to it on the charts.' },
     { tab: 'ps', sel: '#sTabs', click: '#sTabs button[data-v="replay"]', title: 'Settings: Replay',
       text: 'Whether a run starts playing when it opens, and the speed a replay starts at. The General tab holds the theme, the view and the reset of everything stored in this browser.' },
@@ -170,7 +170,7 @@
   RV.TOUR_NAMES = { general: TOURS.general.name, beginner: TOURS.beginner.name, advanced: TOURS.advanced.name };
 
   let at = -1, open = false, lastFocus = null, which = 'general', STEPS = GENERAL, looping = false;
-  let snap = null, back = '', touched = false, manual = null, tick = 0, barWin = null;
+  let snap = null, back = '', touched = false, manual = null, tick = 0, barWin = null, absent = false;
   const root = () => $('tour'), hole = () => $('tourHole'), card = () => $('tourCard');
   const shown = el => !!el && el.getClientRects().length > 0;
 
@@ -229,7 +229,7 @@
     const st = STEPS[at], c = card(), h = hole(), W = innerWidth, H = innerHeight, gap = 14;
     const el = st ? document.querySelector(st.sel) : null;
     const put = (x, y) => { if (manual) { x = manual[0]; y = manual[1]; } c.style.left = RV.clamp(x, 4, Math.max(4, W - c.offsetWidth - 4)) + 'px'; c.style.top = RV.clamp(y, 4, Math.max(4, H - c.offsetHeight - 4)) + 'px'; };
-    if (!shown(el)) {                                              /* a card without a step, or an element that is not on screen */
+    if (absent || !shown(el)) {                                    /* a card without a step, or a part that is not on screen */
       h.style.cssText = 'left:50%;top:50%;width:0;height:0';
       put((W - c.offsetWidth) / 2, (H - c.offsetHeight) / 2);
       return;
@@ -263,7 +263,7 @@
   }
   /* Bring the page into the state the step describes, whatever the reader did before: the right page and view, the
      side panel open, a closed or folded window back, the sub-tab pressed. False when the step needs a control
-     that this data does not have. */
+     that this data does not have: the step is still shown, without a highlight, so the reader learns the part exists. */
   function prepare(st) {
     if (TOURS[which].detailed && RV.prefs.view !== 'detailed') RV.setView('detailed');
     if (st.tab && S.ds && S.tab !== st.tab) RV.showTab(st.tab);
@@ -275,7 +275,7 @@
     if (!st.click) return true;
     const b = document.querySelector(st.click);
     if (b && !b.classList.contains('on')) b.click();
-    return !!b || !st.opt;
+    return !!b || !st.need;                             /* need: without that control the step has nothing to point at */
   }
 
   /* the two other tutorials, offered on the first and the last card of the quick tour */
@@ -284,7 +284,7 @@
   function acts() {
     $('tourNext').onclick = () => go(at + 1);
     if ($('tourSkip')) $('tourSkip').onclick = done;
-    if ($('tourBack')) $('tourBack').onclick = () => go(at - 1, -1);
+    if ($('tourBack')) $('tourBack').onclick = () => go(at - 1);
     card().querySelectorAll('[data-tour]').forEach(b => { b.onclick = () => begin(b.dataset.tour, true); });
     place(); requestAnimationFrame(place); setTimeout(place, 120);   /* the page under the tour may still be laying itself out */
     $('tourNext').focus({ preventScroll: true });
@@ -319,12 +319,14 @@
     acts();
   }
 
-  /* dir: the direction of travel, so a step this data has nothing for is passed over the same way */
-  function go(k, dir) {
-    dir = dir || 1;
+  /* No step is left out. A part that this data has nothing for is described all the same, with a line that says
+     why it is not on screen. */
+  const ABSENT = '<p class="note tour-absent">Not on screen right now: the versions shown have nothing for this part. It appears by itself when they do.</p>';
+  function go(k) {
+    absent = false;
     if (k >= 0 && k < STEPS.length) {
       touched = true;
-      if (!prepare(STEPS[k]) || (STEPS[k].opt && !shown(document.querySelector(STEPS[k].sel)))) return go(k + dir, dir);
+      absent = !prepare(STEPS[k]) || !shown(document.querySelector(STEPS[k].sel));
     }
     if (k > STEPS.length || (k === STEPS.length && which !== 'general')) { const t = touched; done(); if (!t) RV.showTab('pv'); return; }
     at = k; manual = null;
@@ -332,7 +334,7 @@
     if (k < 0) return intro();
     if (k === STEPS.length) return outro();
     const st = STEPS[k], last = k === STEPS.length - 1 && which !== 'general';
-    card().innerHTML = '<div class="tour-count">' + (which === 'general' ? 'Step ' : TOURS[which].name + ', step ') + (k + 1) + ' of ' + STEPS.length + '</div><h2 id="tourTitle">' + st.title + '</h2><p>' + st.text + '</p>' +
+    card().innerHTML = '<div class="tour-count">' + (which === 'general' ? 'Step ' : TOURS[which].name + ', step ') + (k + 1) + ' of ' + STEPS.length + '</div><h2 id="tourTitle">' + st.title + '</h2><p>' + st.text + '</p>' + (absent ? ABSENT : '') +
       '<div class="tour-acts"><button class="btn prim" id="tourNext">' + (last ? 'Finish' : 'Next') + '</button>' +
       (k > 0 ? '<button class="btn" id="tourBack">Back</button>' : '') + '<button class="btn ghost" id="tourSkip">End the tutorial</button></div>';
     acts();
@@ -342,7 +344,7 @@
   function begin(id, welcome) {
     which = TOURS[id] ? id : 'general';
     if (TOURS[which].detailed && RV.prefs.view !== 'detailed') { touched = true; RV.setView('detailed'); }
-    STEPS = TOURS[which].steps.filter(st => !st.det || !RV.simple());
+    STEPS = TOURS[which].steps;
     go(welcome ? -1 : 0);
   }
 
