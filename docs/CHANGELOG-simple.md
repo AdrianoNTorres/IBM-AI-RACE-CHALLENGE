@@ -2049,6 +2049,86 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — 1.30 s faster over all 70 laps, every lap faster, none off the road. A setting that was a further 0.2 s faster was not taken because it put the car closer to the inside edge at 1,930 m. |
 | **Learned** | After the new line, it was the speed plan and not the line that held the car back in the fast corners. The car now cuts a little inside the planned line at the fastest corner, and that, not grip, sets how much more speed can be added. The planned line and the allowed speeds now come largely from knowledge of the track, with the sensors checking and correcting every step; whether that balance matches the competition's rules is a question for the officials. |
 
+## v1.13 — Steering along the line: more help at low speed, less at high speed
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.13 |
+| **What changed** | Two numbers in the steering that follows the planned line were changed. That steering turns the wheel in advance according to how curved the line is just ahead; the advance is now larger at low speed and grows less as the speed rises. |
+| **Why** | Every setting of the line-following steering turned out to do the same thing: it decides how far inside the planned line the car cuts through a corner. Cutting inside is faster, and what limits it is the inside edge of the fast left-hander at 1,930 m, which the car enters at 278 km/h. The new pair of values gives the gain while leaving more room at that edge. |
+| **Prediction** | About 0.35 s gained over the 70 test laps, none off the road; lap near 1:09.1 to 1:09.2. |
+| **Lap time** | 1:09:13 |
+| **Damage** | 0 |
+| **Top speed** | 288 km/h |
+| **Min speed** | 65 km/h |
+| **Observed** | Lap 1:09:13 (0.40 s faster), damage 0, top speed 288 km/h, slowest corner 65 km/h. All 70 test laps were faster, by 0.35 s on average, and none left the road; none of the 140 extra laps that vary the steering settings left the road either. |
+| **Decision** | ✅ Kept — 0.35 s faster over all 70 laps, none off the road. A setting that was a further 0.07 s faster was not taken because it put the car closer to the edge at another corner. |
+| **Learned** | The car is faster a little inside the planned line than exactly on it: every attempt to bring it back onto the line was 0.2 to 0.7 s slower. All the steering settings pull on the same limit, the inside edge at 1,930 m, so after this change none of them gives more time. The limit on steering angle at speed (v0.94) no longer matters on the line. |
+
+## v1.14 — The hairpin joins the planned line
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.14 |
+| **What changed** | The line-following steering now also drives the hairpin (up to 3,330 m). The planned line there was redrawn to use more of the road on the way in and out, and the allowed-speed entry for the hairpin went from 9 km/h below the plan to 2 km/h above it. |
+| **Why** | The older, sensor-based steering took the hairpin around the middle of the road with the wheel fully turned, using a third of the road width, at 71 km/h. |
+| **Prediction** | About 0.42 s gained over the 70 test laps, none off the road; nothing changes before 2,990 m; hairpin at about 79 km/h; lap near 1:08.7. |
+| **Lap time** | 1:08:72 |
+| **Damage** | 0 |
+| **Top speed** | 288 km/h |
+| **Min speed** | 65 km/h |
+| **Observed** | Lap 1:08:72 (0.41 s faster), damage 0, top speed 288 km/h, slowest corner 65 km/h (the Corkscrew; the hairpin is now taken at 79 km/h, from the outside to the inside and back out). All 70 test laps were faster, by 0.42 s on average, and none left the road; none of the 140 extra steering-check laps left the road. |
+| **Decision** | ✅ Kept — 0.42 s faster over all 70 laps, every lap faster, none off the road. |
+| **Learned** | In v1.11 the hairpin on the planned line had measured 1.5 s slower and was left out. That no longer held once the steering had been re-tuned in v1.13: an old "this is slower" result is worth one new lap when the things around it have changed. Using more road width pays in the slow corners; in the fast ones it only brings the car closer to the edge. A first try at putting the Corkscrew on the line failed (off the road, or damage over the crest before it), which showed what the next version had to solve. |
+
+## v1.15 — The Corkscrew joins the planned line
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.15 |
+| **What changed** | The line-following steering now drives the whole lap except the first 60 m and the finishing straight. The planned line before and through the Corkscrew was redrawn: kept to the inside before the crest, and away from the wall on the right. A speed limit of 230 km/h over the crest is stored with the line. (The user decided on 2026-10-08 that a braking plan may be stored in the track memory.) |
+| **Why** | The sensor-based steering left the kink before the Corkscrew on the wrong side of the road, entered the first turn from the inside and spent 30 m with the wheel fully turned at 65 km/h. The earlier try at using the line here failed because the old line crossed the road right on the crest and nothing slowed the car for the crest. |
+| **Prediction** | About 0.81 s gained over the 70 test laps, none off the road; nothing changes before 1,900 m; the Corkscrew at about 72 km/h instead of 65 and further from the wall; the next corner a little slower; lap near 1:07.9. |
+| **Lap time** | 1:07:93 |
+| **Damage** | 0 |
+| **Top speed** | 288 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:07:93 (0.80 s faster, the first lap under 1:08), damage 0, top speed 288 km/h, slowest corner 72 km/h. All 70 test laps were faster, by 0.82 s on average, and none left the road. The stretch from 2,400 to 2,600 m is 0.9 s faster; the next corner gives 0.13 s back. In the worst test lap the car stays further from the wall than before (0.57 of the way to it instead of 0.82). |
+| **Decision** | ✅ Kept — 0.82 s faster over all 70 laps, every lap faster, none off the road, and more room at the wall. |
+| **Learned** | What had blocked the Corkscrew was not the Corkscrew itself but the 150 m before it: where the line sits over the crest, and a braking point for the crest. Going over the crest more slowly gives a faster Corkscrew. The wall on the right ends the run if the car gets to about 0.83 of the way to the edge, so the line is kept well inside there. |
+
+## v1.16 — The speed plan comes from the track memory
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.16 |
+| **What changed** | On two stretches (90 to 1,750 m and 2,600 to 2,850 m) the speed the car is allowed is now the speed stored with the planned line, instead of a speed worked out from the distance sensors. The stored cornering speed was raised by 6 % and 7 % at two corners. The stored value is a speed for each place on the track, never a pedal position: the brake and throttle still react every step to the car's actual speed, and the anti-lock brakes and wheelspin control work as before. |
+| **Why** | The user ruled on 2026-10-08 that the braking plan may be stored in the track memory. The sensor-based plan read 15 to 25 km/h too low before the corner at 770 m, and through the fast corners it fell in steps while the car coasted behind it. |
+| **Prediction** | About 0.37 s gained over the 70 test laps, none off the road; gains at four corners; nothing changes at the 1,930 m corner, the Corkscrew or the hairpin; lap near 1:07.6. |
+| **Lap time** | 1:07:59 |
+| **Damage** | 0 |
+| **Top speed** | 290 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:07:59 (0.33 s faster), damage 0, top speed 290 km/h, slowest corner 72 km/h. All 70 test laps were faster, by 0.37 s on average, and none left the road. A new check was added for this design: 80 laps in which the stored speed is read up to 10 m too early or too late, or the pedals react more or less strongly; none left the road. |
+| **Decision** | ✅ Kept — 0.37 s faster over all 70 laps, none off the road. A version that used the stored speed almost everywhere was 0.48 s faster but was not taken: with 3 % more speed, half of its test laps ended in the Corkscrew's wall. |
+| **Learned** | The sensor-based plan had been acting as a safety ceiling. In the Corkscrew and at the hairpin the stored speed gains almost nothing, so the sensor plan stays in charge there. The cornering speed of the computed line needs its own correction at each corner. The car now brakes in short on-off touches where the stored speed falls; that pattern is still to be fixed. |
+
+## v1.17 — A safety check on the stored speed, and 2 % more speed
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.17 |
+| **What changed** | A new live check: when the car is more than 0.4 of the half road width away from the planned line, its allowed speed is reduced, by 5 % for each further 0.1. With that check in place the stored speed is used at 102 %. The corner at 770 m and the Corkscrew keep their earlier speeds. |
+| **Why** | In v1.16, more speed failed in one situation only: the car missed the inside of the Corkscrew's left turn, and the stored speed, which assumes the car is on the line, let it accelerate toward the wall. Measuring how far the car is from the line and slowing it accordingly removes that case. |
+| **Prediction** | About 0.17 s gained over the 70 test laps, none off the road; nothing closer to the wall or faster over the crest; with 3 % and 4 % more speed, none of 10 test laps off the road (2 and 4 before). |
+| **Lap time** | 1:07:40 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 71 km/h |
+| **Observed** | Lap 1:07:40 (0.20 s faster), damage 0, top speed 291 km/h, slowest corner 71 km/h. Over the 70 test laps 0.18 s faster on average (69 faster, 1 slower), none off the road; none of the 200 steering-check laps and none of the 80 speed-plan-check laps left the road. With 3 % and 4 % more speed no test lap left the road. On a normal lap the new check acts only in the Corkscrew, for a moment. |
+| **Decision** | ✅ Kept — 0.18 s faster over all 70 laps, none off the road, and more room at the wall than v1.16. |
+| **Learned** | The check has to be gentle: one two to four times stronger makes the car brake with the wheel fully turned and is slower and closer to the wall. With the check in place, the next limits on speed are the exits of the corners at 2,700 m and 770 m. A brake pedal that acts ahead of the falling stored speed was tried and was slower as built; it may work together with a later braking plan. |
+
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.12 run.*
+*Simplified from CHANGELOG.md as it stood after the v1.17 run.*

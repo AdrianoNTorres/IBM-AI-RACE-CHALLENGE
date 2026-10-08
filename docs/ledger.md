@@ -2,10 +2,52 @@
 
 One row per candidate that was measured (or considered and not run), newest version last. Written by `tools/record.py` from `tools/accept.py`'s results; search it before trying an idea: `grep -i "plan_ff\|1,931" docs/ledger.md`. Difference = paired mean lap difference to that version's base (s, negative = faster) over the stated runs; worst = largest on-track \|trackPos\| and where.
 
-Rows for v1.13–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and the HANDOFF notes (n/s = not stated there); versions before v1.13 are not in the ledger yet: for those, search `docs/history.md` and `docs/CHANGELOG.md`.
+Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and the HANDOFF notes (n/s = not stated there; for v1.03–v1.12 the Worst column is the largest \|trackPos\| stated for the 70 runs, where stated); versions before v1.03 are not in the ledger: for those, search `docs/history.md` and `docs/CHANGELOG.md`.
 
 | Version | Candidate | Where | What was tried | Runs | Difference | SE | Off | Worst | Verdict | Why / note |
 |---|---|---|---|---|---|---|---|---|---|---|
+| v1.03 | **chosen** | held bends (start kink) | soft dab: a brake application starting in a held bend sends 0.1 of its pedal for its first 2 steps | 70 (full) | -0.003 | 0.018 | 0 of 70 | 0.914 (bm14) | rejected | kink-slow runs 14 → 8 of 70, given back at 700–800 m and the flick |
+| v1.03 | nodrop | 2,900–3,100 m | bend drop removed mid-corner: position-gated / ungated | 70 | -0.006 (on 2 runs) / +0.255 | 0.004 / n/s | 0 / 1 of 40 | n/s | lost | the tail there is braking / line perturbations arriving hot, not the drop |
+| v1.03 | aimoff09 | bend state | `line_aim_off` 0.9 | 70 | +0.110 | n/s | n/s | n/s | lost | |
+| v1.03 | coast-lift | lift band | zero-torque throttle in the lift band, four forms (sensor plan) | 70 | +0.032 to +0.074 | n/s | 1 of 40 in three of four | n/s | lost | untested on the stored speed (open again, plan rank 6) |
+| v1.04 | **chosen** | flick approach, 2,334–2,339 m | S-bend look with the focus sensors (`sb_*`): one look shows the flick ~40 m before the beams do | 70 (full) | -0.035 | 0.014 | 0 of 70 | 0.896 @ hairpin exit 3,278 m (bm14) | kept | since v1.15 the line's crest cap binds there instead |
+| v1.04 | sb-neighbours | flick approach | `sb_x` / `sb_hold` 22/12, 28/12, 32/12, 22/25 | 70 each | +0.024 / -0.028 / -0.017 / -0.026 | n/s | 0 | 0.923 (28/12), 0.986 (22/25) | lost | the chosen value is the best of five |
+| v1.04 | gaplook | start kink | focus look rays as extra plan beams, seven forms | 70 | +0.003 to +0.141 | n/s | 1 of 40 in five of seven | n/s | lost | |
+| v1.05 | **chosen** | braking plan at speed | planned-deceleration cap ungated above a car speed (`brake_hi_car` 245) | 70 (full) | -0.033 | 0.015 | 0 of 70 | 0.904 @ hairpin exit 3,278 m (bm14) | kept | sensor plan only: inert inside `plan_mem` since v1.16 |
+| v1.05 | ungated | braking plan | cap fully ungated | 70 | -0.005 | n/s | 0 of 70 | 0.895 | lost | +0.023 s at the start kink (an extra one-step brake at 180 m in 32 of 70 runs) |
+| v1.05 | gate240-250 | braking plan | gate 240 / 250 km/h; `brake_max_hi` 38 on top | 70 | -0.030 / -0.033; -0.027 | n/s | 0 | 0.919 @ flick (38) | lost | |
+| v1.05 | tcss | traction control | `tc_slip_straight` 6.5 / 7 / 8 / 10 | 70 | +0.020 / -0.015 / -0.025 / -0.010 | 0.015 (8) | 0 | 0.902 (8) | lost | 8 stacked with the chosen: −0.049 s (SE 0.019), not committed |
+| v1.05 | misc | pedals, look | `dab_v` 250; `lift_pct` 4.0 / 4.5; `sb_hold` 16; look as a sustained plan | 70 | +0.024; +0.020 / +0.051; -0.007; +0.035 to +0.122 | n/s | 0 | 0.904 (`sb_hold` 16) | lost | |
+| v1.06 | **chosen** | five medium bends, 2,600 m, hairpin | corner table (first track memory): 7 rows of km/h added to the sensor plan by `distFromStart` | 70 (full) | -0.427 | 0.016 | 0 of 70 | 0.818 @ flick 2,473 m (bm14) | kept | inert inside `plan_mem` since v1.16 |
+| v1.06 | scale | corner table | offsets ×0.8 / ×1.2 | 70 | -0.355 / -0.444 | n/s | 0 | 0.810 (×1.2) | lost | |
+| v1.06 | plus20-28 | 1,931 / 2,700 / 2,988 m | +20 / +28 km/h there | 70 | -0.370 / – | n/s | 0 / 4 of 70 around 1,960 m | 0.727 @ 1,931 m (+20) | lost | cliff at +28 on the old line |
+| v1.06 | shift20 | corner table | all rows 20 m earlier / later | 70 | +0.363 / -0.236 | n/s | 0 | n/s | lost | on the planned line row ends ±15 m are flat (v1.12) |
+| v1.06 | otherrows | 446 m, 770 m, start kink, flick approach, hairpin | 446 m ±4 / braking +8; 770 m ±4; start kink +15 / +40 / −6; flick approach −5; hairpin +3 | 70 | +0.010 to +0.049; +0.008 / +0.019; +40: +0.075; -0.020; – | n/s | hairpin +3: 1 of 70 | 0.966 (flick −5) | lost | |
+| v1.07 | **chosen** | 1,931 m, hairpin | line table: rows that put the car on the outside before the bend is detected | 70 (full) | -0.156 | 0.010 | 0 of 70 | 0.852 @ flick 2,462 m (bm14) | kept | every row inert since v1.14 |
+| v1.07 | widerows | 446 / 770 / 1,042 / 1,528 / 2,988 m | wide line rows alone | 70 | +0.09 / +0.042 / +0.003 / +0.17 / +0.15 | n/s | 0 | n/s | lost | 1,528 m and 2,988 m worked in v1.10 as row + offset + turn-in together |
+| v1.07 | trail-in | before detection | trail-in before the bend is detected | 70 | +0.272 | n/s | n/s | n/s | lost | halves the 1,931 m gain |
+| v1.07 | row2700 | 2,560–2,645 m | wide row before the 2,700 m left-hander (−0.5) | 70 | -0.025 | 0.014 | 0 | n/s | superseded | by the planned line (v1.11) |
+| v1.08 | **chosen** | 770 m, 1,042 m, 1,528 m, 1,931 m, hairpin | turn table: no bend detection before a known turn-in point; hairpin corner row −3 → −9 | 70 (full) | -0.249 | 0.017 | 0 of 70 | 0.848 (bm14) | kept | every row inert since v1.14 |
+| v1.08 | braketable | seven zones | braking table, deceleration factor ×1.15 | 70 | – | – | 13–15 of 70 | – | lost | |
+| v1.08 | zonegain | braking zones | per-zone `brake_gain` ×1.5 | 70 | +0.112 | n/s | n/s | n/s | lost | |
+| v1.08 | hairpin-split | hairpin | split hairpin rows (more plan speed inside the bend) | n/s | – | – | wide / off | 0.83 / 0.998 | lost | |
+| v1.09 | **chosen** | 1,931 m | corner row +17 → +29 and turn-in end 1,891 → 1,888 m, tuned together | 70 (full) | -0.113 | 0.010 | 0 of 70 | 0.807 @ flick | kept | cliffs: +35 km/h 3 of 70 off; row end 1,885 m 0.969 |
+| v1.09 | hairpin-pull | hairpin | in-bend inside target | 70 | -0.022 | 0.004 | 0 | n/s | superseded | by the hairpin on the planned line (v1.14) |
+| v1.09 | tc-table | flick exit, 2,495–2,620 m | traction table: `tc_slip_straight` +3 there | 70 | -0.033 | 0.009 | 0 | unchanged | open | not re-measured on the planned line (plan rank 9) |
+| v1.09 | flick-row | flick left arc | corner row −4 / −8 | 70 | +0.109 / +0.201 | n/s | 0 | n/s | lost | |
+| v1.09 | offsets | 1,042 / 1,528 / 2,700 / 2,988 m | corner offsets alone | 70 | flat or slower | n/s | 0 | n/s | lost | they paid with wide entries (v1.10) and on the planned line (v1.12) |
+| v1.10 | **chosen** | 1,528 m, 2,988 m | wide entry row + corner offset + turn-in point, tuned together per bend | 70 (full) | -0.146 | 0.010 | 0 of 70 | 0.805 | kept | no margin spent (largest of the 70: 0.807 → 0.805) |
+| v1.10 | row-alone | 1,528 m, 2,988 m | the line row alone | 70 | -0.014 / +0.422 | n/s | 0 | n/s | lost | works only as the combination |
+| v1.10 | transfer | 1,042 m, 770 m, flick approach | the same combination elsewhere | 70; 4 (flick) | flat or slower; -0.025 at best; -0.025 at best | n/s | 0 | 0.06 of margin (flick) | lost | |
+| v1.11 | **chosen** | 60–2,150 m, 2,600–3,160 m | planned line (track memory; set by the user): offline racing line followed by direction of travel + position error + curvature feed-forward; its speed as a cap | 70 (full) | -1.645 | 0.017 | 0 of 70 | 0.849 @ flick (bm14) | kept | the largest gain of the project |
+| v1.11 | lapwide | whole lap | the line everywhere | single laps | – | – | run ends at the 2,351 m crest above ~255 km/h; wall at −0.85 near 2,490 m | – | lost | overturned by v1.14 (hairpin) and v1.15 (flick): it lacked the line's side before the crest, a crest cap and the v1.13 follower |
+| v1.11 | nose-heading | follower | heading from the nose instead of the direction of travel | n/s | – | – | off at 566 m | 0.3 wide of the line | lost | |
+| v1.11 | slip-unlimited | follower | slip angle unlimited (`plan_slipmax`) | 70; 12 | – | – | 38 of 70; 3 of 12 | – | lost | cliff |
+| v1.11 | nocap | line's speed | no speed cap from the line | n/s | – | – | n/s | 20 km/h over at 450 m | lost | |
+| v1.12 | **chosen** | 1,042 / 1,931 / 2,600 / 2,700 / 2,988 m | corner table re-tuned on the planned line: rows +24 to +40 km/h and 35–45 m longer | 70 (full) | -1.304 | 0.018 | 0 of 70 | 0.844 @ flick (bm14) | kept | follower check 0 of 140 off, worst 0.821 @ 1,931 m |
+| v1.12 | cliffs | corner rows | 1,042 m +70 / +85; 1,931 m +99 / +109; 446 m new row +10; 2,700 m +62; 2,988 m +65 | 12 (screen) | – | – | +85: 12 of 12; +109: 5 of 12; 446 m +10: 1 of 12 | 0.945 (+70); 0.91 (+99); 0.925 @ 2,801 m; 0.845 | lost | the measured steps before each cliff |
+| v1.12 | rowends | corner rows | row ends and starts ±15 m | 12 (screen) | within 0.03 | n/s | 0 | n/s | lost | no knife edges on the planned line |
+| v1.12 | follower-ready | follower | `plan_ff` 8.8; `plan_ffv` 1e-3; `plan_kp` 0.4; `plan_la` 0.2 (suite 1, base 69.614) | 10 each | means 69.306; 69.376; 69.390; 69.511 | n/s | 0 | 0.819; 0.821; 0.817; n/s | taken | became v1.13 (one lever: they overlap) |
 | v1.13 | **chosen** | follower, whole line | `plan_ff` 8.0 → 12 with `plan_ffv` 9e-4 → 6e-4 (more feed-forward at low speed, less growth with speed) | 70 (full) | -0.351 | 0.013 | 0 of 70 | 0.851 @ 1,931 m | kept | all follower knobs are one lever against the inside of the 1,931 m apex; flat on v1.13 afterwards |
 | v1.13 | ff14 | follower | `plan_ff` 14 / `plan_ffv` 5e-4 (runner-up) | n/s | -0.066 more than the chosen | n/s | 0 | 0.864 @ 490 m | lost | spends margin at 490 m for a small gain |
 | v1.13 | steercap | steering cap in the zones | `steer_cap` 0.55 / 0.70 / 0.80 inside the line zones | 12 (screen) | about ±0.01 | n/s | 0 | n/s | lost | the cap is not a limit on the line (fronts saturated at 2,700 m) |
