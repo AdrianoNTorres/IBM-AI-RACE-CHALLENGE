@@ -6,7 +6,7 @@
 
   /* One step. tab: the page it needs; sel: the element it points at; side: where the card prefers to sit;
      click: a control pressed first (a sub-tab) unless it is already on; sideTab: a tab of the Track page's side panel,
-     by its label; det: only in the detailed view; opt: left out when its element is not on screen. */
+     by its label; loop: a stretch played on a loop while the step shows, as shares of the lap; det: only in the detailed view; opt: left out when its element is not on screen. */
   const SIDE = '#side .sidebody', SIDE_TABS = { view: 'Camera', cars: 'Cars', layers: 'Layers', sectors: 'Sectors', help: 'Help' };
   const GENERAL = [
     { tab: 'pv', sel: '.tiles', title: 'The project at a glance',
@@ -18,7 +18,9 @@
     { tab: 'pv', sel: '#vside', side: 'left', title: 'What changed, and why',
       text: 'The panel explains what the selected version changed, why it was tried and what was decided. “Replay on the track” plays its lap.' },
     { tab: 'pm', sel: '#mapwrap', side: 'inside', title: 'The replay',
-      text: 'The car drives its recorded lap. The coloured path is the line it took; the lines fanning out from the car are its distance sensors. Drag to move the map, use the wheel to zoom, double-click to return to the car.' },
+      text: 'The car drives its recorded lap. The coloured path is the line it took; the lines fanning out from the car are its distance sensors. Drag beside the road to move the map, use the wheel to zoom, double-click to return to the car.' },
+    { tab: 'pm', sel: '#mapwrap', side: 'inside', loop: [0.62, 0.76], title: 'Loop one part of the track',
+      text: 'Drag along the road, from where a stretch begins to where it ends: that stretch plays on a loop and the rest of the map is dimmed, as it is now. Press Esc or the “Loop” button in the bar below to end it. Dragging beside the road moves the map.' },
     { tab: 'pm', sel: '#bar', side: 'top', title: 'Play, pause and step',
       text: 'Play or pause here, or press Space. The arrow keys move one step at a time; hold one to play slowly. Drag the slider to jump anywhere in the lap.' },
     { tab: 'pm', sel: '#side', side: 'left', title: 'Camera, layers and help',
@@ -26,7 +28,7 @@
     { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'A second look at the same lap',
       text: '“+ Track window” opens another view of the replay in a window over the map, with its own camera and layers. Up to four can be open.' },
     { tab: 'pt', sel: '#pt', side: 'inside', title: 'Telemetry',
-      text: 'Speed, throttle and brake along the lap. Click a chart to move the car to that point. With several versions selected, their lines are drawn together so you can see where one gains on another.' },
+      text: 'Speed, throttle and brake along the lap. Click a chart to move the car to that point; drag across one to play that stretch on a loop. With several versions selected, their lines are drawn together so you can see where one gains on another.' },
     { sel: '#viewsw', title: 'Two levels of detail',
       text: 'Basic view explains things in plain language and shows the main controls. Detailed view adds the technical record, every channel, sector times and all the controls.' },
     { sel: '#settingsTab', title: 'Settings',
@@ -53,21 +55,25 @@
     { tab: 'pv', sel: '#bulkBar', side: 'top', title: 'Load everything, or add your own',
       text: 'A recording is fetched when you first choose its version. “Load all versions” fetches every recording at once, which fills in the rankings. “+ Add versions” is for putting in a lap of your own; you will not need it to look around.' },
     { tab: 'pm', sel: '#mapwrap', side: 'inside', title: 'Watch the lap',
-      text: 'This is the track seen from above, with the car driving the lap exactly as it was recorded. The coloured trail is where it drove: red where it was slow, green where it was fast. Drag the map to move it, roll the mouse wheel to zoom, double-click to go back to the car.' },
-    { tab: 'pm', sel: '#bar', side: 'top', title: 'Play, pause, rewind',
-      text: 'Works like a video player. Play or pause with the button or the Space key. The arrow buttons move one small step; hold one for slow motion. Drag the slider to jump to any part of the lap, and change “Speed” to watch faster or slower.' },
+      text: 'This is the track seen from above, with the car driving the lap exactly as it was recorded. The coloured trail is where it drove: red where it was slow, green where it was fast. Drag beside the road to move the map, roll the mouse wheel to zoom, double-click to go back to the car.' },
+    { tab: 'pm', sel: '#mapwrap', side: 'inside', loop: [0.62, 0.76], title: 'Watch one corner again and again',
+      text: 'Want a closer look at one part? Press the mouse button on the road where the part begins, drag along the road to where it ends, and let go. Only that part now plays, over and over, and the rest of the map goes darker, as you see here. The “Loop” button that appears in the bar below, or the Esc key, ends it.' },
     { tab: 'pm', sel: '#win-hud', opt: true, title: 'The numbers of the moment',
       text: 'How fast the car is going right now, how far round the lap it is and what it is doing: braking, coasting or on the throttle. The detailed view adds more numbers here.' },
-    { tab: 'pm', sel: '#win-inputs', side: 'top', opt: true, title: 'Steering wheel and pedals',
-      text: 'The wheel turns as the car steers. The two bars are the brake and the throttle: the fuller the bar, the harder the pedal is pressed.' },
     { tab: 'pm', sel: '#win-mini', opt: true, title: 'Where on the track',
       text: 'A small map of the whole track with a dot for the car, so you never lose your place when the big map is zoomed in.' },
     { tab: 'pm', sel: '#win-sectorLive', opt: true, title: 'The lap in three parts',
       text: 'The lap is split into three sectors. As the car finishes each one, its time appears here, next to the time of the fastest lap ever recorded. Green means quicker, red means slower.' },
     { tab: 'pm', sel: '#win-lapDeltaBar', opt: true, title: 'Ahead or behind',
       text: 'One bar per car. It shows how far ahead of (green) or behind (red) the fastest recorded lap that car is at this exact point of the track.' },
+    { tab: 'pm', sel: '#win-inputs', side: 'top', opt: true, title: 'Steering wheel and pedals',
+      text: 'The wheel turns as the car steers. The two bars are the brake and the throttle: the fuller the bar, the harder the pedal is pressed.' },
+    { tab: 'pm', sel: '#bar', side: 'top', title: 'Play, pause, rewind',
+      text: 'Works like a video player. Play or pause with the button or the Space key. The arrow buttons move one small step; hold one for slow motion. Drag the slider to jump to any part of the lap, and change “Speed” to watch faster or slower.' },
     { tab: 'pm', sel: '#win-leg', side: 'left', opt: true, title: 'What the colours mean',
       text: 'The key to the colours on the map. Every box on the map, this one included, can be dragged somewhere else, made bigger from its corner, folded or closed.' },
+    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Two views at once',
+      text: '“+ Track window” opens a second, smaller view of the same lap on top of the map. Keep one zoomed in on the car and one showing the whole track, for example. Up to four can be open, and each closes with its ×.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Camera', side: 'left', title: 'How the camera follows',
       text: 'Choose whether the view follows the car, and whether the map turns so the car always drives up the screen. “Back to the car” and “Whole track” get you home if you are lost.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Cars', side: 'left', title: 'The cars on the track',
@@ -76,10 +82,8 @@
       text: 'Everything drawn on the map has a switch here: the trail, the sensor lines, the distance marks and more. Turn off what you do not need; you can always turn it back on.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Sectors', side: 'left', det: true, title: 'Sector times',
       text: 'The times of the three parts of the lap for the cars shown, so you can tell in which part one version beats another.' },
-    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Two views at once',
-      text: '“+ Track window” opens a second, smaller view of the same lap on top of the map. Keep one zoomed in on the car and one showing the whole track, for example. Up to four can be open, and each closes with its ×.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="charts"]', title: 'The lap as charts',
-      text: 'Each chart runs from the start line on the left to the finish on the right. The top one is speed: valleys are corners, peaks are straights. Click anywhere on a chart and the car jumps to that spot on the track.' },
+      text: 'Each chart runs from the start line on the left to the finish on the right. The top one is speed: valleys are corners, peaks are straights. Click anywhere on a chart and the car jumps to that spot on the track; drag across a chart and that part plays on a loop, just as on the map.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="summary"]', title: 'The lap in a few numbers',
       text: 'The summary gives the lap time, the top speed, the slowest corner and how much of the lap was spent braking or at full throttle, for every chosen version.' },
     { sel: '#viewsw', title: 'Simple or detailed',
@@ -107,18 +111,22 @@
       text: 'Lap, gap to the best so far and to the last kept version, top speed, slowest corner, damage, closest approach to the track edge and where, braking and full-throttle share. Below: sector times against the previous best, then the changelog entry itself (what changed, why, observed, decision, learned).' },
     { tab: 'pm', sel: '#mapwrap', side: 'inside', title: 'The replay',
       text: 'The track is rebuilt from its definition file and the car is placed from the recorded distance along the track, its sideways position and its angle. The driven line runs red (slowest) to green (fastest); the 19 beams run to the track edge they measured, pink when it is close and cyan when it is far.' },
-    { tab: 'pm', sel: '#bar', side: 'top', title: 'Transport',
-      text: 'Play and pause, single steps, and slow motion while a step key is held (0.1×, then 0.25×, then 0.5×). Speed runs from 0.1× to 4×. “Auto loop” repeats the lap; dragging across a telemetry chart loops just that section until you end the loop.' },
+    { tab: 'pm', sel: '#mapwrap', side: 'inside', loop: [0.62, 0.76], title: 'Loop a section',
+      text: 'Drag along the road to pick a stretch: it plays on a loop with the rest of the map dimmed (how dark is under Settings, Replay), and the charts mark the same stretch. Dragging across a telemetry chart does the same. The loop chip in the bar, or Esc, ends it; a drag that starts beside the road moves the map instead.' },
     { tab: 'pm', sel: '#win-hud', opt: true, title: 'Readout',
       text: 'Speed, gear, distance from the start line, the speed the driver’s plan allows at this point, track position (0 is the centre, ±1 the edges) and the range of the beams. It shows the car in focus only.' },
-    { tab: 'pm', sel: '#win-inputs', side: 'top', opt: true, title: 'Wheel and pedals',
-      text: 'Steering, brake and throttle of every car shown, as sent to the simulator at this step, with a short trace of the last seconds: on-off pedal work and steering reversals show up here first.' },
+    { tab: 'pm', sel: '#win-mini', opt: true, title: 'Panels are windows',
+      text: 'Readout, overview map, colour keys, wheel and pedals, sector table and delta bar are all windows: drag to move, resize by the corner grip, fold, close, or send back to place. Their switches and opacity are in the Layers tab; positions are saved in this browser.' },
     { tab: 'pm', sel: '#win-sectorLive', opt: true, title: 'Live sector table',
       text: 'Sector times of the car in focus as it passes each sector line, against the fastest lap recorded. The fastest lap itself is compared with the next fastest.' },
     { tab: 'pm', sel: '#win-lapDeltaBar', opt: true, title: 'Lap delta bar',
       text: 'Every selected car against the fastest lap recorded, as a time gap at the same point of the track: green ahead, red behind. Watching it through a corner shows whether time is won on entry or on exit.' },
-    { tab: 'pm', sel: '#win-mini', opt: true, title: 'Panels are windows',
-      text: 'Readout, overview map, colour keys, wheel and pedals, sector table and delta bar are all windows: drag to move, resize by the corner grip, fold, close, or send back to place. Their switches and opacity are in the Layers tab; positions are saved in this browser.' },
+    { tab: 'pm', sel: '#win-inputs', side: 'top', opt: true, title: 'Wheel and pedals',
+      text: 'Steering, brake and throttle of every car shown, as sent to the simulator at this step, with a short trace of the last seconds: on-off pedal work and steering reversals show up here first.' },
+    { tab: 'pm', sel: '#bar', side: 'top', title: 'Transport',
+      text: 'Play and pause, single steps, and slow motion while a step key is held (0.1×, then 0.25×, then 0.5×). Speed runs from 0.1× to 4×. “Auto loop” repeats the lap; while a section is looped, its chip appears here and ends the loop.' },
+    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Track windows',
+      text: 'Up to four more views of the same replay, in windows over the map. Each has its own camera, layers, path colour and cars; “Settings of” beside this button chooses which view the side panel changes. A common set-up is one window per compared car, each following its own.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Camera', side: 'left', title: 'Camera',
       text: 'Follow car, car points up (the map rotates so the car in focus drives toward the top), keep all cars in view, and the jumps back to the car or to the whole track. Camera movement is smoothed, so a follow view does not shake with the steering.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Cars', side: 'left', title: 'Cars',
@@ -127,10 +135,8 @@
       text: 'Every drawing on the map is a layer with a switch and an opacity: track, car and path, sensors, compared runs, and the analysis layers that mark problem areas and how accurately a run held the reference line. “Path colour” above switches the driven line between speed and braking.' },
     { tab: 'pm', sel: SIDE, sideTab: 'Sectors', side: 'left', title: 'Sectors and problem areas',
       text: 'Sector times for the cars shown and where each loses time to the fastest lap. The limits that decide what counts as a problem area are a share of the lap time, so they keep their meaning on a shorter or longer track.' },
-    { tab: 'pm', sel: '#twAdd', side: 'left', opt: true, title: 'Track windows',
-      text: 'Up to four more views of the same replay, in windows over the map. Each has its own camera, layers, path colour and cars; “Settings of” beside this button chooses which view the side panel changes. A common set-up is one window per compared car, each following its own.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="charts"]', title: 'Channels along the lap',
-      text: 'Speed, throttle, brake, steering, track position and gear against distance. Wheel zooms the distance axis, drag pans, click moves the car there, double-click shows the whole lap. One run is coloured by value; compared runs get one solid colour each.' },
+      text: 'Speed, throttle, brake, steering, track position and gear against distance. Drag loops that section, Shift-drag pans, wheel zooms the distance axis, click moves the car there, double-click shows the whole lap. One run is coloured by value; compared runs get one solid colour each.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="summary"]', title: 'Summary',
       text: 'The lap figures of every selected run in one table: lap, top speed, slowest corner, share of the lap braking and at full throttle.' },
     { tab: 'pt', sel: '#pt', side: 'inside', click: '#ttabs button[data-t="sectors"]', title: 'Sector times',
@@ -156,11 +162,19 @@
   };
   RV.TOUR_NAMES = { general: TOURS.general.name, beginner: TOURS.beginner.name, advanced: TOURS.advanced.name };
 
-  let at = -1, open = false, lastFocus = null, which = 'general', STEPS = GENERAL, saved = null;
+  let at = -1, open = false, lastFocus = null, which = 'general', STEPS = GENERAL, saved = null, looping = false;
   const root = () => $('tour'), hole = () => $('tourHole'), card = () => $('tourCard');
   const shown = el => !!el && el.getClientRects().length > 0;
 
+  /* the step about looping shows a loop; it ends with the step */
+  function demoLoop(st) {
+    if (looping) { RV.play.setLoop(null); looping = false; }
+    if (!st || !st.loop || !S.R || !S.R.total) return;
+    const L = [st.loop[0] * S.R.total, st.loop[1] * S.R.total];
+    RV.play.setLoop(L); RV.play.go(RV.idxAtD(S.R, L[0])); RV.play.set(true); looping = true;
+  }
   function done() {
+    demoLoop(null);
     open = false; at = -1;
     root().hidden = true;
     if (!RV.prefs.tutorialDone) { RV.prefs.tutorialDone = true; RV.savePrefs(); }   /* any one of the three counts */
@@ -275,6 +289,7 @@
     }
     if (k > STEPS.length || (k === STEPS.length && which !== 'general')) { done(); RV.showTab('pv'); return; }
     at = k;
+    demoLoop(STEPS[k]);
     if (k < 0) return intro();
     if (k === STEPS.length) return outro();
     const st = STEPS[k], last = k === STEPS.length - 1 && which !== 'general';

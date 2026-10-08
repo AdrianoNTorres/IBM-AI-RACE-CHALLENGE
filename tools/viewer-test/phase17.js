@@ -6,12 +6,12 @@ let bad = 0;
 const ok = (name, pass, info) => { console.log((pass ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '   ' + JSON.stringify(info) : '')); if (!pass) bad++; };
 const state = `(() => { const h = document.getElementById('tourHole').getBoundingClientRect(), c = document.getElementById('tourCard').getBoundingClientRect();
   return { open: RV.tutorial.isOpen(), title: (document.getElementById('tourTitle') || {}).innerText, count: (document.querySelector('.tour-count') || {}).innerText || '',
-    hole: Math.round(h.width) + 'x' + Math.round(h.height), inside: c.left >= 0 && c.top >= 0 && c.right <= innerWidth + 1 && c.bottom <= innerHeight + 1 }; })()`;
+    loop: !!RV.S.loop, x: Math.round(h.left + h.width / 2), hole: Math.round(h.width) + 'x' + Math.round(h.height), inside: c.left >= 0 && c.top >= 0 && c.right <= innerWidth + 1 && c.bottom <= innerHeight + 1 }; })()`;
 const click = id => `document.getElementById('${id}').click()`;
 
 async function run(p, id, view, shots) {
   await p.ev(`RV.tutorial.start(true, '${id}')`); await p.sleep(300);
-  const seen = [], noTarget = [], outside = [];
+  const seen = [], noTarget = [], outside = [], loops = [], xs = [];
   for (let n = 0; n < 45; n++) {
     const s = await p.ev(state);
     if (!s.open) break;
@@ -19,12 +19,18 @@ async function run(p, id, view, shots) {
     const isStep = /step \d+ of/i.test(s.count);
     if (isStep && s.hole === '0x0') noTarget.push(s.title);
     if (!s.inside) outside.push(s.title);
+    if (s.loop) { loops.push(s.title); await p.sleep(500); await p.shot('phase17-' + id + '-' + view + '-loop'); }
+    if (isStep && /Track/.test(await p.ev("document.querySelector('.tab.on').innerText"))) xs.push(s.x);
     if (shots && shots.includes(n)) await p.shot('phase17-' + id + '-' + view + '-' + n);
     await p.ev(click('tourNext')); await p.sleep(260);
   }
   ok(id + ' in the ' + view + ' view runs to its end', !(await p.ev('RV.tutorial.isOpen()')) && seen.length > 5, seen.length + ' cards');
   ok(id + ' in the ' + view + ' view: every step points at something', noTarget.length === 0, noTarget);
   ok(id + ' in the ' + view + ' view: every card is inside the window', outside.length === 0, outside);
+  ok(id + ' in the ' + view + ' view: one step shows a looped section, and the loop ends with it', loops.length === 1 && !(await p.ev('!!RV.S.loop')), loops);
+  /* on the Track page the steps go left, then right: the eye does not travel back */
+  let back = 0; for (let i = 3; i < xs.length; i++) if (xs[i] < xs[i - 1] - 400) back++;
+  ok(id + ' in the ' + view + ' view: the Track steps do not jump back to the left', back === 0, xs);
   return seen;
 }
 
@@ -34,7 +40,7 @@ async function run(p, id, view, shots) {
     await p.until('RV.S.ds && RV.S.R'); await p.sleep(400);
     const side0 = await p.ev('RV.S.sideTab');
     const g = await run(p, 'general', view, view === 'detailed' ? [0, 8, 13] : [0]);
-    const b = await run(p, 'beginner', view, view === 'basic' ? [0, 3, 12, 17] : [14]);
+    const b = await run(p, 'beginner', view, view === 'basic' ? [0, 11, 13, 16] : [14]);
     const a = await run(p, 'advanced', view, view === 'basic' ? [0, 3, 19, 23] : [12, 26]);
     console.log('  cards:', g.length, b.length, a.length);
     ok(view + ': the view and the side panel are as they were', (await p.ev('RV.prefs.view')) === view && (await p.ev('RV.S.sideTab')) === side0, [await p.ev('RV.prefs.view'), await p.ev('RV.S.sideTab')]);
