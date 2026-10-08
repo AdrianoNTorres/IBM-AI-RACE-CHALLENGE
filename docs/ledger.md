@@ -277,3 +277,37 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.24 | B_vd10 | reference | v1.23 read 10 m early | 12 (screen) | +0.412 | 0.014 | 0 of 12 | 0.875 @ 767 m | lost | reference: 770 m 0.875, 1,528 m 0.862, 1,634 m exit 0.778 |
 | v1.24 | B_vd-5 | reference | v1.23 read 5 m late | 12 (screen) | +0.252 | 0.007 | 0 of 12 | 0.859 @ 1,932 m | lost | reference: 1,931 m 0.859 |
 | v1.24 | B_vd-10 | reference | v1.23 read 10 m late | 12 (screen) | +0.676 | 0.006 | 0 of 12 | 0.871 @ 840 m | lost | reference: 839 m 0.871 |
+| v1.25 | **chosen** | see title | The 1,931 m bend on a line that goes where the car goes: the planned apex moves from 0.65 to 0.45 of the half-width and the bend is taken at 245 km/h instead of 201 | 70 (full) | -0.494 | 0.004 | 0 of 70 | 0.841 @ 2,804 m | kept | Passes every item of the bar: 0.494 s over 70 runs (SE 0.004), 70 of 70 faster, the largest single gain since v1.12. No margin spent: every group's worst run is at or below the base's (all-30 0.841 for 0.846, bm14 0.828 for 0.854, lo05 0.828 for 0.838, follower check 0.852 at 1,035 m for 0.881 at 1,932 m, braking-plan 0.875 for 0.875, launch 0.828 for 0.829, gears 0.853 for 0.850, a single run at the 2,700 m exit). The 1,931 m apex stops being the margin place of the suites (0.760) and the exit goes to 0.744. Rule 1: both parts measured alone: the line alone +0.019 s with the apex at 0.705 (`LB45`); the row alone at +110 leaves the track at the apex on 12 of 12 runs (`R110`), at +85 -0.194 s at 0.945 (`R85`). The value is two measured steps below the last setting on the track (+120: exit 0.81, +130: 0.885; +145: 12 of 12 off at the exit, measured with the apex zone 15 m earlier). |
+| v1.25 | LB45 | 1,931 m line | enabling part alone: the chosen stretch (apex limit 0.45 at 1,915-1,980 m), row +65 | 12 (screen) | +0.019 | 0.008 | 0 of 12 | 0.828 @ 2,804 m | lost | the line alone costs 0.02 s; apex 0.705 (base 0.835), exit 0.478 |
+| v1.25 | R110 | 1,931 m row | the value alone: row +110 on v1.24's line | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run leaves the track at the inside of the apex |
+| v1.25 | R70 | 1,931 m row | row +70 on v1.24's line | 12 (screen) | -0.057 | 0.009 | 0 of 12 | 0.882 @ 1,932 m | lost | apex 0.882 |
+| v1.25 | R75 | 1,931 m row | row +75 on v1.24's line | 12 (screen) | -0.121 | 0.009 | 0 of 12 | 0.890 @ 1,932 m | lost | apex 0.890 |
+| v1.25 | R85 | 1,931 m row | row +85 on v1.24's line | 12 (screen) | -0.194 | 0.009 | 0 of 12 | 0.945 @ 1,932 m | lost | apex 0.945: the row spends the inside edge on the old line |
+| v1.25 | LB45R110 | 1,931 m line + row | the chosen on the screen | 12 (screen) | -0.496 | 0.011 | 0 of 12 | 0.828 @ 2,804 m | lost | apex 0.759, exit 0.701 |
+| v1.25 | LB45R110_ff+ | 1,931 m line + row | the chosen with `plan_ff` 13.2 | 12 (screen) | -0.561 | 0.010 | 0 of 12 | 0.852 @ 1,035 m | lost | apex 0.827, exit 0.518 (base with 13.2: apex 0.896) |
+| v1.25 | LB45R110_ff- | 1,931 m line + row | the chosen with `plan_ff` 10.8 | 12 (screen) | -0.270 | 0.007 | 0 of 12 | 0.843 @ 2,802 m | lost | apex 0.709, exit 0.740 |
+| v1.25 | LB45R115 | 1,931 m line + row | chosen line, row +115 | 12 (screen) | -0.519 | 0.008 | 0 of 12 | 0.827 @ 2,804 m | lost | 0.025 s more for exit 0.755 (apex 0.748): the next step, left for margin |
+| v1.25 | L50 | 1,931 m line | apex limit 0.50 at 1,900-1,965 m, row +65 | 12 (screen) | +0.040 | 0.006 | 0 of 12 | 0.831 @ 2,804 m | lost | apex 0.757 |
+| v1.25 | L45 | 1,931 m line | apex limit 0.45 at 1,900-1,965 m, row +65 | 12 (screen) | +0.034 | 0.008 | 0 of 12 | 0.829 @ 2,804 m | lost | apex 0.718 |
+| v1.25 | L40 | 1,931 m line | apex limit 0.40 at 1,900-1,965 m, row +65 | 12 (screen) | +0.059 | 0.007 | 0 of 12 | 0.827 @ 2,804 m | lost | apex 0.663, exit 0.568 |
+| v1.25 | B10 | 1,931 m line, bump | second design: cosine bump 0.10 outward on the followed line at 1,880-1,985 m, tables untouched | 12 (screen) | +0.051 | 0.009 | 0 of 12 | 0.824 @ 2,804 m | lost | apex 0.779: more cost for less room than the regenerated stretch |
+| v1.25 | B15 | 1,931 m line, bump | bump 0.15 | 12 (screen) | +0.073 | 0.007 | 0 of 12 | 0.820 @ 2,803 m | lost | apex 0.759 |
+| v1.25 | B20 | 1,931 m line, bump | bump 0.20 | 12 (screen) | +0.119 | 0.006 | 0 of 12 | 0.823 @ 2,805 m | lost | apex 0.710 |
+| v1.25 | L45R80 | 1,931 m line + row | zone 1,900-1,965 m at 0.45, row +80 | 12 (screen) | -0.168 | 0.011 | 0 of 12 | 0.829 @ 2,804 m | lost | apex 0.753, exit 0.560 |
+| v1.25 | L45R90 | 1,931 m line + row | row +90 | 12 (screen) | -0.277 | 0.008 | 0 of 12 | 0.828 @ 2,804 m | lost | apex 0.752, exit 0.649 |
+| v1.25 | L45R100 | 1,931 m line + row | row +100 | 12 (screen) | -0.382 | 0.008 | 0 of 12 | 0.825 @ 2,804 m | lost | apex 0.759, exit 0.701 |
+| v1.25 | L45R110 | 1,931 m line + row | row +110 | 12 (screen) | -0.495 | 0.005 | 0 of 12 | 0.829 @ 2,804 m | lost | apex 0.776, exit 0.761: the later zone is better on both sides |
+| v1.25 | L45R110_ff+ | 1,931 m line + row | `L45R110` with `plan_ff` 13.2 | 12 (screen) | -0.545 | 0.016 | 0 of 12 | 0.852 @ 1,035 m | lost | apex 0.841, exit 0.550 |
+| v1.25 | L45R110_ff- | 1,931 m line + row | `L45R110` with `plan_ff` 10.8 | 12 (screen) | -0.280 | 0.006 | 0 of 12 | 0.845 @ 2,802 m | lost | apex 0.726, exit 0.764 |
+| v1.25 | L45R115 | 1,931 m line + row | row +115 | 12 (screen) | -0.520 | 0.008 | 0 of 12 | 0.833 @ 2,804 m | lost | apex 0.768, exit 0.755 |
+| v1.25 | L45R120 | 1,931 m line + row | row +120 | 12 (screen) | -0.564 | 0.005 | 0 of 12 | 0.832 @ 2,804 m | lost | exit 0.812 |
+| v1.25 | L45R120_ff- | 1,931 m line + row | `L45R120` with `plan_ff` 10.8 | 12 (screen) | -0.364 | 0.020 | 0 of 12 | 0.867 @ 1,989 m | lost | exit 0.867 at 1,989 m |
+| v1.25 | L45R130 | 1,931 m line + row | row +130 | 12 (screen) | -0.608 | 0.017 | 0 of 12 | 0.885 @ 1,991 m | lost | exit 0.885, the car hardly brakes (262 km/h at the apex): last setting on the track |
+| v1.25 | L45R145 | 1,931 m line + row | row +145 | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run leaves the track at the exit (1,990 m) |
+| v1.25 | L40R95 | 1,931 m line + row | apex limit 0.40, row +95 | 12 (screen) | -0.295 | 0.007 | 0 of 12 | 0.827 @ 2,804 m | lost | slower than 0.45 at the same row; apex 0.729, exit 0.689 |
+| v1.25 | L40R115 | 1,931 m line + row | apex limit 0.40, row +115 | 12 (screen) | -0.510 | 0.007 | 0 of 12 | 0.833 @ 2,804 m | lost | apex 0.734, exit 0.819: too far out |
+| v1.25 | L50R105 | 1,931 m line + row | apex limit 0.50, row +105 | 12 (screen) | -0.452 | 0.010 | 0 of 12 | 0.826 @ 2,804 m | lost | apex 0.824: not far enough out |
+| v1.25 | L50R115 | 1,931 m line + row | apex limit 0.50, row +115 | 12 (screen) | -0.540 | 0.008 | 0 of 12 | 0.832 @ 2,804 m | lost | apex 0.830 |
+| v1.25 | LA45R115 | 1,931 m line + row | own: apex zone 15 m earlier (1,885-1,950 m), row +115 | 12 (screen) | -0.499 | 0.006 | 0 of 12 | 0.830 @ 2,804 m | lost | apex 0.815, exit 0.800: worse on both sides |
+| v1.25 | B_ff+ | reference | v1.24 with `plan_ff` 13.2 | 12 (screen) | -0.047 | 0.015 | 0 of 12 | 0.896 @ 1,932 m | lost | reference: 1,931 m apex 0.896 |
+| v1.25 | B_ff- | reference | v1.24 with `plan_ff` 10.8 | 12 (screen) | +0.195 | 0.006 | 0 of 12 | 0.843 @ 2,803 m | lost | reference: 1,931 m apex 0.788 |
