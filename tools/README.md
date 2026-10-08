@@ -25,6 +25,7 @@ without modifying it directly — each race gets a private copy.
 | Control-pattern check of a CSV | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |
 | Track-width use per corner | `python tools/width.py [runs/<file>.csv]` |
 | 70-run tail analysis + paired comparison | `python tools/tails.py --dir %TEMP%\x\cand [--pair %TEMP%\x\base]` |
+| Elevation profile from the track file: height, gradient, vertical curvature, banking, tyre load at the speed driven | `python tools/elevation.py [--csv runs/<file>.csv] [--range from:to] [--table elev.txt]` |
 | Offline racing line from the track's geometry (the driver's `plan_*` table) | `python tools/raceline.py [--limit 0.65] [--zone from:to:limit] [--csv runs/<file>.csv] [--table plan.txt]` |
 | Knob search with Optuna | `python tools/opt.py --knob tc_slip=2:3.5 --trials 40 --study tc` |
 | Record the chosen version | `python tools/finalize.py [--suite]` |
@@ -470,6 +471,46 @@ times only rank lines: they are not the car's lap time, and the "driven line" fi
 (1/km, + = left), speed limit (km/h). **Not modelled:** elevation (the crest at ~2,350 m damages the car
 above ~255 km/h; the Corkscrew drop), walls at the track's edge (right side at ~2,490 m) and the tyres'
 real limits, so the driver uses the table only inside its `plan_zones`.
+
+---
+
+## elevation.py — the track's elevation profile from the track file
+
+**What it does.** Rebuilds the height of the Corkscrew's centre line by `distFromStart` offline and prints,
+per 10 m, the height, the gradient, the vertical curvature and the banking; with a driven lap, also what they
+do to the car at the speed it had there. No race is run.
+
+    python tools/elevation.py                                       # extremes of height, gradient, curvature
+    python tools/elevation.py --csv runs/<lap>.csv                  # rows where the tyre load or the slope is large
+    python tools/elevation.py --csv runs/<lap>.csv --range 2300:2620   # every row of a stretch
+    python tools/elevation.py --table elev.txt                      # `plan_z` / `plan_kv` tables, one entry per 10 m
+
+Columns: `z` (m), `grade%` (+ = uphill), `kv 1/km` (+ = compression, − = crest), `bank` (degrees, + = left
+side high); with `--csv`: `km/h`, `load` = 1 + kv·v²/g (the share of the car's weight on the tyres),
+`dgrip%` = kv·v²/(g + 0.005·v²) (the change of the whole tyre load, downforce counted; `--aero` changes the
+0.005) and `dbrake` = g·grade (m/s², + = the slope helps braking). `--load` and `--grade` set which rows the
+short list shows; `--smooth` is the length the curvature is taken over (30 m).
+
+**Where it is used.** Before changing the stored speed (`plan_v`) or a corner row at a place: look up whether
+the car is light or heavy there and how steep the road is. v1.30 used it to move the braking for the flick
+into the compression at 2,335–2,358 m.
+
+**Why it exists.** `raceline.py` models a flat track, and until v1.30 the only elevation knowledge was a
+hand-set cap at "the crest" and hand-tuned Corkscrew entries. The user allowed the elevation to be memorised
+(2026-10-08). The profile showed that the crest at 2,351 m is a compression (where the car bottoms and is
+damaged) followed by a crest at 2,365–2,385 m.
+
+**Implementation.** Reads `C:\torcs\torcs\tracks\road\corkscrew\corkscrew.xml` and follows `track4.cpp`:
+a segment starts at the previous one's end height and ends at `z end` or start + length × `grade`; it is cut
+into profile steps (`profil steps length`), whose end heights lie on a cubic spline (`TrackSpline`) with the
+previous segment's end tangent and this segment's `profil end tangent`; banking runs linearly from
+`banking start` to `banking end`. Check: the lap is 3,608.45 m, the height runs from −2.6 m (3,390 m) to
+46.5 m (2,410 m) and closes to 0.00 m. The road between step ends is flat-faced, so the curvature is the
+change of the mean gradient over 15 m behind and ahead. `load` and `dgrip` use the speed of the first log row
+in each 10 m of the lap. Downforce per unit mass 0.005 m/s² per (m/s)² is from the car file (two wings
+4·1.23·area·sin(angle) = 1.83, ground effect about 1.4 N per (m/s)², 650 kg). **Not in it:** the kinks at the
+step joints (4–8 m apart), which the car feels as bumps, and the side slope across the road apart from the
+banking column.
 
 ---
 

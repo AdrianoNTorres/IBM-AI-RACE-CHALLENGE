@@ -14,6 +14,7 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 | **Two laps side by side** at marks: time difference, speed, gear, trackPos, throttle, brake (a folder = its unperturbed lap) | `python tools/lapdiff.py %TEMP%\vNNN\base %TEMP%\vNNN\A 2600 2900 10` |
 | Every gear change of a lap and the stints shorter than 1 s | `python tools/gears.py %TEMP%\vNNN\A` (or a CSV) |
 | Step trace of a run against the planned line and its speed | `python tools/trace.py <csv> 2200 2640 [step] [--driver a.py]` |
+| **Elevation by place** (from the track file, no race): height, gradient, vertical curvature, banking and, with a lap, the tyre load and slope effect at the speed driven; `--range from:to` for every row of a stretch | `python tools/elevation.py --csv runs/<lap>.csv [--range 2300:2620]` |
 | What was measured before (one short row per candidate, all versions) | `grep -i "plan_ff\|1,931" docs/ledger.md` |
 | Races are cached (same driver text + overrides = no race); `--no-cache` to race anyway | `python tools/race.py --cache-info` |
 | One race, current driver (or with overrides) | `python tools/race.py [--set knob=value ...] [--keep out.csv]` |
