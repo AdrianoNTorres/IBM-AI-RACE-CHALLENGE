@@ -81,3 +81,20 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.17 | guard-strong | guard | `plan_ek` 2 / 4 at `plan_vs` 1.04 | n/s | +0.5 to +1.0 | n/s | n/s | n/s | lost | cliff: `plan_ek` ≥ 2 |
 | v1.17 | vd-10 | 770 m stretch | `plan_vd` −10 with the 770 m stretch at 1.02 | 10 (suite 1) | – | – | 10 of 10 at 826 m | – | lost | why the 770 m entries are held at v1.16's speeds |
 | v1.17 | vd-12.5 | braking-plan check | `plan_vd` −12.5 | n/s | n/s | n/s | 0 | 0.986 @ 822 m | lost | cliff; the 770 m exit sets the braking-plan check |
+| v1.18 | **chosen** | see title | Throttle from the stored speed's slope (feed-forward throttle through each bend's slowest point): faster on the 70 runs, fails both plan checks | 70 (full) | -0.108 | 0.008 | 0 of 70 | 0.832 @ 1,932 m | rejected | The feed-forward throttle gains 0.11 s on the standard runs by spending the stored speed's margin at the exits: both plan checks fail, and every tamer setting that stays on the track is at 0.90-0.99 where v1.17 is at 0.88. |
+| v1.18 | S05 | plan_mem bends | feed-forward throttle, `plan_tk` 0.05, no cap, single lap | 1 (single) | -0.158 | n/a | 0 of 1 | 0.936 @ 2,804 m | lost | 0.936 at the 2,700 m exit on the standard lap |
+| v1.18 | S05nf | plan_mem bends | the same without the fade in the lift band, single lap | 1 (single) | n/a | n/a | 1 of 1 | none on track | lost | off the track on the standard lap |
+| v1.18 | S03 | plan_mem bends | `plan_tk` 0.03, no cap | 12 (screen) | -0.155 | 0.018 | 0 of 12 | 0.888 @ 1,107 m | lost | 0.888 at the 1,042 m exit |
+| v1.18 | S05m7 | plan_mem bends | `plan_tk` 0.05, `plan_tmax` 0.7 | 12 (screen) | -0.144 | 0.021 | 0 of 12 | 0.898 @ 2,804 m | lost | 0.898 at the 2,700 m exit |
+| v1.18 | S05m6 | plan_mem bends | `plan_tk` 0.05, `plan_tmax` 0.6 | 12 (screen) | -0.116 | 0.017 | 0 of 12 | 0.850 @ 2,803 m | lost | 0.850 at the 2,700 m exit |
+| v1.18 | S05m5 | plan_mem bends | `plan_tk` 0.05, `plan_tmax` 0.5 | 12 (screen) | -0.086 | 0.016 | 0 of 12 | 0.830 @ 1,931 m | lost | no wider on 12 runs; smaller gain than 0.04 |
+| v1.18 | S04m5 | plan_mem bends | `plan_tk` 0.04, `plan_tmax` 0.5 (the chosen setting, 12 runs) | 12 (screen) | -0.119 | 0.017 | 0 of 12 | 0.827 @ 1,931 m | lost | chosen; failed the plan checks on the full bar |
+| v1.18 | S05m5v103 | plan_mem bends | chosen mechanism with `plan_vs` 1.03 | 12 (screen) | -0.058 | 0.021 | 0 of 12 | 0.891 @ 2,803 m | lost | slower than 1.02, 0.891 at the 2,700 m exit |
+| v1.18 | S05m5l45 | plan_mem bends | chosen mechanism with `lift_pct` 4.5 | 12 (screen) | -0.108 | 0.025 | 0 of 12 | 0.864 @ 1,106 m | lost | 0.864 at the 1,042 m exit |
+| v1.18 | H2-05 | 2,700 m and 1,042 m | `plan_tk` 0.05, no cap, stored speed of both stretches 2 % lower | 12 (screen) | -0.120 | 0.028 | 0 of 12 | 0.844 @ 1,931 m | lost | same trade as the cap; not put through the checks |
+| v1.18 | P1042x102 | 1,042 m | handed down: stored speed of the 1,042 m bend x1.02, no new mechanism | 12 (screen) | -0.054 | 0.016 | 0 of 12 | 0.840 @ 1,932 m | lost | smaller gain, 0.840 at 1,931 m |
+| v1.18 | m3_vd=10 | 2,700 m exit | `plan_tmax` 0.3 with the stored speed read 10 m early | 12 (screen) | +0.186 | 0.020 | 0 of 12 | 0.903 @ 2,804 m | lost | 0.903 at 2,803 m (v1.17: 0.882) |
+| v1.18 | m3_vd=-10 | 770 m exit | `plan_tmax` 0.3 with the stored speed read 10 m late | 12 (screen) | +0.271 | 0.021 | 0 of 12 | 0.922 @ 823 m | lost | 0.922 at 823 m (v1.17: 0.880) |
+| v1.18 | m4_vs=1.04 | 2,700 m exit | `plan_tmax` 0.4 with `plan_vs` 1.04 | 12 (screen) | -0.025 | 0.018 | 0 of 12 | 0.966 @ 2,803 m | lost | 0.966 at 2,803 m |
+| v1.18 | Z_vd=-10 | 1,528 m exit | mechanism only at 90-1,750 m, stored speed read 10 m late | 12 (screen) | +0.243 | 0.020 | 0 of 12 | 0.988 @ 1,632 m | lost | 0.988 at 1,631 m |
+| v1.18 | f3_vd=10 | 2,700 m exit | fade over a third of the lift band, stored speed read 10 m early | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | 12 of 12 off |
