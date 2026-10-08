@@ -1,14 +1,15 @@
 # Run Viewer — Agent Handoff Document
 
 **Branch:** `viewer_no_login`
-**Last updated:** after Phase 16 (2026-10-07). **Next: Phase 17 (tutorials), only when the user says so.**
+**Last updated:** after Phase 17 (2026-10-08). **Phase 18 (3D) is skipped** (user, 2026-10-08: submission is 2026-10-11, rather skipped than half done). Nothing is next unless the user asks.
+**Data:** the changelog and the recordings come from `main`; after every new driver version run `git checkout main -- docs/CHANGELOG.md runs`, then `node tools/viewer-test/newdata.js vX.Y`, commit and push (done up to v1.28).
 **The GitHub login, the Repository page and the security pass (Phases 15.1 and 15.2) are not on this branch** (user, 2026-10-07: to be polished later). They are on `experimental_hosting` (tags `phase-15.1`, `phase-15.2`), to be merged back in later; this branch is `phase-15` plus Phase 15.3 and what came after. **The site is published from this branch since Phase 16** (user, 2026-10-07): `.github/workflows/pages.yml` and `RV.DEFAULT_LINK` / `RV.TRACK_URL` (`js/core.js`) name `viewer_no_login`. If the first deployment is refused, the branch has to be allowed once under Settings, Environments, github-pages, Deployment branches (the owner does that on GitHub).
 
 ---
 
 ## Start here
 
-Phases 1 to 16 are built, tested, tagged (`phase-1` ... `phase-16`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: **Phase 17** (tutorials), **Phase 18** (3D). Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
+Phases 1 to 17 are built, tested, tagged (`phase-1` ... `phase-17`) and live at `https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/`. What is left: **Phase 18** (3D), skipped. Their specification is `viewer/RACE_RUNNER_TASKS_ORDERED.md`; "What is left" at the end of this file says how each stands and what to watch for.
 
 Read, in this order: this section; "What is left"; the phase you are about to build in `RACE_RUNNER_TASKS_ORDERED.md`; `tools/viewer-test/README.md`. Read the sections on finished phases only when you touch that code.
 
@@ -253,7 +254,7 @@ The user wants a login page with GitHub as the recommended login, so that an ent
 
 ### Phase 17: tutorials
 
-The tour is `js/tutorial.js` (eleven steps, `STEPS`). Wanted: a chooser before step 1 and again at the end (general / beginner / advanced), a beginner tutorial (all features, simple, more depth) and an advanced one (all features, technical). Write them last, against the page as it then is (the track windows of Phase 16 belong in all three); the Help page (`js/help.js`) has the current descriptions of everything.
+**Done (tag `phase-17`).** `js/tutorial.js` holds one engine and three step lists (`TOURS`): `general` "Quick tour" (12 steps), `beginner` "First lap" (26), `advanced` "Full telemetry" (28, runs in the detailed view and puts the view back). `RV.tutorial.start(welcome, id)`. The first and the last card of the quick tour offer the other two (`.tour-offers`); Help, Start here has a button for each. Ending any one sets `tutorialDone` (user, 2026-10-08). A step may press a sub-tab first (`click`, `sideTab`), is left out when its element is not on screen (`opt`) or in the basic view (`det`). The names are working names the user may change (`TOURS[..].name`, used everywhere through `RV.TOUR_NAMES`). When a feature changes, change its step in all three lists; `node tools/viewer-test/phase17.js` fails on a step that points at nothing.
 
 ### Phase 18: 3D
 

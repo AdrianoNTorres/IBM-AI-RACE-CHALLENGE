@@ -583,6 +583,10 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 #tourCard h2 { font-size: 22px; margin-bottom: 8px; } #tourCard p { line-height: 1.55; } #tourCard .note { margin: 10px 0 0; }
 .tour-count { font: 600 12px var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
 .tour-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; } .tour-acts .ghost { margin-left: auto; }
+/* the other tutorials, offered on the first and last card of the quick tour: a question and the button that answers it */
+.tour-offers { margin-top: 16px; border-top: 1px solid var(--line); }
+.tour-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.tour-offer span { flex: 1 1 150px; color: var(--ink); font-weight: 600; line-height: 1.35; }
 
 /* ---------- replay bar, tooltip, toast ---------- */
 #bar { display: none; gap: 10px; align-items: center; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--line); }

@@ -70,8 +70,8 @@
     const out = [], ds = S.ds, k = s => '<kbd>' + s + '</kbd>';
     const card = (title, body) => { out.push([title, body]); return ''; };
     void ('' +
-      card('New here?', '<p>The tutorial walks through the three pages in about a minute and points at each part of the screen in turn.</p>' +
-        '<div class="acts"><button class="btn prim" id="hTour">Redo the tutorial</button></div>') +
+      card('New here?', '<p>Three tutorials point at each part of the screen in turn. The <b>' + RV.TOUR_NAMES.general + '</b> shows where things are, in about a minute. <b>' + RV.TOUR_NAMES.beginner + '</b> goes through every feature in plain words. <b>' + RV.TOUR_NAMES.advanced + '</b> goes through every feature in technical detail, in the detailed view.</p>' +
+        '<div class="acts"><button class="btn prim" id="hTour">Redo the ' + RV.TOUR_NAMES.general.toLowerCase() + '</button><button class="btn" id="hTourB">' + RV.TOUR_NAMES.beginner + ' tutorial</button><button class="btn" id="hTourA">' + RV.TOUR_NAMES.advanced + ' tutorial</button></div>') +
       card('What this site is', '<p>The run viewer replays the laps of a self-driving racing car in the simulator ' + RV.TORCS + '. The car\u2019s driver is a set of hand-written rules that was improved one version at a time; each version drove one measured lap, and each was either kept or rejected.</p>' +
         '<p>The site only reads data. It changes nothing in the source, and nothing you open is uploaded anywhere. Your settings are saved in this browser.</p>') +
       card('The pages', '<dl class="helpdl">' +
@@ -157,6 +157,8 @@
     box.querySelectorAll('.helpnav button[data-v]').forEach(b => { b.onclick = () => { query = ''; S.helpTab = b.dataset.v; RV.uiSet('helpTab', S.helpTab); render(); box.scrollTop = 0; }; });
     box.querySelectorAll('#sGuide button').forEach(b => { b.onclick = () => { S.guideTab = b.dataset.v; render(); }; });
     if ($('hTour')) $('hTour').onclick = () => RV.tutorial.start(true);
+    if ($('hTourB')) $('hTourB').onclick = () => RV.tutorial.start(true, 'beginner');
+    if ($('hTourA')) $('hTourA').onclick = () => RV.tutorial.start(true, 'advanced');
     if ($('hFormat')) $('hFormat').onclick = () => open('format');
     if ($('hKeys')) $('hKeys').onclick = () => { S.setTab = 'controls'; RV.showTab('ps'); };
   }
