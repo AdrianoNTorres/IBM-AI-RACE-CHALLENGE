@@ -48,7 +48,8 @@
         {"knob": "drive_ds_rpm", "abs": [500, 1000]},
         {"knob": "drive_ds_wait", "abs": 2},
         {"knob": "downshift_rpm", "abs": 1000},
-        {"knob": "entry_ds_rpm", "abs": [500, 1000]}
+        {"knob": "entry_ds_rpm", "abs": [500, 1000]},
+        {"knob": "entry_ds2_rpm", "abs": [500, 1000]}
       ]
     }
   }

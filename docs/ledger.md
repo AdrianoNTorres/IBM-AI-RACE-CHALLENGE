@@ -449,3 +449,33 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.30 | R250_vs104 | 2,280-2,360 m, margin | 250 with `plan_vs` 1.04 | 12 (screen) | +0.465 | 0.014 | 0 of 12 | 0.870 @ 2,803 m | lost | clean at 265 / 252 km/h |
 | v1.30 | R250d_vs104 | 2,280-2,360 m, margin | 250 with the lower 2,350 m entry and `plan_vs` 1.04 | 12 (screen) | +0.436 | 0.015 | 0 of 12 | 0.870 @ 2,803 m | lost | clean at 265 / 248 km/h, 1 km/h from R255d's damaged 265 / 247 |
 | v1.30 | R255d_vs104 | 2,280-2,360 m, margin | 255 with the lower 2,350 m entry and `plan_vs` 1.04 | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run damaged |
+| v1.31 | **chosen** | see title | The lower gear about 15 m earlier in the braking for 770 m and 1,528 m: with the engine braking on the rear wheels the car turns in harder, runs closer to the inside kerb at the apex and takes a shorter path | 70 (full) | -0.052 | 0.003 | 0 of 70 | 0.845 @ 765 m | kept | Kept, narrowly: 0.052 s over 70 runs (SE 0.003), 69 of 70 faster, every check 0 off. It spends margin on the inside kerb of 770 m (suites 0.837 -> 0.845, braking-plan check 0.909 -> 0.933) and of 1,528 m (0.922 read 10 m late); kept under the track-limits ruling (wheels may ride the kerb, limit 1.0) and because two measured steps above it (18,000; 19,000) stay on the track. The gain is at the batch-ending threshold of about 0.05 s. If the officials answer "any wheel", this version is no worse than v1.30 on the judged lap (0.831 at 1,034 m, unchanged). |
+| v1.31 | Z770 | 770 m, design 1 | zone (700, 760) at `entry_ds_rpm` 19,000 | 12 (screen) | -0.015 | 0.008 | 0 of 12 | 0.892 @ 764 m | lost | small gain, apex 0.799 -> 0.892 |
+| v1.31 | Z770u | 770 m, design 1 | upper gear only, zone (700, 745) | 12 (screen) | -0.015 | 0.008 | 0 of 12 | 0.892 @ 764 m | lost | identical to Z770: the gain is the 4th -> 3rd shift |
+| v1.31 | Z770l | 770 m, design 1 | last gear only, zone (745, 765) | 12 (screen) | +0.001 | 0.005 | 0 of 12 | 0.835 @ 3,047 m | lost | nothing |
+| v1.31 | Z1528 | 1,528 m, design 1 | upper gears too, zone (1430, 1530) at 19,000 | 12 (screen) | -0.040 | 0.009 | 0 of 12 | 0.841 @ 1,522 m | lost | apex 0.760 -> 0.841 |
+| v1.31 | Z1528u | 1,528 m, design 1 | the same written as (1430, 1500) + (1500, 1530) | 12 (screen) | -0.040 | 0.009 | 0 of 12 | 0.841 @ 1,522 m | lost | identical to Z1528 |
+| v1.31 | Zboth | 770 m and 1,528 m, design 1 | both zones at 19,000 | 12 (screen) | -0.063 | 0.009 | 0 of 12 | 0.892 @ 764 m | lost | most gain on 12 runs, but 770 m apex 0.892, 1,528 m 0.840 |
+| v1.31 | Zhp | hairpin, design 1 | zone (3150, 3240) at 19,000 | 12 (screen) | +0.039 | 0.004 | 0 of 12 | 0.837 @ 3,046 m | lost | slower in all 12 runs: 3,300 m section +0.023 |
+| v1.31 | Z2700 | 2,700 m, design 1 | zone (2680, 2720) at 19,000 | 12 (screen) | -0.018 | 0.015 | 0 of 12 | 0.840 @ 2,804 m | lost | within noise; 2,803 m exit 0.801 -> 0.840 |
+| v1.31 | Zall4 | 770 m, 1,528 m, hairpin, design 1 | the three zones at 19,000 | 12 (screen) | +0.005 | 0.023 | 0 of 12 | 0.892 @ 764 m | lost | the hairpin's loss cancels the rest |
+| v1.31 | D16 | every bend, design 2 | `downshift_rpm` 16,000 | 12 (screen) | -0.012 | 0.019 | 0 of 12 | 0.834 @ 1,034 m | lost | within noise |
+| v1.31 | D17 | every bend, design 2 | `downshift_rpm` 17,000 | 12 (screen) | -0.055 | 0.016 | 0 of 12 | 0.834 @ 1,035 m | lost | as fast as the zones, 770 m apex 0.834, but hairpin exit 0.701 -> 0.742 and 3,200 m section +0.017 |
+| v1.31 | D175 | every bend, design 2 | `downshift_rpm` 17,500 | 12 (screen) | -0.024 | 0.007 | 0 of 12 | 0.862 @ 3,048 m | lost | less: 2,803 m exit 0.858, 3,053 m exit 0.862, hairpin section +0.017 |
+| v1.31 | R16a | 770 m and 1,528 m upper gears, design 3 | the two zones at 16,000 | 12 (screen) | -0.035 | 0.015 | 0 of 12 | 0.835 @ 1,034 m | lost | smaller step; 770 m apex 0.812 |
+| v1.31 | R17a | 770 m and 1,528 m upper gears, design 3 | the two zones at 17,000: the chosen, on 12 runs | 12 (screen) | -0.056 | 0.008 | 0 of 12 | 0.835 @ 764 m | lost | the chosen (as a 3-tuple zone; `F` drives the same lap) |
+| v1.31 | R175a | 770 m and 1,528 m upper gears, design 3 | the two zones at 17,500 | 12 (screen) | -0.057 | 0.006 | 0 of 12 | 0.855 @ 764 m | lost | same gain, 770 m apex 0.855 |
+| v1.31 | R18a | 770 m and 1,528 m upper gears, design 3 | the two zones at 18,000 | 12 (screen) | -0.049 | 0.007 | 0 of 12 | 0.867 @ 764 m | lost | no more gain, 770 m apex 0.867 |
+| v1.31 | R17_770 | 770 m, design 3 | part alone: zone (700, 760) at 17,000 | 12 (screen) | -0.044 | 0.017 | 0 of 12 | 0.835 @ 764 m | lost | part alone; apex 0.835 |
+| v1.31 | R17_1528 | 1,528 m, design 3 | part alone: zone (1430, 1500) at 17,000 | 12 (screen) | -0.044 | 0.007 | 0 of 12 | 0.833 @ 1,036 m | lost | part alone; apex 0.801 |
+| v1.31 | R17m | 770 m at 17,000, 1,528 m at 19,000 | mixed thresholds | 12 (screen) | -0.087 | 0.017 | 0 of 12 | 0.841 @ 1,522 m | lost | more on 12 runs (partly a far-away 3,000 m section), but 1,528 m apex 0.841 and 0.948 read 10 m late |
+| v1.31 | R17b | design 3 plus 2,700 m | the two zones and (2680, 2720) at 17,000 | 12 (screen) | -0.069 | 0.014 | 0 of 12 | 0.835 @ 764 m | lost | 2,700 m adds 0.013 s at SE 0.014: not shown |
+| v1.31 | base_vd5 | margin | base with the stored speed read 5 m late (`plan_vd` 5) | 12 (screen) | +0.118 | 0.014 | 0 of 12 | 0.909 @ 439 m | lost | 446 m 0.909, 770 m 0.870, 1,528 m 0.829 |
+| v1.31 | R17a_vd5 | margin | the chosen read 5 m late | 12 (screen) | +0.105 | 0.008 | 0 of 12 | 0.921 @ 768 m | lost | 770 m 0.921, 1,528 m 0.862, 446 m 0.909 unchanged |
+| v1.31 | Zboth_vd5 | margin | both zones at 19,000 read 5 m late | 12 (screen) | +0.084 | 0.014 | 0 of 12 | 0.940 @ 767 m | lost | 770 m 0.940 |
+| v1.31 | base_vd10 | margin | base read 10 m late | 12 (screen) | +0.393 | 0.010 | 0 of 12 | 0.909 @ 767 m | lost | 770 m 0.909, 1,528 m 0.891 |
+| v1.31 | R17a_vd10 | margin | the chosen read 10 m late | 12 (screen) | +0.381 | 0.017 | 0 of 12 | 0.933 @ 767 m | lost | 770 m 0.933, 1,528 m 0.922 |
+| v1.31 | R17m_vd10 | margin | mixed thresholds read 10 m late | 12 (screen) | +0.386 | 0.013 | 0 of 12 | 0.948 @ 1,528 m | lost | 1,528 m 0.948 |
+| v1.31 | Zboth_vd10 | margin | both zones at 19,000 read 10 m late | 12 (screen) | +0.392 | 0.008 | 0 of 12 | 0.954 @ 767 m | lost | 770 m 0.954, 1,528 m 0.948, 0 off: the measured step above the chosen |
+| v1.31 | base_vdm10 | margin | base read 10 m early | 12 (screen) | +0.662 | 0.009 | 0 of 12 | 0.863 @ 824 m | lost | 770 m exit 0.863 |
+| v1.31 | R17a_vdm10 | margin | the chosen read 10 m early | 12 (screen) | +0.496 | 0.016 | 0 of 12 | 0.870 @ 825 m | lost | 0.870 at 825 m |
