@@ -30,6 +30,13 @@
         {"knob": "plan_tk", "rel": 0.1},
         {"knob": "plan_tmax", "rel": 0.1}
       ]
+    },
+    "launch": {
+      "suites": "1",
+      "perturb": [
+        {"knob": "launch_v", "rel": 0.1},
+        {"knob": "launch_slip", "rel": 0.2}
+      ]
     }
   }
 }

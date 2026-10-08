@@ -620,10 +620,11 @@ def drive_example(c):
     thr_zero=1.0        # throttle floor: while the car is under the allowed speed the stored throttle is at least this share of the engine's zero-torque throttle (0.13 at 12,000 rpm, 0.21 at 17,000; 0 = off; 1.6 leaves the track 1 of 30).
     abs_ratio=.8        # ABS: the brake is cut once the slowest wheel turns below this share of the car speed (v0.55: 0.8 -> 0.85; v0.77: back to 0.8 with brake_aero .0065) ...
     abs_cut=.5          # ... to this share of the pedal.
-    launch_v=130        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ...
+    launch_v=160        # km/h: standing start (v0.71; v0.69 rejected at corner_speed 79): until the car first reaches this speed ... (v1.21: 130 -> 160. At 130 the rear wheels were still 15-20 m/s over the car in 3rd gear and the car was steering across the track, so traction control cut the throttle to 0.74, the wheels hooked up at once and the engine fell to 14,700 rpm, under its 16-18k peak; left alone they hook up by themselves at 142-147 km/h with the engine at 16,300 rpm. 135 / 140 / 160 / 250: the same lap, 0.079 s sooner at 280 m, 263.4 for 262.2 km/h there; 0.075 s on 12 runs. Holding 1st and 2nd gear during the launch instead: 0.03-0.05 s slower than that; launch_slip 8 / 12 / 18 / 35 with it: +0.09 / +0.06 / +0.03 / 0.00 s at 280 m)
     launch_slip=25      # m/s: ... this much more rear over-speed is allowed before traction control cuts (in practice no cut).
-    exit_steer=.3       # v0.72: below launch_v after the launch, launch_slip also applies while the car runs straight (out of the hairpin and the Corkscrew), full at steer 0, none from this |steer| ...
+    exit_steer=.3       # v0.72: below exit_v after the launch, launch_slip also applies while the car runs straight (out of the hairpin and the Corkscrew), full at steer 0, none from this |steer| ...
     exit_vy=6           # ... and none from this sideways speed (km/h; no extra while the car slides).
+    exit_v=130          # km/h: v1.21: the speed below which the straight-exit allowance above applies, its own knob now that launch_v is 160 (with 160 here too: 0.004 s less gain on 12 runs)
     clutch_slip=.667    # most clutch pedal while accelerating (v0.78: .7; v0.79: 2/3, the most at which TORCS still passes the full engine torque: min(3*(1 - pedal), 1)) ...
     clutch_top=17000    # ... v0.79: slipped in every gear while the rpm of the driven wheels (rear wheel speed * gear ratio * final drive) is below this ...
     clutch_k=60         # ... easing off toward it: pedal = 1 - (clutch_k/(clutch_top - wheel rpm + clutch_k))^(1/4) (rpm; larger = closed sooner).
@@ -1294,10 +1295,10 @@ def drive_example(c):
     # rpm, far below the 16-18k torque peak) and the Corkscrew the car runs
     # straight, yet traction control cut the throttle by 0.15-0.3 for ~100 m
     # (rear over-speed beyond the 9.5 m/s straight limit): the same state as
-    # the standing start. So below launch_v the launch allowance applies again,
+    # the standing start. So below exit_v the launch allowance applies again,
     # faded out with |steer| (none from exit_steer) and sideways speed (none
     # from exit_vy): only while the car is straight and not sliding.
-    elif S['speedX'] < launch_v:
+    elif S['speedX'] < exit_v:
         slip_target+= launch_slip*clip(1-abs(R['steer'])/exit_steer, 0, 1)*clip(1-abs(S['speedY'])/exit_vy, 0, 1)
     c.throttle= clip(R['accel'], 0, 1)
     c.tc_cut= max(clip((rear_over-slip_target)*tc_gain, 0, 1), getattr(c, 'tc_cut', 0)*tc_hold)

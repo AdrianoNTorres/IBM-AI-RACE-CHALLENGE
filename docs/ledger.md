@@ -152,3 +152,34 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.20 | Vb10 | every bend | own: no feed-forward at full brake pedal, single lap | 1 (single) | +1.070 | n/a | 0 of 1 | 0.859 @ 3,048 m | lost | 1,931 m 0.636, 3,047 m 0.859 |
 | v1.20 | Vd3 | every bend | own: 30 % less feed-forward per 30 m/s^2 of measured deceleration, single lap | 1 (single) | +0.518 | n/a | 0 of 1 | 0.826 @ 1,105 m | lost | slower; 1,105 m 0.826 |
 | v1.20 | Vd10 | every bend | own: no feed-forward at 30 m/s^2 of deceleration, single lap | 1 (single) | n/a | n/a | 1 of 1 | none on track | lost | off the track at 1,103 m |
+| v1.21 | **chosen** | see title | Standing start: the launch's wheelspin is kept until the rear wheels hook up by themselves (traction control stays out to 160 km/h for 130) | 70 (full) | -0.083 | 0.008 | 0 of 70 | 0.837 @ 1,932 m | kept | Passes every item of the bar; 0.083 s gained over 70 runs (SE 0.008) with the margins unchanged (largest change 0.005, follower check). |
+| v1.21 | X140 | launch | launch allowance to 140 km/h, exits at 130 | 12 (screen) | -0.075 | 0.007 | 0 of 12 | 0.832 @ 1,931 m | lost | identical to the chosen on all 12 runs |
+| v1.21 | X250 | launch | launch allowance to 250 km/h, exits at 130 | 12 (screen) | -0.075 | 0.007 | 0 of 12 | 0.832 @ 1,931 m | lost | identical to the chosen on all 12 runs |
+| v1.21 | H250 | launch | second design: the allowance ends when the rear over-speed falls under the normal limit above 100 km/h | 12 (screen) | -0.075 | 0.007 | 0 of 12 | 0.832 @ 1,931 m | lost | identical to the chosen on all 12 runs |
+| v1.21 | L160 | launch and exits | `launch_v` 160 without the separate exit knob (exits to 160 km/h too) | 12 (screen) | -0.071 | 0.006 | 0 of 12 | 0.832 @ 1,931 m | lost | 0.004 s less gain: the exits keep 130 |
+| v1.21 | A_vd10 | chosen | chosen with the stored speed read 10 m early | 12 (screen) | +0.258 | 0.017 | 0 of 12 | 0.876 @ 768 m | lost | 0.876 at 767 m (v1.19 0.877) |
+| v1.21 | A_vdm10 | chosen | chosen with the stored speed read 10 m late | 12 (screen) | +0.723 | 0.012 | 0 of 12 | 0.881 @ 836 m | lost | 0.881 at 835 m (v1.19 0.881) |
+| v1.21 | A_vs104 | chosen | chosen with `plan_vs` 1.04 | 12 (screen) | +0.351 | 0.024 | 0 of 12 | 0.855 @ 1,932 m | lost | 0.855 at 1,932 m (v1.19 0.843) |
+| v1.21 | T3 | Corkscrew exit, 2,495-2,620 m | handed down: traction table, `tc_slip_straight` +3 there | 12 (screen) | +0.011 | 0.009 | 0 of 12 | 0.832 @ 1,931 m | lost | slower in 8 of 12: closed |
+| v1.21 | T6 | Corkscrew exit, 2,495-2,620 m | traction table +6, single lap | 1 (single) | +0.028 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | slower |
+| v1.21 | G7 | launch | own: 1st / 2nd gear held until the car's own speed gives 7,000 rpm in that gear, single lap | 1 (single) | -0.014 | n/a | 0 of 1 | 0.817 @ 1,931 m | lost | 280 m at 6.802 s like the chosen (6.803); lap chaotic later |
+| v1.21 | G10 | launch | own: gears held to 10,000 rpm of car speed, single lap | 1 (single) | -0.022 | n/a | 0 of 1 | 0.817 @ 1,931 m | lost | 280 m 0.031 s later than the chosen |
+| v1.21 | G15 | launch | own: gears held to 15,000 rpm of car speed, single lap | 1 (single) | +0.026 | n/a | 0 of 1 | 0.827 @ 1,932 m | lost | 280 m 0.046 s later than the chosen |
+| v1.21 | Xs8 | launch | allowance to 250 km/h with `launch_slip` 8, single lap | 1 (single) | +0.068 | n/a | 0 of 1 | 0.814 @ 1,932 m | lost | 280 m 0.094 s later than the chosen |
+| v1.21 | Xs12 | launch | allowance to 250 km/h with `launch_slip` 12, single lap | 1 (single) | +0.010 | n/a | 0 of 1 | 0.814 @ 1,932 m | lost | 280 m 0.058 s later |
+| v1.21 | Xs18 | launch | allowance to 250 km/h with `launch_slip` 18, single lap | 1 (single) | +0.042 | n/a | 0 of 1 | 0.818 @ 1,932 m | lost | 280 m 0.026 s later |
+| v1.21 | Xs35 | launch | allowance to 250 km/h with `launch_slip` 35, single lap | 1 (single) | +0.008 | n/a | 0 of 1 | 0.804 @ 1,932 m | lost | 280 m the same (6.802 s); 2nd gear at 0.26 s |
+| v1.21 | Xu180 | launch | allowance to 250 km/h with `upshift_rpm` 18,000, single lap | 1 (single) | +0.312 | n/a | 0 of 1 | 0.816 @ 1,931 m | lost | 280 m 0.018 s later; 1,200 m +0.07 |
+| v1.21 | lv100 | launch | `launch_v` 100, single lap | 1 (single) | +0.060 | n/a | 0 of 1 | 0.823 @ 1,932 m | lost | 280 m 0.029 s later than v1.19 |
+| v1.21 | ls5 | launch | `launch_slip` 5 at `launch_v` 130, single lap | 1 (single) | +0.142 | n/a | 0 of 1 | 0.819 @ 1,932 m | lost | 280 m 0.088 s later than v1.19 |
+| v1.21 | a6 | Corkscrew entry, 2,385-2,445 m | own: corner-table row -6 km/h, single lap | 1 (single) | +0.082 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,400 m section +0.08 |
+| v1.21 | a10 | Corkscrew entry, 2,385-2,445 m | own: row -10 km/h, single lap | 1 (single) | +0.180 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,400 m +0.20 |
+| v1.21 | a15 | Corkscrew entry, 2,385-2,445 m | own: row -15 km/h, single lap | 1 (single) | +0.656 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,400 m +0.52, 2,500 m +0.08 |
+| v1.21 | b10 | Corkscrew entry, 2,400-2,450 m | own: row -10 km/h, single lap | 1 (single) | +0.300 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,400 m +0.24 |
+| v1.21 | c10 | flick approach, 2,360-2,420 m | own: row -10 km/h, single lap | 1 (single) | -0.020 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,500 m -0.06, 2,400 m +0.02, 2,300 m +0.02: open, not screened |
+| v1.21 | p5 | Corkscrew entry, 2,385-2,445 m | own: row +5 km/h, single lap | 1 (single) | +0.064 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | 2,400 m -0.06, 2,500 m +0.06 |
+| v1.21 | ts35 | traction control | `tc_slip` 3.5, single lap | 1 (single) | +0.154 | n/a | 0 of 1 | 0.823 @ 1,931 m | lost | Corkscrew and hairpin exits +0.04 each |
+| v1.21 | ts55 | traction control | `tc_slip` 5.5, single lap | 1 (single) | -0.004 | n/a | 0 of 1 | 0.826 @ 1,931 m | lost | flat |
+| v1.21 | tss9 | traction control | `tc_slip_straight` 9, single lap | 1 (single) | +0.000 | n/a | 0 of 1 | 0.818 @ 1,932 m | lost | the same lap time |
+| v1.21 | es15 | straight exits | `exit_steer` 0.15, single lap | 1 (single) | +0.040 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | slower |
+| v1.21 | es5 | straight exits | `exit_steer` 0.5, single lap | 1 (single) | +0.022 | n/a | 0 of 1 | 0.814 @ 1,931 m | lost | slower |
