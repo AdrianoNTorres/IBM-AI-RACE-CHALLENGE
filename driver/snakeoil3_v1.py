@@ -648,6 +648,17 @@ def drive_example(c):
         (2880, 3005, 17),   # 2,988 m right-hander (+8 / +14 / +20: 0.06 / 0.13 / 0.13 s)
         (3175, 3275, -3),   # hairpin: slower in (+3: 0.95-0.96 of the edge at the exit, 1 of 70 off; -3: exit 0.90 -> 0.77, no time lost)
     )
+    # v1.07: line table (track memory, hand-written from our telemetry): on the approach to a corner the sensors
+    # cannot see in time, the car is pulled toward this trackPos (+1 = left edge) with line_gain, by at most the row's
+    # steer, while distFromStart is inside the row and no bend is detected. It replaces the sensor corner set-up there
+    # (which starts only 60-70 m before the braking point and moved the car 0.2-0.3 of the half-width); the bend detection,
+    # the turn-in and the line through the bend stay with the sensors. Rows measured slower and left out: 446 m
+    # (+0.09 s), 770 m (+0.04), 1,528 m (+0.17), 2,988 m (+0.14), 1,042 m (0.00); a pull toward the inside before the
+    # detection ("trail-in") is slower at all four medium bends.
+    line_table= (        # from m, to m, trackPos, most steer
+        (1700, 1890, -.7, .3),    # 1,931 m left-hander: from the right (reaches -0.45 to -0.50 by 1,846 m); -.55 / -.85 and ends at 1,870 / 1,905 m gain 0.03-0.06 s less
+        (3020, 3240, -.85, .3),   # hairpin (left): from the right (reaches -0.57 at 3,196 m; the 2,988 m exit leaves the car on the left); -.7: 0.008 s less
+    )
     prev_steer= R['steer']  # steering sent last step (R persists between steps).
     R['accel']= getattr(c, 'throttle', R['accel'])  # throttle before last step's traction-control cut.
 
@@ -715,6 +726,19 @@ def drive_example(c):
         elif abs(prev_steer) < setup_steer and abs(asym) > setup_min:
             setup= 1 if asym > 0 else -1   # longer road to the right: right-hand bend
     c.setup_side= setup   # kept between steps
+    # Line Table (v1.07, track memory): out of the bend before it the car comes to
+    # the hairpin on the inside half (+0.23 at 3,100 m), and the sensor set-up
+    # above starts only once the road's end shows which way it turns (~3,115 m;
+    # 1,931 m: ~1,780 m) and ends at setup_road, so the car turned in from the
+    # centre (-0.02) at the hairpin and from -0.30 at 1,931 m. The table says
+    # where the approach to such a corner starts and on which side to be; the
+    # pull is the set-up's own (line_gain, capped), and it ends when the sensors
+    # detect the bend (side set from the bearing) or the row ends.
+    for l0, l1, lt, lc in line_table:
+        if l0 <= S['distFromStart'] < l1 and side == 0:
+            setup= 0   # the row replaces the sensor set-up's pull
+            line_target= lt
+            R['steer']+= clip((lt - S['trackPos'])*line_gain, -lc, lc)
     if setup != 0:
         line_target= setup_offset*setup
         R['steer']+= clip((line_target - S['trackPos'])*line_gain, -setup_pull, setup_pull)
