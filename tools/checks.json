@@ -23,7 +23,12 @@
       "perturb": [
         {"knob": "plan_vd", "abs": [5, 10]},
         {"knob": "brake_gain", "rel": 0.1},
-        {"knob": "lift_pct", "rel": 0.1}
+        {"knob": "lift_pct", "rel": 0.1},
+        {"knob": "plan_xk", "rel": 0.1},
+        {"knob": "plan_x0", "rel": 0.1},
+        {"knob": "plan_xt", "rel": 0.1},
+        {"knob": "plan_tk", "rel": 0.1},
+        {"knob": "plan_tmax", "rel": 0.1}
       ]
     }
   }
