@@ -2129,6 +2129,86 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — 0.18 s faster over all 70 laps, none off the road, and more room at the wall than v1.16. |
 | **Learned** | The check has to be gentle: one two to four times stronger makes the car brake with the wheel fully turned and is slower and closer to the wall. With the check in place, the next limits on speed are the exits of the corners at 2,700 m and 770 m. A brake pedal that acts ahead of the falling stored speed was tried and was slower as built; it may work together with a later braking plan. |
 
+## v1.18 — Throttle through the middle of the corners: faster, but not safe
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.18 |
+| **What changed** | In the corners where the car follows the stored speed, the throttle was worked out from that speed itself: the car knows how quickly the stored speed is about to fall and rise, so it can hold just enough throttle to slow down exactly as planned. Before, it lifted off completely, coasted until it was below the plan, and only then opened the throttle again. Not kept. |
+| **Why** | The car reached the slowest point of every such corner 4 to 10 % below the speed it was allowed. |
+| **Prediction** | About 0.12 s gained over the 70 test laps, with the closest approach to the edge unchanged. |
+| **Lap time** | 1:07:30 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 71 km/h |
+| **Observed** | Lap 1:07:30 (0.10 s faster), damage 0. Over the 70 test laps 0.11 s faster on average, none off the road. But in the two extra checks, where the stored speed is read a little early or late and the steering is made a little stronger or weaker, 6 of 200 and 10 of 160 laps left the road, all at the exit of the corner at 2,700 m. |
+| **Decision** | ❌ Rejected — the previous version was restored. Any lap that leaves the road in a check means the version is not kept. |
+| **Learned** | The speed the car was missing in the middle of the corner was also its safety reserve at the exit. After each corner the stored speed rises faster than the car can follow, so nothing was watching the exit. The exits need their own live safety check before this throttle can be used. |
+
+## v1.19 — A safety check at the corner exits, and the new throttle where it is safe
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.19 |
+| **What changed** | Two things, each measured by itself. First, a new live check at the exits of the corners that use the stored speed: when the car runs wider than the planned line by more than 0.45 of the half road width, looking 0.2 s ahead at the rate it is drifting, the throttle is reduced. Second, the throttle from v1.18, now only at three corners (446 m, 770 m and 1,528 m). |
+| **Why** | v1.18 showed that the exits had no live protection. With the check in place, the throttle can be used where the exit has room. |
+| **Prediction** | About 0.075 s gained over the 70 test laps, and the checks no closer to the edge than v1.17. |
+| **Lap time** | 1:07:34 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:07:34 (0.06 s faster than v1.17), damage 0. Over the 70 test laps 0.04 s faster on average, none off the road; none of the 200 steering-check laps and none of the 180 speed-plan-check laps left the road. The exit check alone changes nothing on normal laps (12 test laps identical). The throttle alone, without the check, sent 12 of 12 laps off the road when the stored speed was read 10 m late. |
+| **Decision** | ✅ Kept — a small gain, and the exits now have a live safety check. |
+| **Learned** | The check must look ahead: reading only where the car is now comes too late. The corner exits have no speed to spare: every faster setting became slower once the check was strict enough to keep the car on the road. The short test (12 laps) promised more than the full test showed. |
+
+## v1.20 — Braking later and harder: slower
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.20 |
+| **What changed** | The brake pedal was pressed slightly ahead of the falling stored speed instead of only after the car was above it, and the stored speed was made to fall later and more steeply before three corners (446 m, 770 m and 1,042 m). Not kept. |
+| **Why** | The car can slow down harder than the stored speed asks. This pair had been suggested three times and never raced together. |
+| **Prediction** | After the short test: about 0.08 s slower. |
+| **Lap time** | 1:07:39 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 71 km/h |
+| **Observed** | Lap 1:07:39 (0.06 s slower than v1.19), damage 0, none of the 70 test laps off the road, 0.05 s slower on average. Each half was also slower by itself. |
+| **Decision** | ❌ Rejected — slower. The previous version was restored. |
+| **Learned** | The braking zones are already at their best: braking later gains time on the straight and loses more in the corner; braking earlier does the opposite. The earlier pedal did make the braking smoother and left more room at one exit, but it cost time. This idea is closed. |
+
+## v1.21 — A better standing start
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.21 |
+| **What changed** | At the start the rear wheels are allowed to spin. That permission used to end at 130 km/h; it now lasts until 160 km/h. The same permission out of the hairpin and the Corkscrew keeps its old limit of 130 km/h through a setting of its own. |
+| **Why** | At 130 km/h the wheels were still spinning usefully, and traction control cut the power. The wheels stop spinning by themselves at about 142 to 147 km/h. |
+| **Prediction** | About 0.07 s gained, all of it in the first 200 m. |
+| **Lap time** | 1:07:25 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 71 km/h |
+| **Observed** | Lap 1:07:25 (0.08 s faster than v1.19), damage 0. Over the 70 test laps 0.08 s faster on average, none off the road, the car no closer to the edge anywhere. A new check for the start (40 laps): none off the road. |
+| **Decision** | ✅ Kept — 0.08 s faster with nothing given up. |
+| **Learned** | Any limit from 135 to 250 km/h gives the same lap, so 160 is far from any edge. During the start, less wheelspin is slower. Two other ideas were tested and closed: more wheelspin allowed out of the Corkscrew, and a slower entry into it. |
+
+## v1.22 — The right gear out of the corners
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.22 |
+| **What changed** | When the driver is on the throttle and not braking, the car now shifts down as soon as the lower gear fits below the engine's rev limit, waiting at least 5 steps (about 0.1 s) after the last gear change. Under braking the gears change as before. |
+| **Why** | The car left three fast corners in 4th gear at low revs. The engine pulls equally hard from 9,000 to 18,000 rpm, so the lower gear always pushes the car harder: 3rd gives 23 % more thrust than 4th. |
+| **Prediction** | About 0.15 s gained, at the exits of the corners at 1,931 m, 2,700 m and 2,988 m; the car about 0.16 wider at the 2,700 m exit. |
+| **Lap time** | 1:07:18 |
+| **Damage** | 0 |
+| **Top speed** | 291 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:07:18 (0.08 s faster than v1.21), damage 0. All 70 test laps were faster, by 0.20 s on average, and none left the road. None of the laps in the four checks left the road (200 steering, 180 speed-plan, 40 start, and a new one for the gears with 80 laps). The car now uses more of the road at the exit of the 2,700 m corner: at most 0.85 of the way to the edge, where it was 0.67. |
+| **Decision** | ✅ Kept — the largest gain of the batch. A version that also shifted down earlier while braking was 0.07 s faster again but came too close to the edge at two corners, so it was not taken. |
+| **Learned** | An old belief was wrong: the engine has no narrow power peak to stay near. Where the car shifts down matters more than at what revs: on the throttle it disturbs nothing, while braking it changes how the car turns in. The car now makes some very short stays in the lower gear (0.2 to 0.4 s); whether those help is a question for the next batch. |
+
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.17 run.*
+*Simplified from CHANGELOG.md as it stood after the v1.22 run.*

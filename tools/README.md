@@ -14,6 +14,7 @@ without modifying it directly — each race gets a private copy.
 | Step trace of a run against the planned line | `python tools/trace.py runs/<file>.csv 2200 2640 [step]` |
 | **Record a version once** (changelog entry, batch row, ledger rows, run CSV, commit, tag) | `python tools/record.py %TEMP%\vNNN\version.md [--dry-run]` |
 | What each sub-agent of a session cost (turns, context, minutes) | `python tools/agentcost.py [--all] [--detail]` |
+| Batch-end doc sync: remap the tuning card's driver line numbers and check every knob row | `python tools/cardlines.py [--from v1.17] [--write]` |
 | One race (optionally with knob overrides) | `python tools/race.py [--set knob=value ...]` |
 | Race cache: size / empty it | `python tools/race.py --cache-info` / `--cache-clear` |
 | Safety suites — 3×10 perturbation runs | `python tools/suite.py [--set knob=value ...]` |
@@ -206,6 +207,32 @@ the minutes agents reported themselves did not match the transcripts.
 **Implementation.** Parses `~/.claude/projects/<project>/<session>/subagents/*.jsonl`:
 one usage record per model message, tool waits from the timestamps of each call and
 its result.
+
+---
+
+## cardlines.py — the tuning card's line numbers after the driver changed
+
+**What it does.** With `--from <tag>` it maps every line of that tag's driver to its
+line in the working driver and rewrites the tuning card's line references: the "Line"
+column of each knob row and the numbers after "line", "lines", "comment" and "code" in
+the text (ranges and "N and M" too). Without `--write` it only prints what would
+change. It then checks, with or without `--from`, that each row named after a knob
+points at the line where the driver assigns that knob (for a range: that the range
+contains it) and prints every mismatch; exit code 1 if there is one.
+
+**Where it is used.** By the orchestrator at the batch-end doc sync
+(`docs/batch.md`, step 1): once with `--from <the previous batch's tag> --write`
+before the new rows are written, once without arguments after.
+
+**Why it exists.** A batch moves the knob block and the code by tens of lines (batch
+16: +14 to +70), and the card holds about 230 line references. The remap was a
+one-off script at the batch 15 sync and was needed again at the batch 16 sync.
+
+**Implementation.** `git show <tag>:driver/snakeoil3_v1.py` against the working file
+through `difflib.SequenceMatcher`; a line inside a changed block maps to the same
+share of the way through the new block. References written in another form (for
+example "with `plan_pos` 784") are not found: grep the card for the old numbers of
+anything the batch touched. New rows and changed values are written by hand.
 
 ---
 
