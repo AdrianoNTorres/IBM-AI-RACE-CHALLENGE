@@ -168,7 +168,7 @@
   }
   function wireBulk() {
     if (!$('bulkLoad')) return;
-    $('addVer').onclick = () => RV.entry.open('one');
+    $('addVer').onclick = () => { if (!RV.tutorial.isOpen()) RV.entry.open('one'); };   /* entered versions would not be put back */
     if ($('addMine')) $('addMine').onclick = () => RV.entry.open('mine');
     $('bulkLoad').onclick = async () => {
       if (bulk) return;

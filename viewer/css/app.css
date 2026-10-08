@@ -579,7 +579,7 @@ ul.helpul { margin: 0; padding-left: 20px; } ul.helpul li { margin-bottom: 8px; 
 #tour { position: fixed; inset: 0; z-index: 40; pointer-events: none; }   /* the page under it stays in use */
 #tour[hidden] { display: none; }
 #tourHole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px var(--scrim); outline: 3px solid var(--accent); outline-offset: 0; transition: left .18s, top .18s, width .18s, height .18s; pointer-events: none; }
-#tourCard { position: fixed; width: min(400px, calc(100vw - 24px)); background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px 16px; pointer-events: auto; cursor: grab; touch-action: none; }
+#tourCard { position: fixed; width: min(400px, calc(100vw - 24px)); background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px 16px; pointer-events: auto; cursor: grab; max-height: calc(100vh - 16px); overflow: auto; }
 #tourCard.dragging { cursor: grabbing; user-select: none; } #tourCard button { cursor: pointer; }
 .win.tour-bar > .winbar { opacity: 1; pointer-events: auto; }
 body.touring #addVer { opacity: .45; pointer-events: none; }   /* entered versions are stored apart and would not be put back */

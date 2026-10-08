@@ -3,7 +3,7 @@
    one step shows a looped section and one keeps a window's buttons in sight. The choosers lead to the other
    tutorials and the Help page starts each one. Phase 17.2: the page stays in use while a tutorial runs, what the
    reader closed is opened again for the step that needs it, and everything is put back when the tutorial ends.
-   Phase 17.3: no step is ever left out.
+   Phase 17.3: no step is ever left out. Phase 17.4: leaving at the welcome changes nothing; a reload mid-tutorial.
    Writes phase17-*.png: look at them. */
 const { open } = require('./h.js');
 let bad = 0;
@@ -71,6 +71,16 @@ async function run(p, id, view, shots) {
   ok('the offer opens the beginner tutorial', (await p.ev('RV.tutorial.which()')) === 'beginner', (await p.ev(state)).title);
   await p.ev(click('tourSkip')); await ready(p);
   ok('ending any tutorial counts as seen', (await p.ev('RV.prefs.tutorialDone')) === true);
+  /* 17.4: leaving at the first card changes nothing: the compared versions stay, no reload */
+  await p.ev("RV.sel.set(['v1.27', 'v1.26']); RV.sel.apply()"); await p.until("RV.S.sel.length === 2 && RV.S.R && RV.S.CM.length === 1");
+  await p.ev('window.__same = 1; RV.tutorial.start(true)'); await p.sleep(300);
+  await p.ev(click('tourSkip')); await p.sleep(600);
+  ok('leaving at the welcome keeps the compared versions and does not reload', (await p.ev('window.__same === 1 && RV.S.sel.join() === "v1.27,v1.26" && !RV.tutorial.isOpen()')));
+  /* 17.4: a reload in the middle of a tutorial does not keep what the tutorial changed */
+  await p.ev("RV.tutorial.start(false, 'advanced')"); await p.sleep(400);
+  ok('mid-tutorial the view is detailed', (await p.ev('RV.prefs.view')) === 'detailed');
+  await p.ev('location.reload()'); await ready(p);
+  ok('after a reload in the middle, the view is basic again', (await p.ev('RV.prefs.view')) === 'basic');
   /* the last card of the quick tour leads to the advanced one, which runs in the detailed view and puts the view back */
   await p.ev("RV.tutorial.start(false)"); await p.sleep(250);
   for (let n = 0; n < 20 && !(await p.ev("!!document.querySelector('#tourCard [data-tour]')")); n++) { await p.ev(click('tourNext')); await p.sleep(220); }
