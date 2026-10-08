@@ -12,6 +12,7 @@ The viewer (`viewer/`) has no build step and no unit tests. It is checked by dri
 | `phase15.js` | Phase 15: the validator, the "Add versions" window (one version, import, export, change, delete), a reload in between. Empties the browser's database of entered versions before and after. |
 | `phase16.js` | Phase 16: track windows (open, own layers / colour / camera, move, resize, fold, close, saved and restored, four at most, one window per compared car, basic view and dark theme). Writes `phase16-*.png`: look at them. |
 | `summary.js` | Phase 15.3: the site's summary (run `node tools/viewer-summary/build.js` first) and the analysis limits as a share of the lap. |
+| `newdata.js` | After the changelog and the runs were brought over from `main` (`git checkout main -- docs/CHANGELOG.md runs`): `node newdata.js v1.28 1:06` checks that every version from v1.06 on is listed with its recording, that the tiles show that lap, and that the named version replays. Writes `newdata-*.png`. |
 
 `open()` redirects the page's requests to `raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/<branch>/...` to the local server, so the page reads the changelog and the runs **of your working tree**, not what is on GitHub.
 
