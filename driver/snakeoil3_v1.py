@@ -733,21 +733,6 @@ def drive_example(c):
     plan_ek=.5          # share of the allowed speed taken off per unit of trackPos off the line beyond plan_e0 (0 = off; 1: Corkscrew 0.14 s slower at plan_vs 1.04; 2 / 4: 0.5 / 1.0 s slower and the car brakes at full lock toward the wall, 0.93-0.95)
     plan_e0=.4          # trackPos off the line with no effect (0.3 with plan_ek 2: 1.4 s slower; 0.5 with plan_ek 1: no effect on the standard lap, measures like 0.4 / 0.5 at plan_vs 1.04)
     plan_emax=.5        # most taken off
-    # v1.18: throttle from the stored speed's slope (feed-forward throttle). Until v1.17 the car came into every bend
-    # of plan_mem at the top of the lift band (3.5 % above the stored speed), coasted at throttle 0 (10 m/s^2 at 200
-    # km/h: drag and engine braking) until it was under the plan, and only then started the throttle from its
-    # zero-torque floor at +0.05 per step: by then the stored speed was rising again and the car ran 4-10 % under it
-    # at the slowest point (1,042 m: 201 km/h for 0.35 s where the plan is 201 -> 252; 770 m: 126 against 143; 2,700
-    # m: 178 against 186). The stored speed's slope is known, so the throttle that makes the car slow down as the
-    # plan does is known before the car is under it: (plan's acceleration v*dv/ds + coasting deceleration 5.75 +
-    # 0.00161*v^2, v1.17's fit) * plan_tk, at most plan_tmax. Under the plan it is a floor for the stored throttle;
-    # inside the lift band it is sent in place of 0, faded to none at the top of the band (plan_tf), so the car
-    # settles inside the band instead of coasting through it. Live as before: the brake, the lift band, the
-    # full-lock limit and traction control act on it. Only inside plan_mem.
-    plan_tk=.04         # throttle per m/s^2 the stored speed asks for beyond coasting (0 = off; 12 perturbed runs with plan_tmax 0.5: 0.03 / 0.04 / 0.05 / 0.08 = -0.095 / -0.119 / -0.086 / -0.088 s, worst 0.827-0.835)
-    plan_tla=.1         # s ahead over which the stored speed's slope is read (0.05 / 0.2 with 0.05 and 0.6: -0.121 / -0.104 s against -0.116)
-    plan_tf=1           # share of it faded out from the allowed speed to the top of the lift band (0.5: 0.892 at the 2,700 m exit; 0 with no cap: off the track on the standard lap)
-    plan_tmax=.5        # most throttle from it (with 0.05: 0.4 / 0.5 / 0.55 / 0.6 / 0.7 / 1.0 = -0.074 / -0.086 / -0.116 / -0.116 / -0.144 / single lap -0.158 s, worst 0.840 / 0.830 / 0.841 / 0.850 / 0.898 / 0.936: above 0.5 the 2,700 m exit (2,803 m) and the 1,042 m exit (1,106 m) widen)
     plan_ds= 10
     plan_pos= (0.003, 0.123, 0.145, 0.072, -0.064, -0.19, -0.303, -0.401, -0.484, -0.548, -0.589, -0.603, -0.588, -0.541, -0.458, -0.339, -0.179, 0.022, 0.268, 0.519, 0.64, 0.622, 0.459, 0.211, -0, -0.173, -0.312, -0.421, -0.503, -0.563, -0.604, -0.63, -0.643, -0.649, -0.65, -0.65, -0.65, -0.649, -0.622, -0.509, -0.241, 0.203, 0.499, 0.623, 0.65, 0.627, 0.559, 0.46, 0.572, 0.65, 0.605, 0.483, 0.302, 0.064, -0.246, -0.505, -0.622, -0.65, -0.644, -0.649, -0.616, -0.521, -0.388, -0.231, -0.061, 0.109, 0.27, 0.413, 0.529, 0.612, 0.65, 0.609, 0.455, 0.141, -0.25, -0.494, -0.615, -0.65, -0.618, -0.496, -0.249, 0.139, 0.422, 0.574, 0.638, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.647, 0.625, 0.563, 0.439, 0.231, -0.053, -0.266, -0.401, -0.475, -0.499, -0.479, -0.388, -0.181, 0.164, 0.416, 0.563, 0.633, 0.65, 0.641, 0.612, 0.56, 0.482, 0.379, 0.247, 0.086, -0.101, -0.27, -0.405, -0.51, -0.584, -0.631, -0.65, -0.641, -0.603, -0.532, -0.459, -0.411, -0.384, -0.376, -0.384, -0.403, -0.433, -0.468, -0.507, -0.546, -0.582, -0.613, -0.635, -0.648, -0.648, -0.617, -0.522, -0.333, -0.031, 0.234, 0.426, 0.555, 0.63, 0.65, 0.619, 0.558, 0.476, 0.377, 0.262, 0.125, -0.04, -0.241, -0.446, -0.569, -0.629, -0.648, -0.65, -0.65, -0.649, -0.648, -0.646, -0.645, -0.643, -0.642, -0.642, -0.641, -0.641, -0.642, -0.643, -0.644, -0.645, -0.646, -0.647, -0.649, -0.649, -0.65, -0.65, -0.645, -0.612, -0.519, -0.333, -0.026, 0.413, 0.637, 0.577, 0.214, -0.202, -0.465, -0.606, -0.65, -0.623, -0.534, -0.382, -0.269, -0.27, -0.36, -0.411, -0.412, -0.376, -0.336, -0.3, -0.269, -0.248, -0.24, -0.251, -0.279, -0.3, -0.305, -0.301, -0.292, -0.272, -0.217, -0.123, 0.007, 0.127, 0.214, 0.271, 0.298, 0.295, 0.281, 0.258, 0.217, 0.149, 0.045, -0.106, -0.315, -0.461, -0.5, -0.484, -0.48, -0.496, -0.495, -0.407, -0.111, 0.31, 0.564, 0.65, 0.41, -0.166, -0.5, -0.408, -0.13, 0.267, 0.564, 0.649, 0.593, 0.429, 0.269, 0.199, 0.251, 0.438, 0.591, 0.65, 0.584, 0.402, 0.332, 0.399, 0.469, 0.495, 0.5, 0.499, 0.499, 0.5, 0.498, 0.483, 0.439, 0.353, 0.207, -0.013, -0.279, -0.445, -0.514, -0.503, -0.425, -0.298, -0.138, 0.041, 0.221, 0.387, 0.523, 0.615, 0.65, 0.611, 0.475, 0.217, -0.111, -0.328, -0.449, -0.497, -0.489, -0.418, -0.248, 0.053, 0.366, 0.547, 0.631, 0.65, 0.629, 0.578, 0.501, 0.404, 0.29, 0.166, 0.035, -0.098, -0.229, -0.355, -0.472, -0.575, -0.663, -0.73, -0.771, -0.778, -0.711, -0.46, 0.111, 0.554, 0.647, 0.422, -0.194, -0.62, -0.762, -0.78, -0.779, -0.776, -0.77, -0.763, -0.754, -0.743, -0.731, -0.718, -0.705, -0.69, -0.675, -0.661, -0.65, -0.642, -0.636, -0.628, -0.612, -0.584, -0.544, -0.496, -0.448, -0.412, -0.401, -0.408, -0.407, -0.366, -0.272, -0.134)
     plan_curv= (0.77, 0.6, 0.71, 0.81, 0.8, 0.77, 0.81, 0.95, 1.15, 1.38, 1.59, 1.77, 1.94, 2.09, 2.22, 2.35, 2.48, 2.62, 2.77, 2.9, 2.97, 2.89, 2.7, 2.48, 2.24, 2.01, 1.79, 1.57, 1.35, 1.14, 0.92, 0.71, 0.49, 0.27, 0.05, 0, 0, 1.48, 5.2, 8.92, 12.76, 16.78, 20.88, 24.84, 27.86, 27.05, 26.52, 26.93, 28.17, 29.04, 25.91, 22.34, 18.73, 15.21, 11.79, 8.52, 5.28, 1.99, -0.9, -3.56, -3.84, -3.72, -3.7, -3.75, -3.84, -3.98, -4.18, -4.39, -4.58, -4.69, -4.89, -6.85, -9.09, -11.38, -13.75, -16.05, -18.12, -19.67, -17.71, -15.11, -12.57, -10.08, -7.7, -5.36, -3, -0.63, 0, 0, 0, 0, 0, 0, 0, 0, -0.09, -1.15, -2.41, -3.69, -5.01, -6.37, -7.81, -9.34, -10.89, -12.34, -13.45, -12.43, -10.92, -9.36, -7.77, -6.21, -4.65, -3.07, -1.48, -1.25, -1.39, -1.5, -1.58, -1.65, -1.72, -1.79, -1.86, -1.93, -2, -2.08, -2.16, -2.22, -2.23, -2.1, -1.9, -1.7, -1.5, -1.31, -1.12, -0.93, -0.75, -0.56, -0.37, -0.19, -0.01, 0.16, 0.32, 0.47, 0.61, 0.73, 1.83, 3.77, 5.7, 7.59, 9.42, 11.27, 13.27, 15.41, 17.46, 18.6, 17.13, 15.43, 13.74, 12.14, 10.64, 9.21, 7.83, 6.47, 5.13, 3.79, 2.44, 1.05, 0.06, 0.03, 0.02, 0.01, 0, -0.01, -0.01, -0.02, -0.02, -0.03, -0.02, -0.02, -0.02, -0.01, -0, 0, 0.01, 0.02, 0.02, 0.02, 0.14, 1.76, 3.56, 5.35, 7.16, 9.03, 10.83, 12.36, 11.67, 10.21, 8.7, 7.21, 5.71, 4.15, 3.81, 3.77, 3.67, 3.53, 3.37, 3.2, 3.03, 2.84, 2.65, 2.44, 2.24, 2.01, 1.77, 1.54, 1.34, 1.13, 0.88, 0.57, 0.26, 0.23, 0.25, 0.24, 0.24, 0.23, 0.23, 0.24, 0.25, 0.26, -0.03, -0.54, -1.06, -1.61, -2.19, -2.8, -3.48, -4.18, -4.82, -5.15, -3.28, -1.16, 0.94, 5.05, 12.32, 20.02, 28.35, 37.11, 43.87, 22.27, -5.18, -29.14, -27.92, -22.33, -17.17, -12.56, -8.24, -6.54, -5.03, -3.3, -1.5, 0.29, 2.03, 3.65, 5.12, 6.35, 7.57, 8.86, 10.22, 11.59, 12.84, 13.84, 14.12, 14.05, 13.72, 12.95, 11.89, 10.8, 9.73, 8.7, 7.71, 6.75, 5.81, 4.87, 3.92, 2.97, 2.01, 1.05, 0.1, -0.84, -1.76, -2.65, -3.48, -4.28, -5.77, -7.31, -8.93, -10.66, -12.42, -14.07, -15.46, -15, -13.17, -11.31, -9.45, -7.62, -5.82, -3.97, -2.18, -1.83, -1.55, -1.24, -0.94, -0.65, -0.38, -0.14, 0.1, 0.34, 0.56, 0.75, 0.96, 1.23, 1.57, 1.92, 4.25, 10.91, 18.3, 26.84, 36.47, 40.93, 32.52, 24.05, 15.81, 7.57, 0.66, 0.13, 0.12, 0.12, 0.11, 0.09, 0.07, 0.06, 0.05, 0.05, 0.02, -0.06, -0.16, -0.21, -0.13, 0.11, 0.48, 0.75, 0.74, 0.5, 0.02, -0.78, -1.5, -1.17, 0.49, 2.44, 3.25, 2.66, 1.5)
@@ -1105,14 +1090,6 @@ def drive_example(c):
     if pw > 0 and plan_ek > 0:
         allowed_speed*= 1 - pw*clip((abs(S['trackPos'] - plan_at(plan_pos, pd)) - plan_e0)*plan_ek, 0, plan_emax)
     c.allowed_speed= allowed_speed   # kept for telemetry and for the next step's exit run-out (v0.81)
-    # Throttle From The Stored Speed's Slope (v1.18, see the knob block): 0 outside plan_mem and while the plan
-    # falls faster than the car coasts.
-    thr_ff= 0
-    if plan_tk > 0 and any(z0 <= pd < z1 for z0, z1 in plan_mem):
-        vms= max(S['speedX'], 0)/3.6
-        tds= max(vms*plan_tla, 1)
-        a_p= vms*(plan_at(plan_v, pd+plan_vd+tds) - plan_at(plan_v, pd+plan_vd))*plan_vs/3.6/tds   # m/s^2 the stored speed asks for
-        thr_ff= clip((a_p + 5.75 + .00161*vms*vms)*plan_tk, 0, plan_tmax)
 
     # Throttle Control
     if S['speedX'] < min(target_speed - (abs(R['steer'])*50), allowed_speed):
@@ -1126,7 +1103,7 @@ def drive_example(c):
         # with the plan already asking for speed. So the ramp starts from the
         # zero-torque throttle instead (S['rpm'] as read, ~4.7 % high).
         eng_brk= .33*max(S['rpm']-5000, 0)/15000
-        R['accel']= max(R['accel'], thr_zero*eng_brk/(1+eng_brk), thr_ff)
+        R['accel']= max(R['accel'], thr_zero*eng_brk/(1+eng_brk))
     else:
         R['accel']-= .01
     if S['speedX']<10:
@@ -1279,10 +1256,7 @@ def drive_example(c):
     if R['brake'] == 0 and not lift: c.brk_n= 0
     if 0 < R['brake'] < touch_brake or (dab and R['brake'] > 0):   # brake touch or dab: stored throttle kept, nothing sent
         c.throttle= min(c.throttle + touch_thr, 1); R['accel']= 0
-    if lift:
-        R['accel']= 0   # lift band: nothing sent, c.throttle stays for the next step
-        if thr_ff > 0 and lift_band > 0:   # v1.18: but the throttle the stored speed's slope asks for, faded out toward the top of the band
-            R['accel']= max(min(thr_ff*(1 - plan_tf*clip((S['speedX']-allowed_speed)/lift_band, 0, 1)), 1 - lock*(1-lt)) - c.tc_cut, 0)
+    if lift: R['accel']= 0   # lift band: nothing sent, c.throttle stays for the next step
 
     # Clutch Slip (v0.78): out of slow corners and at the start the gear puts
     # the engine far below its 16-18k torque peak (hairpin exit: 2nd at ~6,800
