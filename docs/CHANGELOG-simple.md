@@ -1899,7 +1899,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 
 ---
 
-## v1.04 — A closer look behind a kink
+## v1.04 — Spotting the slow corner hidden behind a fast kink sooner
 
 | Field | Detail |
 |---|---|
@@ -2033,7 +2033,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — by far the largest gain of the project: 1.65 s over all 70 laps, every lap faster, none off the road. The usual test laps vary the old steering settings, which no longer act where the line is followed, so the new steering was also tested by varying each of its own settings up and down: 140 further laps, none off the road. |
 | **Learned** | Following the line by where the car is pointing does not work, because the car slides; it has to steer by the direction it is actually travelling, within a limit. The line could not yet be used over the crest before the Corkscrew, down the Corkscrew or at the hairpin; those are the next places to gain. The car now brakes in short on-off touches where it rides the line's speed limit, which is a pattern to fix. |
 
-## v1.12 — The speed to match the new line
+## v1.12 — Higher corner speeds to match the new racing line
 
 | Field | Detail |
 |---|---|
@@ -2097,7 +2097,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — 0.82 s faster over all 70 laps, every lap faster, none off the road, and more room at the wall. |
 | **Learned** | What had blocked the Corkscrew was not the Corkscrew itself but the 150 m before it: where the line sits over the crest, and a braking point for the crest. Going over the crest more slowly gives a faster Corkscrew. The wall on the right ends the run if the car gets to about 0.83 of the way to the edge, so the line is kept well inside there. |
 
-## v1.16 — The speed plan comes from the track memory
+## v1.16 — The stored corner speeds now decide where the car brakes
 
 | Field | Detail |
 |---|---|
@@ -2113,7 +2113,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — 0.37 s faster over all 70 laps, none off the road. A version that used the stored speed almost everywhere was 0.48 s faster but was not taken: with 3 % more speed, half of its test laps ended in the Corkscrew's wall. |
 | **Learned** | The sensor-based plan had been acting as a safety ceiling. In the Corkscrew and at the hairpin the stored speed gains almost nothing, so the sensor plan stays in charge there. The cornering speed of the computed line needs its own correction at each corner. The car now brakes in short on-off touches where the stored speed falls; that pattern is still to be fixed. |
 
-## v1.17 — A safety check on the stored speed, and 2 % more speed
+## v1.17 — Slowing down when the car drifts off its line, and 2 % more speed
 
 | Field | Detail |
 |---|---|
@@ -2145,7 +2145,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ❌ Rejected — the previous version was restored. Any lap that leaves the road in a check means the version is not kept. |
 | **Learned** | The speed the car was missing in the middle of the corner was also its safety reserve at the exit. After each corner the stored speed rises faster than the car can follow, so nothing was watching the exit. The exits need their own live safety check before this throttle can be used. |
 
-## v1.19 — A safety check at the corner exits, and the new throttle where it is safe
+## v1.19 — Easing off when the car runs wide out of a corner, and earlier throttle where that is safe
 
 | Field | Detail |
 |---|---|
@@ -2193,7 +2193,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — 0.08 s faster with nothing given up. |
 | **Learned** | Any limit from 135 to 250 km/h gives the same lap, so 160 is far from any edge. During the start, less wheelspin is slower. Two other ideas were tested and closed: more wheelspin allowed out of the Corkscrew, and a slower entry into it. |
 
-## v1.22 — The right gear out of the corners
+## v1.22 — A lower gear sooner when accelerating out of corners
 
 | Field | Detail |
 |---|---|
@@ -2209,7 +2209,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — the largest gain of the batch. A version that also shifted down earlier while braking was 0.07 s faster again but came too close to the edge at two corners, so it was not taken. |
 | **Learned** | An old belief was wrong: the engine has no narrow power peak to stay near. Where the car shifts down matters more than at what revs: on the throttle it disturbs nothing, while braking it changes how the car turns in. The car now makes some very short stays in the lower gear (0.2 to 0.4 s); whether those help is a question for the next batch. |
 
-## v1.23 — The lower gear earlier, into three corners
+## v1.23 — Changing down a gear sooner before three corners
 
 | Field | Detail |
 |---|---|
@@ -2225,7 +2225,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — a small, safe gain. |
 | **Learned** | The same early gear change at every corner was twice as fast but brought the car close to the inside edge at two corners, so it was limited to the places where it costs nothing. |
 
-## v1.24 — Second gear before the throttle at 1,528 m
+## v1.24 — Second gear already engaged before accelerating out of one corner
 
 | Field | Detail |
 |---|---|
@@ -2337,7 +2337,7 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — a small gain, and the first use of the road's height. |
 | **Learned** | Applying the hills to the whole lap made the car half a second slower: the speeds tuned by hand over many versions already allow for the hilltops. Only this one place had been misread. Going 15 km/h faster through the dip damages the car on the hilltop behind it. |
 
-## v1.31 — The lower gear earlier into two more corners
+## v1.31 — Changing down a gear sooner before two corners
 
 | Field | Detail |
 |---|---|
