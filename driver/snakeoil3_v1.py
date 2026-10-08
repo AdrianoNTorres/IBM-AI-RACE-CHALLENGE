@@ -718,6 +718,24 @@ def drive_example(c):
     plan_kp=.5          # steer per unit of trackPos away from the line (.3: 0.88 of the edge at the start kink; .8: 0.15 s slower)
     plan_kh=4.77        # steer per radian between the car's direction of travel and the line's direction (15/PI, the sensor steering's own; 4 the same, 6: 0.26 s slower)
     plan_slipmax=5      # deg: most slip angle (atan(speedY/speedX)) counted in the direction of travel; beyond it the nose counts, so a slide is still caught by counter-steer (3: 0.24 s slower; 7 the same; no limit: 3 of 12 perturbed runs off; nose only, 0: off at 566 m, the car runs 0.3 wide of the line in every bend)
+    # v1.27: no counter-steer while the car is still outside its line, at the Corkscrew's left flick. Braking into the
+    # flick the car slides with its nose 10-21 deg inside its direction of travel; beyond plan_slipmax the nose counts,
+    # so the heading term counter-steered at full gain (-0.49 at 2,450 m in a left-hander, then +0.93, -0.48, +0.37,
+    # -0.62: a sign change every 8 m) while the car was 0.2-0.3 outside its line, pushing it further out. Inside plan_gz,
+    # below plan_gv0 + plan_gvw km/h, and only while the car is on the outer side of the line (by plan_gw of trackPos for
+    # the full effect), the heading and position gains are scaled down to plan_khlo / plan_kplo of their value. On the
+    # line or inside it the gains are whole, so the car is caught at the apex exactly as before; the feed-forward is
+    # never scaled. Measured on 12 runs: 0.063 s gained, every place's worst run as before, wall side 0.50 -> 0.45.
+    # The same scaling whatever side of the line the car is on (flick, hairpin and 446 m: 0.21 s; flick and hairpin:
+    # 0.17 s) lets the car cut inside the line at the apexes: 10 of 10 off at 441 m with the stored speed read 5 m
+    # late, hairpin apex 0.895 at plan_vs 1.0 (0.725 without) and off at 0.98: not taken. By speed alone, no zone:
+    # 0.08 s (exits lose what entries gain); plan_kh 4 / plan_kp 0.4 everywhere: 0.19 s, 0.87 at the 1,042 m exit.
+    plan_gz= ((2400, 2470),)   # from m, to m: the Corkscrew's left flick, braking to apex (with the hairpin 3,200-3,275 m and 446 m 400-480 m as well: no further gain in this form, the car is on its line there)
+    plan_gv0=100        # km/h: ... the scaled gains act in full up to this speed ...
+    plan_gvw=60         # km/h: ... and fade to the full gains over this much more
+    plan_gw=.05         # trackPos outside the line for the full effect (.1 / .02: 0.052 / 0.065 s gained for 0.063)
+    plan_khlo=.5        # share of plan_kh there (1 = off; .3: the same)
+    plan_kplo=.6        # share of plan_kp there
     plan_ff=12          # feed-forward: steer per 1/m of the line's curvature at low speed (v1.13: 8.0 -> 12 with plan_ffv 9e-4 -> 6e-4: +30 % at 100 km/h, +13 % at 200, +8 % at 270; over 70 runs 0.351 s faster, apex at 1,931 m 0.79 -> 0.83-0.85 of the inside edge; 14 with 5e-4: 0.417 s, 0.86 at 490 m and 766 m; 8.8 / 9.6 / 10.4 with 9e-4: 0.29 / 0.36 / 0.52 s on 12 runs for 0.83 / 0.88 / 0.94 at 1,931 m; 11.2 with 9e-4: 3 of 12 off there) ...
     plan_ffv=6e-4       # ... rising by this share per (m/s)^2 (the fronts slip more at speed; v1.11, with plan_ff 8: 6e-4 / 7e-4: 0.3 s slower, the car runs wide of the line; 11e-4: 0.12 s faster on 12 runs, but it cuts inside the line at the fast apexes. v1.13: 6e-4 with plan_ff 12: the same lap time as plan_ff 9.6 / 10 with 9e-4 / 8e-4 for 0.03-0.05 less of the edge at the 1,931 m apex, entered at 278 km/h; 4e-4 / 3e-4 / 2e-4 with 16 / 18 / 20: the margin goes at 490 m instead, 0.85-0.89)
     plan_la=.15         # s: the feed-forward reads the curvature this far ahead (0: 0.12 s slower; .3 the same)
@@ -972,8 +990,12 @@ def drive_example(c):
         p0= plan_at(plan_pos, pd)
         p_dir= -atan(6*(plan_at(plan_pos, pd+plan_ds/2) - plan_at(plan_pos, pd-plan_ds/2))/plan_ds)   # the line's direction as an 'angle' reading (half-width 6 m)
         p_slip= atan2(S['speedY'], max(S['speedX'], 10))
-        p_steer= ((S['angle'] - clip(p_slip, -plan_slipmax*PI/180, plan_slipmax*PI/180) - p_dir)*plan_kh
-                  + (p0 - S['trackPos'])*plan_kp
+        p_g= 1   # v1.27: 1 = full feedback gains, 0 = the flick's shares (slow, in the zone, outside the line: see plan_gz)
+        if any(z0 <= pd < z1 for z0, z1 in plan_gz):
+            p_g= 1 - (clip((plan_gv0 + plan_gvw - S['speedX'])/plan_gvw, 0, 1)
+                      *clip((p0 - S['trackPos'])*(1 if plan_at(plan_curv, pd) > 0 else -1)/plan_gw, 0, 1))
+        p_steer= ((S['angle'] - clip(p_slip, -plan_slipmax*PI/180, plan_slipmax*PI/180) - p_dir)*plan_kh*(plan_khlo + (1-plan_khlo)*p_g)
+                  + (p0 - S['trackPos'])*plan_kp*(plan_kplo + (1-plan_kplo)*p_g)
                   + plan_at(plan_curv, pd + plan_la*pv)/1000*plan_ff*(1 + plan_ffv*pv*pv))
         R['steer']= pw*p_steer + (1-pw)*R['steer']
         line_target= p0

@@ -343,3 +343,52 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.26 | B_vs+ | reference | v1.25 with `plan_vs` 1.04 | 12 (screen) | +0.439 | 0.020 | 0 of 12 | 0.844 @ 2,802 m | lost | reference: wall side 0.549 |
 | v1.26 | B_ff+ | reference | v1.25 with `plan_ff` 13.2 | 12 (screen) | -0.065 | 0.014 | 0 of 12 | 0.852 @ 1,035 m | lost | reference: wall side 0.561 |
 | v1.26 | B_ff- | reference | v1.25 with `plan_ff` 10.8 | 12 (screen) | +0.225 | 0.009 | 0 of 12 | 0.843 @ 2,802 m | lost | reference: wall side 0.573 |
+| v1.27 | **chosen** | see title | Less counter-steer into the Corkscrew's left flick: while the car is still outside its line there, the follower's heading and position gains are halved, so it no longer steers 0.49 to the right in a left-hander | 70 (full) | -0.042 | 0.004 | 0 of 70 | 0.822 @ 2,805 m | kept | Kept, narrowly: 0.042 s over 70 runs (SE 0.004), 64 of 70 faster; every standard group's worst run equal or lower and the wall side lower (0.489 for 0.551). Spent: 0.02-0.03 at the flick's left apex and 0.09 on the wall side when the stored speed is 2 % lower (0.866 and 0.641, a run ends at about 0.83 on the wall side), none of it one step further (`plan_vs` 0.98: 0.955 for 0.951). The gain is under 0.05 s and the slide it was aimed at is not smaller: the orchestrator may reasonably reverse this. |
+| v1.27 | Pscr | flick, outside the line only | the chosen on the screen | 12 (screen) | -0.060 | 0.010 | 0 of 12 | 0.817 @ 2,804 m | lost | left apex 0.666, wall side 0.45 |
+| v1.27 | Pscr_vs98 | flick, outside the line only | the chosen with `plan_vs` 0.98 | 12 (screen) | +0.656 | 0.008 | 0 of 12 | 0.955 @ 2,462 m | lost | left apex 0.955 (base with 0.98: 0.951): the cliff is not moved |
+| v1.27 | GK | flick + hairpin, outside the line only | the same design with the hairpin zone (3,200-3,275 m) and `plan_gw` 0.1 | 12 (screen) | -0.052 | 0.010 | 0 of 12 | 0.821 @ 2,805 m | lost | the hairpin adds nothing: the car is on its line there |
+| v1.27 | GK05 | flick + hairpin, outside the line only | `plan_gw` 0.05 | 12 (screen) | -0.063 | 0.010 | 0 of 12 | 0.817 @ 2,804 m | lost | as the chosen |
+| v1.27 | GK02 | flick + hairpin, outside the line only | `plan_gw` 0.02 | 12 (screen) | -0.065 | 0.009 | 0 of 12 | 0.804 @ 2,804 m | lost | flat |
+| v1.27 | GK30 | flick + hairpin, outside the line only | `plan_khlo` 0.3 | 12 (screen) | -0.052 | 0.011 | 0 of 12 | 0.813 @ 2,804 m | lost | the same as 0.5 |
+| v1.27 | G | flick + hairpin + 446 m, outside the line only | three zones, `plan_gw` 0.1 | 12 (screen) | -0.056 | 0.008 | 0 of 12 | 0.822 @ 2,805 m | lost | 446 m adds nothing either |
+| v1.27 | GK_vs- | flick + hairpin, outside the line only | with `plan_vs` 1.0 | 12 (screen) | +0.244 | 0.011 | 0 of 12 | 0.866 @ 2,463 m | lost | left apex 0.866, wall side 0.641 (base 0.840 / 0.550), hairpin apex 0.726 |
+| v1.27 | GK_vs98 | flick + hairpin, outside the line only | with `plan_vs` 0.98 | 12 (screen) | +0.664 | 0.011 | 0 of 12 | 0.954 @ 2,462 m | lost | left apex 0.954, wall side 0.667 (base 0.951 / 0.652) |
+| v1.27 | G_vd5 | flick + hairpin + 446 m, outside the line only | with the stored speed read 5 m late | 12 (screen) | +0.081 | 0.011 | 0 of 12 | 0.871 @ 2,803 m | lost | 446 m apex 0.863, on the track (the both-sides design: 10 of 10 off) |
+| v1.27 | A | flick + hairpin + 446 m, both sides of the line | gains scaled to 0.5 / 0.6 in (400, 480), (2400, 2470), (3200, 3275) whatever the side: full bar | 70 (full) | -0.199 | 0.004 | 0 of 70 | 0.838 @ 440 m | lost | FAILED the bar: braking-plan check 10 of 180 off, all at 441 m with `plan_vd` 5; follower check 0.897 at the hairpin apex |
+| v1.27 | zC50 | flick + hairpin + 446 m, both sides of the line | the same on the screen | 12 (screen) | -0.207 | 0.008 | 0 of 12 | 0.811 @ 2,805 m | lost | 446 m apex 0.759 -> 0.795, hairpin apex 0.727 -> 0.763, hairpin exit 0.762 -> 0.656 |
+| v1.27 | zC30 | flick + hairpin + 446 m, both sides of the line | `plan_khlo` 0.3 | 12 (screen) | -0.224 | 0.010 | 0 of 12 | 0.819 @ 2,804 m | lost | flat from 0.3 to 0.5 |
+| v1.27 | zC20 | flick + hairpin + 446 m, both sides of the line | `plan_khlo` 0.2 | 12 (screen) | -0.173 | 0.011 | 0 of 12 | 0.824 @ 2,804 m | lost | less than 0.3 |
+| v1.27 | zC63 | flick + hairpin + 446 m, both sides of the line | `plan_khlo` 0.63 | 12 (screen) | -0.143 | 0.012 | 0 of 12 | 0.812 @ 2,803 m | lost | less than 0.5 |
+| v1.27 | zC50p1 | flick + hairpin + 446 m, both sides of the line | position gain not scaled | 12 (screen) | -0.185 | 0.008 | 0 of 12 | 0.821 @ 2,805 m | lost | 0.02 s less |
+| v1.27 | zC50v80 | flick + hairpin + 446 m, both sides of the line | `plan_gv0` 80 | 12 (screen) | -0.174 | 0.008 | 0 of 12 | 0.818 @ 2,803 m | lost | 0.03 s less |
+| v1.27 | zC50v120 | flick + hairpin + 446 m, both sides of the line | `plan_gv0` 120 | 12 (screen) | -0.212 | 0.007 | 0 of 12 | 0.813 @ 441 m | lost | the same as 100 |
+| v1.27 | zE63 | flick + hairpin + 446 m, both sides of the line | zones 20-35 m longer, past the apex, `plan_khlo` 0.63 | 12 (screen) | -0.086 | 0.009 | 0 of 12 | 0.808 @ 2,804 m | lost | exits slower: 3,300 m section +0.040 |
+| v1.27 | zF160 | five corners, both sides of the line | 770 m and 1,528 m added, `plan_gv0` 160 | 12 (screen) | -0.263 | 0.007 | 0 of 12 | 0.837 @ 765 m | lost | 0.837 at the 770 m apex |
+| v1.27 | zH200 | five corners, both sides of the line | 2,700 m and 2,988 m added, `plan_gv0` 200 | 12 (screen) | -0.269 | 0.011 | 0 of 12 | 0.821 @ 440 m | lost | fastest screen, cuts inside the line: margin |
+| v1.27 | K | flick + hairpin, both sides of the line | without the 446 m zone | 12 (screen) | -0.172 | 0.009 | 0 of 12 | 0.811 @ 2,803 m | lost | hairpin apex 0.764 |
+| v1.27 | K_vs- | flick + hairpin, both sides of the line | `K` with `plan_vs` 1.0 | 12 (screen) | +0.074 | 0.010 | 0 of 12 | 0.895 @ 3,268 m | lost | hairpin apex 0.895 (base 0.725) |
+| v1.27 | K_vs98 | flick + hairpin, both sides of the line | `K` with `plan_vs` 0.98 | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | 12 of 12 off: flick left apex 1.015, hairpin apex 1.013 (base 0.951 / 0.727, on the track) |
+| v1.27 | Kp15_vs- | flick + hairpin, both sides of the line | position gain x1.5 instead, `plan_vs` 1.0 | 12 (screen) | +0.093 | 0.011 | 0 of 12 | 0.871 @ 3,268 m | lost | hairpin apex still 0.871 |
+| v1.27 | K3 | flick + hairpin, both sides of the line | hairpin zone ending at 3,250 m, before the apex | 12 (screen) | -0.036 | 0.010 | 0 of 12 | 0.811 @ 2,803 m | lost | the hairpin's gain is gone: it was the cut at the apex |
+| v1.27 | F | flick, both sides of the line | the flick zone alone | 12 (screen) | -0.068 | 0.008 | 0 of 12 | 0.811 @ 2,803 m | lost | same as the chosen on the standard runs, off at `plan_vs` 0.98 like `K` |
+| v1.27 | z0 | whole lap, by speed | gains scaled below 100-160 km/h everywhere, 0.73 / 0.6 | 12 (screen) | -0.084 | 0.012 | 0 of 12 | 0.806 @ 2,805 m | lost | exits lose what entries gain (2,500 m +0.017) |
+| v1.27 | gh63 | whole lap, by speed | heading gain 0.63 below 100-160 km/h | 12 (screen) | -0.004 | 0.009 | 0 of 12 | 0.817 @ 2,804 m | lost | 3,200 m -0.078 but 2,500 m +0.057, 3,300 m +0.042 |
+| v1.27 | kh4 | follower, whole lap | inherited conclusion re-checked: `plan_kh` 4 for 4.77 (v1.11: "the same") | 12 (screen) | -0.113 | 0.015 | 0 of 12 | 0.832 @ 1,035 m | lost | faster now; 0.832 at 1,035 m |
+| v1.27 | kh3 | follower, whole lap | `plan_kh` 3 | 12 (screen) | +0.085 | 0.016 | 0 of 12 | 0.897 @ 1,932 m | lost | 0.897 at the 1,931 m apex |
+| v1.27 | kp4 | follower, whole lap | `plan_kp` 0.4 for 0.5 | 12 (screen) | -0.108 | 0.014 | 0 of 12 | 0.839 @ 203 m | lost | 0.839 at the start kink |
+| v1.27 | kp3 | follower, whole lap | `plan_kp` 0.3 | 12 (screen) | -0.152 | 0.018 | 0 of 12 | 0.907 @ 203 m | lost | 0.907 at the start kink |
+| v1.27 | kh4kp4 | follower, whole lap | `plan_kh` 4 and `plan_kp` 0.4 | 12 (screen) | -0.187 | 0.018 | 0 of 12 | 0.874 @ 1,035 m | lost | 0.874 at the 1,042 m exit: margin |
+| v1.27 | kh56 | follower, whole lap | `plan_kh` 5.6 | 12 (screen) | +0.135 | 0.010 | 0 of 12 | 0.829 @ 3,309 m | lost | slower |
+| v1.27 | kp7 | follower, whole lap | `plan_kp` 0.7 | 12 (screen) | +0.229 | 0.010 | 0 of 12 | 0.837 @ 2,802 m | lost | slower |
+| v1.27 | sm3 | follower, slip limit | `plan_slipmax` 3 | 12 (screen) | +0.159 | 0.011 | 0 of 12 | 0.911 @ 3,310 m | lost | slower, 0.911 at the hairpin exit |
+| v1.27 | sm7 | follower, slip limit | `plan_slipmax` 7 (v1.11: "the same") | 12 (screen) | +0.100 | 0.012 | 0 of 12 | 0.814 @ 2,805 m | lost | slower now |
+| v1.27 | sm10 | follower, slip limit | `plan_slipmax` 10 | 12 (screen) | +0.515 | 0.011 | 0 of 12 | 0.801 @ 2,799 m | lost | slower: Corkscrew exit +0.25 |
+| v1.27 | la25 | follower, feed-forward look-ahead | `plan_la` 0.25 | 12 (screen) | +0.052 | 0.022 | 0 of 12 | 0.879 @ 1,931 m | lost | 0.879 at the 1,931 m apex |
+| v1.27 | la08 | follower, feed-forward look-ahead | `plan_la` 0.08 | 12 (screen) | +0.157 | 0.012 | 0 of 12 | 0.820 @ 2,804 m | lost | slower |
+| v1.27 | VS97 | flick entry, stored speed | handed down as "less slide": stored speed x0.97 at 2,395-2,435 m (braking done earlier) | 12 (screen) | +0.017 | 0.011 | 0 of 12 | 0.823 @ 2,805 m | lost | slower: 2,400 m section +0.038 |
+| v1.27 | R60 | 2,988 m row | handed down, re-measured on v1.26: corner row +60 for +52 | 12 (screen) | -0.063 | 0.019 | 0 of 12 | 0.806 @ 2,804 m | lost | worst run unchanged; open, a re-tune for the next version |
+| v1.27 | R115 | 1,931 m row | handed down, re-measured on v1.26's line: corner row +115 for +110 | 12 (screen) | -0.047 | 0.009 | 0 of 12 | 0.826 @ 2,804 m | lost | 2,700 m exit 0.826; open |
+| v1.27 | AR60 | 2,988 m row + three zones | `R60` on top of `A` | 12 (screen) | -0.267 | 0.010 | 0 of 12 | 0.811 @ 2,805 m | lost | adds fully to the follower change (2,900 m section -0.048) |
+| v1.27 | B_vs- | reference | v1.26 with `plan_vs` 1.0 | 12 (screen) | +0.282 | 0.012 | 0 of 12 | 0.840 @ 2,462 m | lost | reference: left apex 0.840, wall side 0.550, hairpin apex 0.725 |
+| v1.27 | B_vs98 | reference | v1.26 with `plan_vs` 0.98 | 12 (screen) | +0.668 | 0.008 | 0 of 12 | 0.951 @ 2,461 m | lost | reference: left apex 0.951 at 2,461 m: v1.26's line relies on the slide |
+| v1.27 | B_vd+ | reference | v1.26 with the stored speed read 10 m late | 12 (screen) | +0.414 | 0.015 | 0 of 12 | 0.875 @ 767 m | lost | reference: 446 m 0.823 |

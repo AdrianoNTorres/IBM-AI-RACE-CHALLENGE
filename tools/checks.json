@@ -15,7 +15,11 @@
         {"knob": "plan_la", "abs": 0.05},
         {"knob": "plan_ek", "rel": 0.1},
         {"knob": "plan_e0", "rel": 0.1},
-        {"knob": "plan_emax", "rel": 0.1}
+        {"knob": "plan_emax", "rel": 0.1},
+        {"knob": "plan_khlo", "rel": 0.2},
+        {"knob": "plan_kplo", "rel": 0.2},
+        {"knob": "plan_gv0", "abs": 20},
+        {"knob": "plan_gw", "rel": 0.2}
       ]
     },
     "braking-plan": {
