@@ -10,7 +10,10 @@ without modifying it directly — each race gets a private copy.
 |---|---|
 | **The whole acceptance bar in one call** (70 runs against the base, paired difference, checks, patterns, width) | `python tools/accept.py --out %TEMP%\vNNN [--cand "label[@file.py][: knob=value ...]"] [--base v1.17]` |
 | Screen several candidates (12 runs each) or one lap each | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py" --cand "B: plan_vs=1.03" --screen` (or `--single`) |
-| Trial copy of the driver with exact text edits or spliced table rows | `python tools/variant.py %TEMP%\vNNN\a.py --rep "old=>new" [--edits edits.txt] [--plan plan.txt:from:to]` |
+| Trial copy of the driver with exact text edits, spliced table rows or a stretch of the stored speed scaled | `python tools/variant.py %TEMP%\vNNN\a.py --rep "old=>new" [--edits edits.txt] [--plan plan.txt:from:to] [--vscale from:to:factor]` |
+| Worst `\|trackPos\|` per place of the lap over folders of runs | `python tools/places.py %TEMP%\vNNN\base %TEMP%\vNNN\A` |
+| Two laps side by side at marks (time difference, speed, gear, position, pedals) | `python tools/lapdiff.py %TEMP%\vNNN\base %TEMP%\vNNN\A [from to step]` |
+| Every gear change of a lap and its short stints | `python tools/gears.py runs/<file>.csv [--short 1]` |
 | Step trace of a run against the planned line | `python tools/trace.py runs/<file>.csv 2200 2640 [step]` |
 | **Record a version once** (changelog entry, batch row, ledger rows, run CSV, commit, tag) | `python tools/record.py %TEMP%\vNNN\version.md [--dry-run]` |
 | What each sub-agent of a session cost (turns, context, minutes) | `python tools/agentcost.py [--all] [--detail]` |
@@ -155,7 +158,9 @@ git revision) with exact text edits applied: `--rep "old=>new"` (the old text mu
 exactly once), `--edits FILE` for multi-line edits written as `<<<<` / old / `====` /
 new / `>>>>` blocks, and `--plan plan.txt[:from:to]` to take the `plan_pos` /
 `plan_curv` / `plan_v` entries of a `raceline.py --table` file, optionally only inside a
-stretch in metres.
+stretch in metres, and `--vscale from:to:factor` (repeatable) to multiply the stored
+speed `plan_v` inside a stretch in metres (at most 360 km/h; the entries are printed
+before and after).
 
 **Where it is used.** For every trial that changes code or tables and cannot be a
 `--set`: the copy is then raced with `accept.py --cand "A@a.py"` or
@@ -165,10 +170,11 @@ stretch in metres.
 in its `%TEMP%` folder. The driver itself must never be edited to try something, and a
 text edit that silently matches nothing or twice produces a trial of the wrong thing:
 the exactly-once rule stops that. Splicing a stretch keeps the rest of the table byte
-for byte (a full regeneration moves far-away worst runs chaotically, v1.14).
+for byte (a full regeneration moves far-away worst runs chaotically, v1.14). `--vscale`
+replaces the `mkU.py` that the agents of v1.18 and v1.19 each wrote.
 
 **Implementation.** Reads the base with its line endings preserved, applies `--plan`,
-then `--edits`, then `--rep`, and refuses to write over `driver/snakeoil3_v1.py`.
+then `--vscale`, then `--edits`, then `--rep`, and refuses to write over `driver/snakeoil3_v1.py`.
 
 ---
 
@@ -186,6 +192,71 @@ example the Corkscrew's left apex), before and after a change.
 
 **Implementation.** Reads the plan tables from the driver file (`--driver` for a
 variant) and interpolates them at each row's `distFromStart`, as the driver does.
+
+---
+
+## places.py — worst edge use per place
+
+**What it does.** For each folder of run CSVs (or single CSV) given, prints one line:
+the number of runs and the largest `|trackPos|` any of them reached in each of 17
+places of the lap (start kink, 446 m, the exits of 770 m / 1,042 m / 1,528 m, the
+1,931 m apex and exit, flick, the Corkscrew's wall, 2,700 m apex and exit, 2,988 m and
+its exit, hairpin and its exit). A name ending in `x` is an exit.
+
+**Where it is used.** After a screen or a perturbed screen (`plan_vd` ±10, `plan_vs`
+1.04), to see which place a candidate moved: `python tools/places.py
+%TEMP%\vNNN\base %TEMP%\vNNN\A`. `accept.py` keeps each label's runs in
+`<out>\<label>\`.
+
+**Why it exists.** `accept.py` prints only each group's single worst run, so a place
+that moves from 0.67 to 0.85 behind a worst run of 0.88 elsewhere is invisible (the
+2,700 m exit at v1.22). The agents of v1.19 (`win.py`) and v1.22 (`places.py`) each
+wrote this in their trial folder.
+
+**Implementation.** Reads every `*.csv` of a folder, rows with `curLapTime` ≥ 0; the
+places are the `PLACES` table at the top of the script (name, from m, to m): edit it
+when a new margin place appears.
+
+---
+
+## lapdiff.py — two laps side by side
+
+**What it does.** Prints, at distance marks (every 50 m, or `from to step`), the time
+difference of lap B against lap A since the start line (negative = B ahead) and, for
+each lap, speed, gear, `trackPos`, throttle sent and brake, plus B's rpm reading.
+
+**Where it is used.** To find where a single-lap or screen difference is made and what
+the car does differently there, before reading a full step trace with `trace.py`:
+`python tools/lapdiff.py %TEMP%\vNNN\base %TEMP%\vNNN\A 2600 2900 10`.
+
+**Why it exists.** `accept.py` gives the largest per-100 m section differences but not
+the speeds, gears and positions behind them; v1.20 (`sec.py`), v1.21 (`lt.py`) and
+v1.22 (`cmp.py`) each rebuilt a version of this.
+
+**Implementation.** Each argument is a run CSV or a folder of `accept.py` runs (the
+unperturbed lap `*s1_p0.csv` is taken). Values are interpolated linearly at each mark;
+the lap ends at the second crossing of the line.
+
+---
+
+## gears.py — every gear change of a lap
+
+**What it does.** Lists every gear change of a lap (from>to@metres/lap time/km/h) and
+the stints, the time spent in a gear between two changes, shorter than `--short`
+seconds (default 1).
+
+**Where it is used.** For any change to the shift rules (`upshift_rpm`,
+`downshift_rpm`, `drive_ds_rpm`, `drive_ds_wait`, the clutch): which shifts were added
+or lost and where the short stints are. `patterns.py` only counts shifts and those
+undone within 1 s.
+
+**Why it exists.** Written by v1.22's agent to find the 4-3-2 double downshift in the
+2,700 m bend and the short lower-gear stints at 1,045 m, 1,533 m and 1,927 m, which are
+an open Pattern watch item.
+
+**Implementation.** Each argument is a run CSV or a folder of `accept.py` runs
+(`*s1_p0.csv`); rows with `curLapTime` ≥ 0; a change is any row whose `gear` differs
+from the row before.
 
 ---
 

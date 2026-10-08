@@ -9,6 +9,10 @@ Races run 4 at once by default (one TORCS per scr_server slot from 1, ports 3002
 | **Screen** candidates: 12 of the 70 standard runs each, one line per candidate (off, mean, paired difference and SE, worst \|trackPos\| and where, largest section differences) | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py" --cand "B@b.py" --screen` |
 | **The acceptance bar** for the chosen candidate, one call: 70 runs against the base, paired difference, every check in `tools/checks.json` (follower, braking-plan), patterns and width before / after, PASS / FAIL per item. Add a pair to `checks.json` for a new knob the suites do not perturb | `python tools/accept.py --out %TEMP%\vNNN --cand "A@a.py"` |
 | **Record the version** (changelog entry, batch row, ledger rows, run CSV, commit, tag) from `version.md` + accept's output; format: `python tools/record.py -h`. Write `version.md` with the Write tool, never a shell heredoc | `python tools/record.py %TEMP%\vNNN\version.md --dry-run`, then without `--dry-run` |
+| **Stored speed of a stretch × a factor** (no script of your own): prints the entries before and after | `python tools/variant.py %TEMP%\vNNN\a.py --vscale 2650:2760:1.02` |
+| **Which place moved**: worst \|trackPos\| per place (kink, 446, exits of 770 / 1,042 / 1,528, 1,931, flick, wall, 2,700 apex and exit, 2,988, hairpin) over each folder's runs; use it on perturbed screens | `python tools/places.py %TEMP%\vNNN\base %TEMP%\vNNN\A %TEMP%\vNNN\A_vd10` |
+| **Two laps side by side** at marks: time difference, speed, gear, trackPos, throttle, brake (a folder = its unperturbed lap) | `python tools/lapdiff.py %TEMP%\vNNN\base %TEMP%\vNNN\A 2600 2900 10` |
+| Every gear change of a lap and the stints shorter than 1 s | `python tools/gears.py %TEMP%\vNNN\A` (or a CSV) |
 | Step trace of a run against the planned line and its speed | `python tools/trace.py <csv> 2200 2640 [step] [--driver a.py]` |
 | What was measured before (one short row per candidate, all versions) | `grep -i "plan_ff\|1,931" docs/ledger.md` |
 | Races are cached (same driver text + overrides = no race); `--no-cache` to race anyway | `python tools/race.py --cache-info` |
