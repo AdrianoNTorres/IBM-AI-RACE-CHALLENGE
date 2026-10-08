@@ -1951,4 +1951,22 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.06 run.*
+## v1.07 — The car now knows which side of the road to be on before two corners
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.07 |
+| **What changed** | A second short hand-written table, this one about position on the road. At two places on the lap, the approach to the fast left-hander at about 1,930 m and the approach to the last hairpin, it tells the car to move over to the right-hand side of the road before the corner. The table only acts until the sensors have seen the bend; from there the sensors turn the car in and steer it through the corner as before. |
+| **Why** | The sensors can only tell which way the road turns about 60 to 70 m before the braking point, which is too late to cross the road. At the left-hander the car was driving through the middle of the road, and it arrived at the hairpin in the centre because the corner before it leaves the car on the left. |
+| **Prediction** | About 0.15 s gained over the 70 test laps, nearly all of it through and after the 1,930 m left-hander and a little at the hairpin; more room to the edge at both exits; no change at the flick. |
+| **Lap time** | 1:12:99 |
+| **Damage** | 0 |
+| **Top speed** | 286 km/h |
+| **Min speed** | 57 km/h |
+| **Observed** | Lap 1:12:99 (0.15 s faster, the first lap under 1:13), damage 0, top speed 286 km/h, slowest corner 57 km/h. Over the 70 test laps it was 0.16 s faster on average, 67 of them faster, and none left the road. Through the 1,930 m left-hander the car now comes from the right, reaches the inside, and is 7 km/h faster at the slowest point (132 instead of 125 km/h). |
+| **Decision** | ✅ Kept — 0.16 s faster over all 70 laps with none off the road, and more room to the edge at the exits of both corners. On one of the 70 laps the car came a little closer to the edge at the flick than before, although nothing was changed there. |
+| **Learned** | Being on the correct side of the road before a corner helps at these two corners only. The same move was tried at five other bends and was slower or made no difference at each of them. Earlier versions had found that a wide entry was slower everywhere; at the 1,930 m left-hander that changed once v1.06 allowed the car more speed there. Starting to turn in early, before the sensors see the bend, is slower everywhere. |
+
+---
+
+*Simplified from CHANGELOG.md as it stood after the v1.07 run.*
