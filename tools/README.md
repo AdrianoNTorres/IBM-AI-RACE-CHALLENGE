@@ -14,6 +14,7 @@ without modifying it directly — each race gets a private copy.
 | Control-pattern check of a CSV | `python tools/patterns.py [runs/<file>.csv] [--episodes]` |
 | Track-width use per corner | `python tools/width.py [runs/<file>.csv]` |
 | 70-run tail analysis + paired comparison | `python tools/tails.py --dir %TEMP%\x\cand [--pair %TEMP%\x\base]` |
+| Offline racing line from the track's geometry (the driver's `plan_*` table) | `python tools/raceline.py [--limit 0.65] [--zone from:to:limit] [--csv runs/<file>.csv] [--table plan.txt]` |
 | Knob search with Optuna | `python tools/opt.py --knob tc_slip=2:3.5 --trials 40 --study tc` |
 | Record the chosen version | `python tools/finalize.py [--suite]` |
 
@@ -170,6 +171,42 @@ and calls `race.run_batch()`, saving each CSV to `--dir`. The section analysis b
 lap into 100 m windows and computes statistics per bin. The paired comparison zips the
 base and candidate CSV lists (sorted by group and label) and computes the per-run
 difference before aggregating.
+
+---
+
+## raceline.py — offline racing line from the track's geometry
+
+**What it does.** Computes a whole-lap racing line for the Corkscrew offline and prints the table the
+driver embeds (`plan_ds`, `plan_pos`, `plan_curv`, `plan_v` in `drive_example()`'s knob block). No race is
+run and nothing is learned on track.
+
+    python tools/raceline.py --geometry                       # segment list with distFromStart, length check
+    python tools/raceline.py --csv runs/<lap>.csv --every 25  # line next to a driven lap, every 25 m
+    python tools/raceline.py --limit 0.65 --zone 990:1090:0.5 --zone 2940:3030:0.5 --table plan.txt   # v1.11's table
+
+**Where it is used.** Whenever the planned line is changed (v1.11 on): choose the usable half-width
+(`--limit`, as |trackPos|; `--zone from:to:limit` for a stretch that needs a different one), write the table
+with `--table`, paste its four lines into the driver (or into a `--variant` copy for trials), and judge it
+on the 70 runs (`tails.py`). `--csv` prints a lap's driven `trackPos` and speed next to the plan.
+
+**Why it exists.** Since the officials allowed track memory, the line no longer has to be found by the
+sensors corner by corner: the beams show a bend 35–150 m ahead, the geometry file knows the whole lap.
+
+**Implementation.** (1) *Geometry:* reads `C:\torcs\torcs\tracks\road\corkscrew\corkscrew.xml` (straights
+with length, arcs with radius / end radius / angle) and rebuilds the centre line as TORCS does (`track4.cpp`:
+an arc is cut into steps of equal length, `profil steps length`, the radius changing linearly per step).
+Check: the rebuilt lap is 3,608.45 m and closes on itself to 0.0 m and 0.00°; distance along it is the
+telemetry's `distFromStart`. (2) *Line:* stations every 3 m, each free to move along the track's normal
+within the limit; K1999-style smoothing (each point is moved until the path's curvature there is the
+length-weighted mean of its neighbours', coarse to fine, 64 stations down to 1), which ends close to the
+minimum-curvature line. (3) *Speed:* a point mass with sideways grip 15.5·(1 + 5e-4·v²) m/s² (fitted to our
+laps: hairpin, 450 m, 1,528 m) and braking 14 + 0.0065·v² up to 34 m/s², sharing the grip with cornering;
+`plan_v` is that limit with no drive limit (a cap for the driver's braking plan). The printed model lap
+times only rank lines: they are not the car's lap time, and the "driven line" figure is rough (the log's
+`trackPos` has 3 decimals). (4) *Table:* one row every 10 m: trackPos (+1 = left edge), the line's curvature
+(1/km, + = left), speed limit (km/h). **Not modelled:** elevation (the crest at ~2,350 m damages the car
+above ~255 km/h; the Corkscrew drop), walls at the track's edge (right side at ~2,490 m) and the tyres'
+real limits, so the driver uses the table only inside its `plan_zones`.
 
 ---
 
