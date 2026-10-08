@@ -10,12 +10,13 @@ const click = sel => `document.querySelector(${JSON.stringify(sel)}).click()`;
 const chk = "document.getElementById('aCheck').innerText";
 (async () => {
   const root = __dirname + '/../../';
-  const csv = fs.readFileSync(root + 'runs/run_20261004_113412.csv', 'utf8');          // v1.28's lap
-  const csv2 = fs.readFileSync(root + 'runs/run_20261003_220700.csv', 'utf8');         // v1.27's lap
+  const csv = fs.readFileSync(root + 'runs/run_20261004_113412.csv', 'utf8');          // v1.06's lap
+  const csv2 = fs.readFileSync(root + 'runs/run_20261003_220700.csv', 'utf8');         // v1.05's lap
   let p = await open('', { view: 'detailed' });
   await p.until('RV.S.ds && RV.S.R');
   await p.ev(WIPE);
   const V = e => p.ev(e);
+  const LATEST = await V('RV.S.sel[0]');                                              // the page opens on the newest version
 
   // ---- the validator on its own ----
   ok('names: v1.06.1 and v1.07 are newer than v1.06; v1.06 and v1.6 are not', await V("(() => { const c = RV.validate.cmpId; return c('v1.06.1','v1.06') > 0 && c('v1.07','v1.06.1') > 0 && c('v1.06','v1.06') === 0 && c('v1.6','v1.06') === 0 && c('v1.00','v0.99') > 0 && RV.validate.nextId('v1.06') === 'v1.07' && RV.validate.nextId('v1.06.1') === 'v1.06.2'; })()"));
@@ -31,8 +32,8 @@ const chk = "document.getElementById('aCheck').innerText";
   ok('half a lap and a recording without beams are warnings', await V("(() => { const L = __csv.split('\\n'); const half = RV.validate.recording(L.slice(0, 1500).join('\\n'), RV.S.ds.trk); const h = L[0].split(','), keep = h.map((c, i) => (/^track\\d+$/.test(c) ? -1 : i)).filter(i => i >= 0); const nb = RV.validate.recording(L.map(l => { const c = l.split(','); return keep.map(i => c[i]).join(','); }).join('\\n'), RV.S.ds.trk); return half.level === 'warning' && /not a complete lap/.test(half.warns[0].what) && nb.level === 'warning' && /sensor/.test(nb.warns[0].what); })()"));
   const vv = await V(`(() => { const ids = new Set(RV.S.ds.versions.map(v => v.id)), c = { ids: ids, latest: RV.validate.latestOf(ids) }, v = d => { const r = RV.validate.version(Object.assign({ title: 'T', result: 'kept', lap: '1:13.00', top: '280', slow: '60', what: 'w' }, d), c); return [r.level, (r.blocks[0] || (r.warns[0] || {}).what || '')]; };
     return { latest: c.latest, same: v({ id: 'v1.28' }), older: v({ id: 'v0.5' }), sub: v({ id: 'v1.90.1' }), next: v({ id: '1.91' }), junk: v({ id: 'new one' }), notitle: v({ id: 'v1.91', title: ' ' }), nores: v({ id: 'v1.91', result: '' }), badlap: v({ id: 'v1.91', lap: 'quick' }), nothing: RV.validate.version(null, null).level, weird: RV.validate.version({ id: {}, title: 5, rec: 7 }, 3).level }; })()`);
-  ok('a version: the latest is v1.28; an existing or older name is blocked; v1.90.1 and 1.91 pass (warning: no recording)',
-    vv.latest === 'v1.28' && vv.same[0] === 'blocked' && vv.older[0] === 'blocked' && vv.sub[0] === 'warning' && vv.next[0] === 'warning' && vv.junk[0] === 'blocked' && vv.notitle[0] === 'blocked' && vv.nores[0] === 'blocked' && vv.badlap[0] === 'blocked' && vv.nothing === 'blocked' && vv.weird === 'blocked', vv);
+  ok('a version: the latest is known; an existing or older name is blocked; v1.90.1 and 1.91 pass (warning: no recording)',
+    vv.latest === LATEST && vv.same[0] === 'blocked' && vv.older[0] === 'blocked' && vv.sub[0] === 'warning' && vv.next[0] === 'warning' && vv.junk[0] === 'blocked' && vv.notitle[0] === 'blocked' && vv.nores[0] === 'blocked' && vv.badlap[0] === 'blocked' && vv.nothing === 'blocked' && vv.weird === 'blocked', vv);
 
   // ---- the page as it opens: the button is there ----
   await p.ev("RV.showTab('pv')"); await p.sleep(200);
@@ -56,7 +57,7 @@ const chk = "document.getElementById('aCheck').innerText";
   await p.until("!RV.entry.isOpen() && RV.S.ds.byId['v1.90.1']");
   await p.sleep(400);
   const a = await V("(() => { const v = RV.S.ds.byId['v1.90.1']; return { local: v.local, lap: v.lap, kept: v.kept, en: v.enableChange, file: v.file, last: RV.S.ds.versions[RV.S.ds.versions.length - 1].id, detail: RV.S.detailId, sel: RV.S.sel[0], hasR: !!RV.S.R, row: (document.querySelector('#vt tbody tr[data-id=\"v1.90.1\"]') || {}).innerText }; })()");
-  ok('it is the newest version, kept as an enabling change, with the Local badge; the run on screen stayed', a.local && a.lap === 73.5 && a.kept && a.en && a.file === null && a.last === 'v1.90.1' && a.detail === 'v1.90.1' && a.sel === 'v1.28' && a.hasR && /LOCAL/i.test(a.row || ''), a);
+  ok('it is the newest version, kept as an enabling change, with the Local badge; the run on screen stayed', a.local && a.lap === 73.5 && a.kept && a.en && a.file === null && a.last === 'v1.90.1' && a.detail === 'v1.90.1' && a.sel === LATEST && a.hasR && /LOCAL/i.test(a.row || ''), a);
   await p.shot('p15-4-added');
 
   // ---- the form: a version with a recording ----
@@ -141,7 +142,7 @@ const chk = "document.getElementById('aCheck').innerText";
   await p.until('RV.S.ds.local.size === 0'); await p.sleep(400);
   const e = await p.ev("({ n: RV.S.ds.versions.length, last: RV.S.ds.versions[RV.S.ds.versions.length - 1].id, sel: RV.S.sel[0], stored: 0 })");
   e.stored = await p.ev("RV.local.list(RV.local.keyOf(RV.S.ds.src)).then(l => l.length)");
-  ok('deleted: the list ends at v1.28 again, a run is still on screen, the database is empty', e.last === 'v1.28' && e.stored === 0 && !!e.sel, e);
+  ok('deleted: the list ends at the latest version again, a run is still on screen, the database is empty', e.last === LATEST && e.stored === 0 && !!e.sel, e);
   // dark theme, narrow window
   await p.close();
   p = await open('tab=pv', { view: 'basic', theme: 'dark' }, { w: 430, h: 820 });
