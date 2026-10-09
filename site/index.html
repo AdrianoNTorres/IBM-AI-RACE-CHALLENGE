@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One Qubit Racing: the Corkscrew in 1:05.56</title>
-<meta name="description" content="A rule-based TORCS driver, 133 recorded versions, one lap of the Corkscrew in 1:05.56 with no damage. Entry for IBM Granite Racers.">
+<meta name="description" content="A rule-based TORCS driver, 133 recorded versions, one lap of the Corkscrew in 1:05.56 with no damage. Entry for AI Racing League – Go FullSpeed with IBM Bob.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -47,6 +47,7 @@ header.top nav a:hover { color: var(--ink); }
 
 .hero { padding-block: 2.5rem 2.2rem; }
 h1 { font: 700 clamp(2.4rem, 6.4vw, 4.9rem)/1.0 var(--display); letter-spacing: -.012em; margin: 0 0 1.2rem; max-width: 15ch; }
+.team { font-weight: 700; color: var(--best); }
 .lede { font-size: 1.2rem; line-height: 1.5; max-width: 40rem; margin: 0 0 2rem; }
 .kerb { height: 10px; background: repeating-linear-gradient(90deg, var(--rej) 0 28px, #fff 28px 56px); }
 
@@ -121,7 +122,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
 
 <header class="top">
   <div class="wrap">
-    <span>One Qubit Racing</span>
+    <span class="team">One Qubit Racing</span>
     <nav aria-label="Sections">
       <a href="#how">How it drives</a>
       <a href="#journey">Journey</a>
@@ -138,7 +139,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
 <main>
 <div class="hero wrap">
   <h1>One lap of the Corkscrew, from 2:43.38 down to 1:05.56</h1>
-  <p class="lede">A rule-based driver for the TORCS simulator, improved one measured change at a time over 133 recorded versions. No damage, never off the track. Entry for IBM Granite Racers by One Qubit Racing, a team of one: Adriano Torres.</p>
+  <p class="lede">A rule-based driver for the TORCS simulator, improved one measured change at a time over 133 recorded versions. No damage, never off the track. Entry for AI Racing League – Go FullSpeed with IBM Bob by <strong class="team">One Qubit Racing</strong>, a team of one: Adriano Torres.</p>
   <p id="error" role="alert">The numbers on this page are read from <code>data.json</code>, which could not be loaded. Open the page through a web server: run <code>python -m http.server</code> in the <code>site</code> folder and visit <code>http://localhost:8000</code>.</p>
 
   <div class="chart" id="chart-all" tabindex="0" role="img" aria-label="Lap time of every version, from 2:43.38 at v0.2 to 1:05.56 at v1.33. Use the left and right arrow keys to step through the versions."></div>
@@ -220,7 +221,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
   <h2>The journey</h2>
   <div class="text">
     <p>For the first 105 versions the car drove on its sensors alone, because we held back track memory until the officials answered. That approach ran out at about 1:13.6: in batch 12 four of five versions were rejected, since a car cannot set up wide for a corner it does not yet know is coming. On 4 October the officials allowed a pre-mapped track, and the question that turned the project came three days later:</p>
-    <p><q>since we can memorize the track can't we precompute the most optimal racing line and adjust that?</q></p>
+    <p><q>Since we can memorize the track can't we precompute the most optimal racing line and adjust that?</q></p>
     <p>The last eight seconds came from that line, the speed it allows and the rulings that let the car use the whole road.</p>
   </div>
   <div class="chart" id="chart-end" tabindex="0" role="img" aria-label="Lap time from v1.05 to v1.33, 1:13.56 down to 1:05.56, with the four rulings that opened new gains. Use the left and right arrow keys to step through the versions."></div>
@@ -258,8 +259,8 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
       <li><strong>It planned how the work was run.</strong> Bob wrote the hand-off plan for the coding agent and the brief for running agents in parallel. Batch 9 tried it: gains that passed alone failed together, so the project went back to one agent per version.</li>
       <li><strong>It organised and reviewed.</strong> Bob restructured the repository, wrote its READMEs, reviewed the run viewer from four points of view (race engineer, driver, data analyst, first-time visitor) and built the viewer's first hosted phases.</li>
     </ul>
-    <h3>What did not work</h3>
-    <p>Bob's corrections to the driver's code, in my experience, <q>made things worse half the time</q>. That is an impression from working with it, not a measured figure. So the division of work changed early: Bob kept the analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
+    <h3>Where each tool fitted best</h3>
+    <p>Bob was at its best reading code, analysing data and planning. Its direct edits to the driver's control code were less dependable: in my experience about half of them left the lap slower or less stable. That is an impression from working with it, not a measured figure. So I settled early on a division of work. Bob handled analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
     <p>The driver itself contains no model. Granite helped build it; it does not drive it.</p>
   </div>
 </section>
