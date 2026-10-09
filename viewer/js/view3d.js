@@ -12,9 +12,13 @@
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$;
   const DEF = { on: false, adv: false, cam: 'orbit', k: 1, rel: [-9, 0, 3.5], look: true, centre: false, sens: true, plan: true, model: 'race' };
-  /* the driver's eye: just above the tub of the simple car, a little higher in a model */
-  const cockpit = () => (st.model === 'blocks' ? [-0.35, 0, 1.0] : [-0.15, 0, 1.3]);
-  const CARS = [['race', 'Formula'], ['race-future', 'Future racer'], ['sedan-sports', 'Sports sedan'], ['hatchback-sports', 'Hot hatch'], ['kart-oobi', 'Kart'], ['blocks', 'Blocks']];
+  /* The cars to pick from: file name, name, and where the "Cockpit" camera sits (ahead, left, up from the car, m).
+     No model has an inside or a steering wheel, so (user, 2026-10-08): the open-wheel cars get the onboard camera
+     above the driver's head, which looks over the nose with both front wheels in sight, so the steering shows;
+     the closed cars get a hood camera, low over the bonnet. */
+  const CARS = [['race', 'Formula', [-0.9, 0, 1.6]], ['race-future', 'Future racer', [-0.9, 0, 1.6]], ['sedan-sports', 'Sports sedan', [1.5, 0, 1.45]], ['hatchback-sports', 'Hot hatch', [1.5, 0, 1.45]],
+    ['kart-oobi', 'Kart', [-0.7, 0, 1.35]], ['blocks', 'Blocks', [-0.35, 0, 1.0]]];
+  const cockpit = () => (CARS.find(c => c[0] === st.model) || CARS[0])[2].slice();
   const st = Object.assign({}, DEF, RV.uiGet('v3', {}));
   st.rel = (st.rel || DEF.rel).slice(0, 3);
   if (!CARS.some(c => c[0] === st.model)) st.model = DEF.model;
@@ -30,7 +34,7 @@
   let chaseDist = 1, eye = null, lastCam = '', focus = null;
   let beamL = null, beamG = null, tubes = [], discs = [], planCol = null, roadM = null, roadN = 0, roadBase = null, tinted = null, skyOf = '', beamsNow = 0, planNow = 0, steerNow = 0, kerbs = [0, 0];
 
-  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan, model: st.model });
+  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan, model: st.model, cock: !!st.cock });
   const trkNow = () => (S.ds && S.ds.trk) || null;
   const col = (name, dflt) => new T.Color(RV.pal[name] || dflt);
 
@@ -197,6 +201,8 @@
   function paintOf(scene) {
     let body = null;
     scene.traverse(o => { if (o.isMesh && /body/i.test(o.name) && !body) body = o; });
+    /* a model whose main part has another name: the part with the most points that is not a wheel */
+    if (!body) scene.traverse(o => { if (o.isMesh && !/wheel/i.test(o.name) && o.geometry.attributes.uv && (!body || o.geometry.attributes.position.count > body.geometry.attributes.position.count)) body = o; });
     const map = body && body.material && body.material.map;
     if (!map || !map.image || !body.geometry.attributes.uv) return null;
     const px = pixels(map.image)[2], uv = body.geometry.attributes.uv, bins = new Float32Array(36), sum = [];
@@ -425,7 +431,7 @@
       look = F.pos.clone().addScaledVector(F.fwd, 5).addScaledVector(zUp, 1);
     } else {                                               /* relative: the reader's offset, in the car's own directions */
       want = F.pos.clone().addScaledVector(F.fwd, st.rel[0]).addScaledVector(F.left, st.rel[1]).addScaledVector(F.up, st.rel[2]);
-      look = st.look ? F.pos.clone().addScaledVector(zUp, 0.6) : want.clone().addScaledVector(F.fwd, 30);
+      look = st.look ? F.pos.clone().addScaledVector(zUp, 0.6) : want.clone().addScaledVector(F.fwd, 30).addScaledVector(F.up, -2.5);   /* ahead, and a little down at the road */
     }
     /* the chase camera trails a little, so the car is seen to turn; the relative one is fixed to the car */
     if (!eye || snap || st.cam === 'rel') eye = want; else eye.lerp(want, 1 - Math.exp(-dt * 7));
@@ -499,7 +505,7 @@
       if (st.cam === 'orbit') h += '<label class="check"><input type="checkbox" id="v3centre"' + (st.centre ? ' checked' : '') + '> Turn about the car</label>';
       if (st.cam === 'rel') h += '<div class="v3rel">' + slide('v3r0', 'Ahead', -60, 60, 0.5, st.rel[0], ' m') + slide('v3r1', 'Left', -30, 30, 0.5, st.rel[1], ' m') + slide('v3r2', 'Up', 0.3, 60, 0.1, st.rel[2], ' m') +
         '<label class="check"><input type="checkbox" id="v3look"' + (st.look ? ' checked' : '') + '> Look at the car</label>' +
-        '<button class="btn sm" id="v3cock" title="The driver’s eye: just above the tub, looking ahead">Cockpit</button><button class="btn sm" id="v3back" title="Back to the offset this camera starts with">Reset</button></div>';
+        '<button class="btn sm" id="v3cock" title="From the car, looking ahead: above the driver\u2019s head in the open-wheel cars, over the bonnet in the closed ones">Cockpit</button><button class="btn sm" id="v3back" title="Back to the offset this camera starts with">Reset</button></div>';
     }
     bar.innerHTML = h;
     bar.classList.toggle('on3', st.on);
@@ -507,14 +513,14 @@
     const on = (id, ev, fn) => { const e = $(id); if (e) e[ev] = fn; };
     const live = (id, fn, unit) => on(id, 'oninput', e => { fn(+e.target.value); e.target.nextElementSibling.textContent = e.target.value + unit; save(); });
     live('v3k', v => { st.k = v; }, '×');
-    live('v3r0', v => { st.rel[0] = v; }, ' m'); live('v3r1', v => { st.rel[1] = v; }, ' m'); live('v3r2', v => { st.rel[2] = v; }, ' m');
+    live('v3r0', v => { st.rel[0] = v; st.cock = false; }, ' m'); live('v3r1', v => { st.rel[1] = v; st.cock = false; }, ' m'); live('v3r2', v => { st.rel[2] = v; st.cock = false; }, ' m');
     on('v3centre', 'onchange', e => { st.centre = e.target.checked; if (st.centre) orbit.dist = Math.min(orbit.dist, 220); save(); });
-    on('v3look', 'onchange', e => { st.look = e.target.checked; save(); });
-    on('v3car', 'onchange', e => { st.model = e.target.value; save(); });
+    on('v3look', 'onchange', e => { st.look = e.target.checked; st.cock = false; save(); });
+    on('v3car', 'onchange', e => { st.model = e.target.value; if (st.cock) { st.rel = cockpit(); paintBar(); } save(); });
     on('v3sens', 'onchange', e => { st.sens = e.target.checked; save(); });
     on('v3plan', 'onchange', e => { st.plan = e.target.checked; save(); });
-    on('v3cock', 'onclick', () => { st.rel = cockpit(); st.look = false; save(); paintBar(); });
-    on('v3back', 'onclick', () => { st.rel = DEF.rel.slice(); st.look = true; save(); paintBar(); });
+    on('v3cock', 'onclick', () => { st.rel = cockpit(); st.look = false; st.cock = true; save(); paintBar(); });
+    on('v3back', 'onclick', () => { st.rel = DEF.rel.slice(); st.look = true; st.cock = false; save(); paintBar(); });
   }
 
   function start() {
@@ -541,7 +547,7 @@
      their own for it since. */
   function mode(m) {
     const adv = m === 'adv';
-    if (adv && !st.adv && st.cam === 'orbit') { st.cam = 'rel'; st.rel = cockpit(); st.look = false; }
+    if (adv && !st.adv && st.cam === 'orbit') { st.cam = 'rel'; st.rel = cockpit(); st.look = false; st.cock = true; }
     st.adv = adv;
     return set(m !== '2d');
   }
@@ -578,8 +584,8 @@
       const i = ren.info.render, p = cam.position;
       const c0 = carsG && carsG.children[0];
       return { on: st.on, ready: true, model: st.model, modelOn: !!(c0 && c0.userData.model), wheels: c0 ? c0.userData.wheelCount : 0, paint: c0 && c0.userData.paint, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
-        car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
+        car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, fwd: focus ? [focus.fwd.x, focus.fwd.y, focus.fwd.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
     },
-    camera(id) { st.cam = id; paintBar(); }, car(id) { st.model = id; paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
+    camera(id) { st.cam = id; paintBar(); }, car(id) { st.model = id; if (st.cock) st.rel = cockpit(); paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
   };
 })();

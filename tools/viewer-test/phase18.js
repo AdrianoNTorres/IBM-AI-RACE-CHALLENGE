@@ -75,7 +75,17 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   s = await p.ev(st);
   await p.shot('phase18-cockpit');
   d = Math.hypot(s.eye[0] - s.car[0], s.eye[1] - s.car[1], s.eye[2] - s.car[2]);
-  ok('cockpit: the camera is in the car', d < 1.6, d);
+  ok('cockpit: the camera is on the car, above the driver\'s head', d > 1.2 && d < 2.2 && s.eye[2] > s.car[2] + 1.3, d);
+  /* 18.3.3: a closed car gets a hood camera, ahead of the car\'s middle; the open-wheel car gets its own back */
+  const ahead = q => (q.eye[0] - q.car[0]) * q.fwd[0] + (q.eye[1] - q.car[1]) * q.fwd[1];
+  const a0 = ahead(s);
+  await p.ev("(() => { const e = document.getElementById('v3car'); e.value = 'sedan-sports'; e.onchange({ target: e }); })()"); await p.until("RV.view3d.state().model === 'sedan-sports' && RV.view3d.state().modelOn", 20000); await p.sleep(500);
+  s = await p.ev(st);
+  await p.shot('phase18-hood');
+  ok('the sedan: the camera moves to the hood, ahead of where the onboard one was', a0 < -0.5 && ahead(s) > 0.5, [a0, ahead(s)]);
+  await p.ev("(() => { const e = document.getElementById('v3car'); e.value = 'race'; e.onchange({ target: e }); })()"); await p.until("RV.view3d.state().model === 'race' && RV.view3d.state().modelOn", 20000); await p.sleep(500);
+  s = await p.ev(st);
+  await p.shot('phase18-onboard');
 
   /* the replay moves the car; the height factor moves the road */
   const c0 = s.car;
@@ -93,7 +103,7 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   s = await p.ev(st);
   await p.shot('phase18-advanced');
   d = Math.hypot(s.eye[0] - s.car[0], s.eye[1] - s.car[1], s.eye[2] - s.car[2]);
-  ok('advanced: opens in the cockpit, with sky and haze', s.adv && s.cam === 'rel' && d < 1.6 && s.fog, { cam: s.cam, d: d });
+  ok('advanced: opens in the cockpit, with sky and haze', s.adv && s.cam === 'rel' && d < 2.2 && s.fog, { cam: s.cam, d: d });
   ok('advanced: the sensors that read something are drawn, and the planned speed lies on the road ahead', s.beams >= 10 && s.beams <= 19 && s.plan > 20, { beams: s.beams, plan: s.plan });
   ok('each sensor is a tube, with a disc where it met the edge', s.tubes === s.beams && s.discs >= 8 && s.discs <= s.tubes, { tubes: s.tubes, discs: s.discs });
   ok('the planned speed covers the next 300 m', s.plan >= 140 && s.plan <= 160, s.plan);
