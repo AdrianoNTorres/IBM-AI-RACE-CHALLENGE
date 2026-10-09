@@ -479,3 +479,44 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.31 | Zboth_vd10 | margin | both zones at 19,000 read 10 m late | 12 (screen) | +0.392 | 0.008 | 0 of 12 | 0.954 @ 767 m | lost | 770 m 0.954, 1,528 m 0.948, 0 off: the measured step above the chosen |
 | v1.31 | base_vdm10 | margin | base read 10 m early | 12 (screen) | +0.662 | 0.009 | 0 of 12 | 0.863 @ 824 m | lost | 770 m exit 0.863 |
 | v1.31 | R17a_vdm10 | margin | the chosen read 10 m early | 12 (screen) | +0.496 | 0.016 | 0 of 12 | 0.870 @ 825 m | lost | 0.870 at 825 m |
+| v1.32 | **chosen** | see title | The stored line drawn wider through 770 m and 1,042 m (entries and exits out to 0.85-0.95 of the half-width, kerbs allowed), driven with less of the line's own speed so the exits hold | 70 (full) | -0.203 | 0.004 | 0 of 70 | 0.862 @ 1,037 m | kept | Kept: 0.203 s over 70 runs, 70 of 70 faster, every check 0 off, judged lap under 66 s. The larger designs (0.34 and 0.46 s on the screen) were turned down because they leave the track in the checks' perturbations. |
+| v1.32 | A2 | 770 m + 1,042 m, design A | investigation's two corners in one splice: 770 m entry 0.95 / exit 0.85 (x0.98), 1,042 m entry / exit 0.85 (x1.06) | 12 (screen) | -0.341 | 0.003 | 0 of 12 | 0.877 @ 853 m | lost | fastest two-corner design, but fails the perturbations below |
+| v1.32 | A2_vdm10 | margin | `A2` with the stored speed read 10 m early | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run off at the 770 m exit (1.09) |
+| v1.32 | A2_vs104 | margin | `A2` at `plan_vs` 1.04 | 12 (screen) | +0.034 | 0.015 | 2 of 12 | 1.000 @ 832 m | lost | 2 off at 832 m |
+| v1.32 | A2_vd10 | margin | `A2` read 10 m late | 12 (screen) | +0.074 | 0.009 | 0 of 12 | 0.945 @ 768 m | lost | 0.945 at the 770 m apex |
+| v1.32 | A2_ff13 | margin | `A2` with `plan_ff` 13.2 | 12 (screen) | -0.213 | 0.017 | 0 of 12 | 0.916 @ 1,036 m | lost | 0.916 at the 1,042 m apex |
+| v1.32 | W85c | whole lap, design B | whole lap at 0.85, apexes held, kink 0.7, 1,180-1,350 m 0.75, 2,200-3,110 m kept | 12 (screen) | -0.458 | 0.014 | 0 of 12 | 0.915 @ 1,648 m | lost | 0.12 s more than A2, worst 0.915 at 1,648 m |
+| v1.32 | W85c_vdm10 | margin | `W85c` read 10 m early | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run off at the 770 m exit (1.05); 1,634 m exit 0.930 |
+| v1.32 | W85c_vs104 | margin | `W85c` at `plan_vs` 1.04 | 12 (screen) | -0.058 | 0.010 | 0 of 12 | 0.993 @ 1,638 m | lost | 0.993 at 1,638 m |
+| v1.32 | W85c_vd10 | margin | `W85c` read 10 m late | 12 (screen) | -0.023 | 0.008 | 0 of 12 | 0.976 @ 1,641 m | lost | 0.976 at 1,640 m |
+| v1.32 | A2m | milder, design C | `A2` with the 770 m entry at 0.90 | 12 (screen) | -0.329 | 0.006 | 0 of 12 | 0.855 @ 853 m | lost | as fast; fails the same test |
+| v1.32 | A2m_vdm10 | margin | `A2m` read 10 m early | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run off |
+| v1.32 | A2m_vs104 | margin | `A2m` at `plan_vs` 1.04 | 12 (screen) | +0.055 | 0.016 | 0 of 12 | 0.985 @ 832 m | lost | 0.985 at 832 m |
+| v1.32 | Am | milder, design C | 770 m entry 0.85 / exit 0.80, 1,042 m 0.80 | 12 (screen) | -0.249 | 0.005 | 0 of 12 | 0.847 @ 765 m | lost | 0.09 s less than A2; not taken further |
+| v1.32 | C_vs104 | 1,042 m alone | investigation's `C1042` at `plan_vs` 1.04 | 12 (screen) | +0.185 | 0.015 | 3 of 12 | 0.906 @ 1,113 m | lost | 3 off at 1,112 m: 1,042 m x1.06 is too fast for the wide exit |
+| v1.32 | C_vdm10 | 1,042 m alone | `C1042` read 10 m early | 12 (screen) | +0.354 | 0.010 | 0 of 12 | 0.952 @ 1,111 m | lost | 0.952 at the 1,042 m exit |
+| v1.32 | D1_vdm10 | 770 m exit 0.75 | 770 m entry 0.85 / exit 0.75, read 10 m early | 12 (screen) | +0.248 | 0.014 | 0 of 12 | 0.961 @ 827 m | lost | 0.961 at 827 m |
+| v1.32 | D1_vs104 | 770 m exit 0.75 | the same at `plan_vs` 1.04 | 12 (screen) | +0.073 | 0.016 | 0 of 12 | 0.991 @ 1,112 m | lost | 0.991 at 1,112 m |
+| v1.32 | D2_vdm10 | 770 m exit 0.75 | entry 0.95 / exit 0.75, read 10 m early | 12 (screen) | +0.194 | 0.011 | 0 of 12 | 0.986 @ 829 m | lost | 0.986 at 829 m |
+| v1.32 | D4_vdm10 | 770 m entry only | entry 0.85, exit left at 0.65, read 10 m early | 12 (screen) | +0.267 | 0.013 | 0 of 12 | 0.904 @ 826 m | lost | 0.904 at 826 m |
+| v1.32 | D4_vs104 | 770 m entry only | the same at `plan_vs` 1.04 | 12 (screen) | +0.131 | 0.009 | 7 of 12 | 0.918 @ 1,113 m | lost | 7 off at the 1,042 m exit |
+| v1.32 | D3_vdm10 | own: less of the line's speed | `A2`'s line with 770 m x0.95, read 10 m early | 12 (screen) | +0.199 | 0.011 | 0 of 12 | 0.893 @ 1,115 m | lost | holds: 770 m exit 0.871 |
+| v1.32 | D3_vs104 | own: less of the line's speed | the same at `plan_vs` 1.04 | 12 (screen) | +0.076 | 0.013 | 0 of 12 | 0.918 @ 1,111 m | lost | 770 m holds (0.867), 1,042 m exit 0.918: its speed must come down too |
+| v1.32 | E1 | design D | 770 m x0.95, 1,042 m x1.03, apex not held | 12 (screen) | -0.231 | 0.010 | 0 of 12 | 0.902 @ 768 m | lost | 0.03 s more than the chosen, but 0.902 at the 770 m apex |
+| v1.32 | E1_vd10 | margin | `E1` read 10 m late | 12 (screen) | +0.215 | 0.007 | 0 of 12 | 0.944 @ 768 m | lost | 0.944 at the 770 m apex |
+| v1.32 | E1_vdm10 | margin | `E1` read 10 m early | 12 (screen) | +0.239 | 0.011 | 0 of 12 | 0.871 @ 848 m | lost | holds, 0.871 |
+| v1.32 | E1_vs104 | margin | `E1` at `plan_vs` 1.04 | 12 (screen) | +0.139 | 0.014 | 0 of 12 | 0.870 @ 2,803 m | lost | holds, 1,042 m exit 0.840 |
+| v1.32 | E2 | design D | 770 m x0.96, 1,042 m x1.04 | 12 (screen) | -0.255 | 0.006 | 0 of 12 | 0.883 @ 767 m | lost | 0.06 s more than the chosen |
+| v1.32 | E2_vdm10 | margin | `E2` read 10 m early | 12 (screen) | +0.232 | 0.011 | 0 of 12 | 0.927 @ 849 m | lost | 0.927 at the 770 m exit: x0.96 is the step toward the cliff |
+| v1.32 | E3 | design D | 770 m x0.95, 1,042 m x1.02 | 12 (screen) | -0.200 | 0.005 | 0 of 12 | 0.902 @ 768 m | lost | 0.03 s less than E1 for 0.02 at the 1,042 m exit |
+| v1.32 | E4 | design D, apex held | `E1` with the 770 m apex at 0.55 | 12 (screen) | -0.176 | 0.005 | 0 of 12 | 0.863 @ 1,037 m | lost | 0.02 s less than the chosen; 770 m 0.807 |
+| v1.32 | E4_vd10 | margin | `E4` read 10 m late | 12 (screen) | +0.264 | 0.013 | 0 of 12 | 0.922 @ 1,528 m | lost | 770 m 0.859 |
+| v1.32 | E5_vd10 | margin | the chosen read 10 m late | 12 (screen) | +0.253 | 0.005 | 0 of 12 | 0.917 @ 1,528 m | lost | 770 m 0.896, 1,528 m 0.917 (the base's place) |
+| v1.32 | E5_vdm10 | margin | the chosen read 10 m early | 12 (screen) | +0.266 | 0.011 | 0 of 12 | 0.861 @ 848 m | lost | 770 m exit 0.861 |
+| v1.32 | E5_vs104 | margin | the chosen at `plan_vs` 1.04 | 12 (screen) | +0.165 | 0.016 | 0 of 12 | 0.870 @ 2,803 m | lost | 770 m 0.820, 1,042 m exit 0.837 |
+| v1.32 | En95x85 | investigation, 770 m | entry 0.95 / exit 0.85, splice 540-990 m | 12 (screen) | -0.119 | 0.005 | 0 of 12 | 0.877 @ 853 m | lost | the 770 m half of `A2` |
+| v1.32 | C1042 | investigation, 1,042 m | entry / exit 0.85, splice 860-1,300 m | 12 (screen) | -0.202 | 0.008 | 0 of 12 | 0.847 @ 1,036 m | lost | the 1,042 m half of `A2` |
+| v1.32 | C1528 | investigation, 1,528 m | entry / exit 0.85, splice 1,300-1,800 m | 12 (screen) | -0.085 | 0.006 | 0 of 12 | 0.921 @ 1,643 m | lost | 0.921 at the 1,643 m exit; not raced here |
+| v1.32 | W80c | investigation, whole lap | `W85c` at 0.80 | 12 (screen) | -0.359 | 0.016 | 0 of 12 | 0.931 @ 1,267 m | lost | 0.931 at 1,267 m; not raced here |
+| v1.32 | En95x85a72 | investigation, 770 m | `En95x85` with the apex at 0.72 | 12 (screen) | -0.145 | 0.004 | 0 of 12 | 0.912 @ 764 m | lost | 0.912 at the apex |
+| v1.32 | W90 | investigation, whole lap | limit 0.9, nothing held | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run off at 1,268 m (the kink) |
