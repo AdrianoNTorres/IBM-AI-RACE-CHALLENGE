@@ -106,6 +106,8 @@ td q { color: var(--muted); font-style: italic; }
 .slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.2rem; margin-top: 1.2rem; }
 .slot { aspect-ratio: 16 / 9; display: grid; place-content: center; text-align: center; padding: 1rem; border: 2px dashed var(--rule); color: var(--muted); background: var(--panel); }
 .slot strong { display: block; color: var(--ink); font: 600 1.2rem var(--display); }
+.slot.filled { display: block; padding: 0; border-style: solid; aspect-ratio: auto; align-self: start; }
+.slot.filled img { display: block; height: auto; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
 .slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
 .button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
@@ -268,16 +270,16 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
 <section class="wrap" id="deliverables">
   <h2>Deliverables</h2>
   <div class="slots">
-    <!-- Replace the inside of each slot with the <iframe> of the video, or an <img> of the certificate. -->
+    <!-- Replace the inside of each video slot with the <iframe> of the video. -->
     <div class="slot" id="slot-team"><strong>Team video, 3 minutes</strong>Not uploaded yet.</div>
     <div class="slot" id="slot-tech"><strong>Technical video, 5 minutes</strong>Not uploaded yet.</div>
-    <div class="slot" id="slot-cert"><strong>IBM SkillsBuild Granite certificate</strong>Not added yet.</div>
+    <a class="slot filled" id="slot-cert" href="granite-certificate.pdf"><img src="certificate.png" width="1400" height="866" alt="IBM SkillsBuild completion certificate presented to Adriano Torres for IBM Granite Models for Software Development, completed 1 October 2026, 1 hour 30 minutes of learning."></a>
   </div>
   <ul class="check">
     <li><span>Team video (3 minutes)</span><span class="todo">not uploaded yet</span></li>
     <li><span>Race lap video with lap time and track name</span><span class="todo">not uploaded yet</span></li>
     <li><span><a href="#summary">Technical summary</a></span><span class="done">on this page</span></li>
-    <li><span>IBM SkillsBuild Granite certificate</span><span class="todo">not added yet</span></li>
+    <li><span><a href="granite-certificate.pdf">IBM SkillsBuild certificate: IBM Granite Models for Software Development</a></span><span class="done">on this page</span></li>
     <li><span>Technical video (5 minutes)</span><span class="todo">not uploaded yet</span></li>
     <li><span><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></span><span class="done">public</span></li>
   </ul>
