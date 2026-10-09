@@ -111,13 +111,14 @@
         '<dt>Basic view cannot be chosen</dt><dd>The source has no simplified changelog (docs/CHANGELOG-simple.md).</dd>' +
         '<dt>A version I entered is gone</dt><dd>Entered versions are kept in the browser they were entered in, for the source they were entered under. Another browser or device, a private window, or cleared site data does not have them. Export them to put them into the repository (Data format, Entered by hand).</dd>' +
         '<dt>A local folder is gone after a reload</dt><dd>Browsers do not keep access to a folder. Choose it again under Settings, Data.</dd></dl>') +
+      card('Which device to use', RV.device.html()) +
       card('Links to a particular state', '<p>Options after <code>#</code> in the address open the page in a given state, for example <code>#tab=pm&amp;run=v1.05&amp;cmp=v0.96&amp;mode=detailed</code>. <code>tab</code> is <code>pv</code>, <code>pm</code>, <code>pt</code>, <code>ps</code> or <code>ph</code> (this page); <code>run</code> and <code>cmp</code> name versions; <code>frame</code> pauses on a frame; <code>help</code> opens this page. The README lists them all.</p>') +
       '');
     return out;
   }
   /* the subjects: id, name in the list, and which of the cards above each one shows (the data format is the guide) */
-  const NAV = [['start', 'Start here', [0, 1, 4]], ['pages', 'The pages', [2]], ['compare', 'Selecting and comparing', [3]], ['keys', 'Mouse and keyboard', [5]],
-    ['colours', 'Reading the colours', [6]], ['own', 'Using your own data', [7]], ['format', 'Data format', null], ['problems', 'If something does not work', [8]], ['links', 'Links to a particular state', [9]]];
+  const NAV = [['start', 'Start here', [0, 1, 9, 4]], ['pages', 'The pages', [2]], ['compare', 'Selecting and comparing', [3]], ['keys', 'Mouse and keyboard', [5]],
+    ['colours', 'Reading the colours', [6]], ['own', 'Using your own data', [7]], ['format', 'Data format', null], ['problems', 'If something does not work', [8]], ['links', 'Links to a particular state', [10]]];
   let query = '';
 
   function guideHtml() {

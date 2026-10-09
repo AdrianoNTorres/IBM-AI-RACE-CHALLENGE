@@ -410,7 +410,9 @@
     }).then(() => {
       if (S.ds && H.tab && H.tab !== 'ps' && H.tab !== 'ph' && !H.help) showTab(H.tab);
       /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
-      if (S.ds && !RV.prefs.tutorialDone && !location.hash.slice(1)) RV.tutorial.start(true);
+      /* on a phone or a tablet, first the note that the site was built for a PC (once) */
+      const hasOpts = !!location.hash.slice(1).replace(/(^|&)device=\w+/, '');
+      RV.device.note(() => { if (S.ds && !RV.prefs.tutorialDone && !hasOpts) RV.tutorial.start(true); });
       /* opened as a local file and nothing loaded: offer the folder picker right on the status page */
       if (!S.ds && location.protocol === 'file:') {
         statusPage(

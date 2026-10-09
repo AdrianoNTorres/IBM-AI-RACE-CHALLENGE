@@ -48,6 +48,7 @@
     speed: 1,                                          /* replay speed */
     autoplay: true,                                    /* start the replay when a run opens */
     tutorialDone: false,                               /* the welcome and tour have been seen (or skipped) */
+    deviceNote: '',                                    /* the note for phones and tablets has been seen on this kind of device (phone | tablet) */
     sync: 't',                                         /* compared cars placed at the same lap time (t) or distance (d) */
     autoLoop: false,                                   /* at the end of the lap, start again by itself (the Auto loop button under the replay) */
     camera: 'fit',                                     /* the camera when a run opens: fit (whole track) | follow | up (follow, car points up) */
