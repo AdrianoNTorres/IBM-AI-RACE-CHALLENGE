@@ -125,10 +125,12 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <nav aria-label="Sections">
       <a href="#how">How it drives</a>
       <a href="#journey">Journey</a>
-      <a href="#bob">IBM Bob</a>
-      <a href="#rules">Rules</a>
       <a href="#viewer">Run viewer</a>
+      <a href="#summary">Summary</a>
+      <a href="#bob">IBM Bob</a>
       <a href="#deliverables">Deliverables</a>
+      <a href="#record">Record</a>
+      <a href="#rules">Rules</a>
     </nav>
   </div>
 </header>
@@ -223,31 +225,26 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
   </div>
   <div class="chart" id="chart-end" tabindex="0" role="img" aria-label="Lap time from v1.05 to v1.33, 1:13.56 down to 1:05.56, with the four rulings that opened new gains. Use the left and right arrow keys to step through the versions."></div>
   <p class="readout" id="read-end" aria-live="polite">The last 29 versions, with the decision that opened each run of gains.</p>
+</section>
 
-  <div class="scroll">
-    <table id="batches">
-      <thead><tr><th class="n">Batch</th><th class="n">Versions</th><th class="n">Best lap</th><th>What it worked on</th></tr></thead>
-      <tbody></tbody>
-    </table>
+<section class="wrap" id="viewer">
+  <h2>The run viewer</h2>
+  <div class="text">
+    <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
+    <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
+</section>
 
-  <h3 style="margin-top:2.4rem">Ten versions that tell the story</h3>
-  <div class="scroll">
-    <table id="key">
-      <thead><tr><th class="n">Version</th><th class="n">Lap</th><th>Why it matters</th></tr></thead>
-      <tbody>
-        <tr data-v="v0.2"><td class="n"></td><td class="lap"></td><td>The first completed lap. The supplied driver crashed, so the target speed was dropped to 80 km/h: finish first, go fast later.</td></tr>
-        <tr data-v="v0.7"><td class="n"></td><td class="lap"></td><td>Steering toward where the road is going: the first real steering logic.</td></tr>
-        <tr data-v="v0.27"><td class="n"></td><td class="lap"></td><td>Corner speed that depends on how sharp the corner is, judged from all the range beams.</td></tr>
-        <tr data-v="v0.42"><td class="n"></td><td class="lap"></td><td>The first target, 1:24, beaten the evening it was set.</td></tr>
-        <tr data-v="v0.81"><td class="n"></td><td class="lap"></td><td>The second target, 1:14.72, beaten on sensors alone, close to what sensors alone could do.</td></tr>
-        <tr data-v="v1.06"><td class="n"></td><td class="lap"></td><td>The first use of track memory after the officials allowed it: a speed allowance per corner.</td></tr>
-        <tr data-v="v1.11"><td class="n"></td><td class="lap"></td><td>The turning point: a racing line computed in advance, followed with live corrections.</td></tr>
-        <tr data-v="v1.17"><td class="n"></td><td class="lap"></td><td>The whole lap on the planned line, with its stored speed deciding where braking starts.</td></tr>
-        <tr data-v="v1.31"><td class="n"></td><td class="lap"></td><td>Declared finished: gears, the road's elevation, gentler steering corrections.</td></tr>
-        <tr data-v="v1.33"><td class="n"></td><td class="lap"></td><td>Reopened after watching the lap and seeing unused road. Every corner checked, four widened.</td></tr>
-      </tbody>
-    </table>
+<section class="wrap" id="summary">
+  <h2>Technical summary</h2>
+  <div class="text">
+    <p>The driver is a rule-based controller in one Python file. It contains no machine-learning model. Steering, braking, throttle and gear changes come from explicit logic reading the simulator's live sensors: 19 range beams, wheel speeds, engine speed, speed, track position and angle.</p>
+    <p>The project produced 133 tagged versions on the Corkscrew circuit (3,608 m) between 1 and 8 October 2026. The first completed lap was 2:43.38 (v0.2). The submitted version, v1.33, laps in 1:05.56, which is 97.82 seconds faster, with zero damage and the car's centre inside the track edge for the whole lap (largest <code>|trackPos|</code> 0.862).</p>
+    <p><strong>Design.</strong> Track memory, computed offline from the track's geometry and stored by distance, holds a racing line, the speed it allows and the road's elevation. These are parameters, not replayed actions. Every step the live sensors correct the steering against the line, set the pedals from the car's actual speed against the stored speed, and run anti-lock braking, traction control and the gearbox.</p>
+    <p><strong>Tooling.</strong> A harness runs up to four simulators at once and judges each candidate on hundreds of deliberately perturbed laps. An optimiser tunes single settings, and a pattern check catches steering wobble and on/off pedals. Every version is a Git tag with its telemetry.</p>
+    <p><strong>Use of IBM Granite.</strong> IBM Bob did the analysis, the planning and the reviews described below. The driver's code was written with Claude Code.</p>
+    <p><strong>Key challenge.</strong> On sensors alone the car cannot prepare for a corner it has not seen. The lap time stalled at 1:13.6 until the officials allowed a pre-mapped track.</p>
+    <p><strong>Rules.</strong> Six questions of legality are recorded, each with a fallback version: four confirmed by the officials, two our own reading.</p>
   </div>
 </section>
 
@@ -264,41 +261,6 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <h3>What did not work</h3>
     <p>Bob's corrections to the driver's code, in my experience, <q>made things worse half the time</q>. That is an impression from working with it, not a measured figure. So the division of work changed early: Bob kept the analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
     <p>The driver itself contains no model. Granite helped build it; it does not drive it.</p>
-  </div>
-</section>
-
-<section class="wrap" id="rules">
-  <h2>Rules, and what we would submit instead</h2>
-  <div class="text">
-    <p>Six times the driver began to rely on something whose legality was not obvious. Four were put to the officials and confirmed. Two are our own reading of those answers and were not asked separately. Each one names the version we would submit if it were turned down.</p>
-  </div>
-  <div class="scroll">
-    <table id="rules-table">
-      <thead><tr><th>What the driver does</th><th class="n">Since</th><th>Status</th><th class="n">Fallback</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
-</section>
-
-<section class="wrap" id="summary">
-  <h2>Technical summary</h2>
-  <div class="text">
-    <p>The driver is a rule-based controller in one Python file. It contains no machine-learning model. Steering, braking, throttle and gear changes come from explicit logic reading the simulator's live sensors: 19 range beams, wheel speeds, engine speed, speed, track position and angle.</p>
-    <p>The project produced 133 tagged versions on the Corkscrew circuit (3,608 m) between 1 and 8 October 2026. The first completed lap was 2:43.38 (v0.2). The submitted version, v1.33, laps in 1:05.56, which is 97.82 seconds faster, with zero damage and the car's centre inside the track edge for the whole lap (largest <code>|trackPos|</code> 0.862).</p>
-    <p><strong>Design.</strong> Track memory, computed offline from the track's geometry and stored by distance, holds a racing line, the speed it allows and the road's elevation. These are parameters, not replayed actions. Every step the live sensors correct the steering against the line, set the pedals from the car's actual speed against the stored speed, and run anti-lock braking, traction control and the gearbox.</p>
-    <p><strong>Tooling.</strong> A harness runs up to four simulators at once and judges each candidate on hundreds of deliberately perturbed laps. An optimiser tunes single settings, and a pattern check catches steering wobble and on/off pedals. Every version is a Git tag with its telemetry.</p>
-    <p><strong>Use of IBM Granite.</strong> IBM Bob did the analysis, the planning and the reviews described above. The driver's code was written with Claude Code.</p>
-    <p><strong>Key challenge.</strong> On sensors alone the car cannot prepare for a corner it has not seen. The lap time stalled at 1:13.6 until the officials allowed a pre-mapped track.</p>
-    <p><strong>Rules.</strong> Six questions of legality are recorded, each with a fallback version: four confirmed by the officials, two our own reading.</p>
-  </div>
-</section>
-
-<section class="wrap" id="viewer">
-  <h2>The run viewer</h2>
-  <div class="text">
-    <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
-    <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
 </section>
 
@@ -319,11 +281,55 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <li><span><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></span><span class="done">public</span></li>
   </ul>
 </section>
+
+<section class="wrap" id="record">
+  <h2>The record, version by version</h2>
+  <h3>Ten versions that tell the story</h3>
+  <div class="scroll">
+    <table id="key">
+      <thead><tr><th class="n">Version</th><th class="n">Lap</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr data-v="v0.2"><td class="n"></td><td class="lap"></td><td>The first completed lap. The supplied driver crashed, so the target speed was dropped to 80 km/h: finish first, go fast later.</td></tr>
+        <tr data-v="v0.7"><td class="n"></td><td class="lap"></td><td>Steering toward where the road is going: the first real steering logic.</td></tr>
+        <tr data-v="v0.27"><td class="n"></td><td class="lap"></td><td>Corner speed that depends on how sharp the corner is, judged from all the range beams.</td></tr>
+        <tr data-v="v0.42"><td class="n"></td><td class="lap"></td><td>The first target, 1:24, beaten the evening it was set.</td></tr>
+        <tr data-v="v0.81"><td class="n"></td><td class="lap"></td><td>The second target, 1:14.72, beaten on sensors alone, close to what sensors alone could do.</td></tr>
+        <tr data-v="v1.06"><td class="n"></td><td class="lap"></td><td>The first use of track memory after the officials allowed it: a speed allowance per corner.</td></tr>
+        <tr data-v="v1.11"><td class="n"></td><td class="lap"></td><td>The turning point: a racing line computed in advance, followed with live corrections.</td></tr>
+        <tr data-v="v1.17"><td class="n"></td><td class="lap"></td><td>The whole lap on the planned line, with its stored speed deciding where braking starts.</td></tr>
+        <tr data-v="v1.31"><td class="n"></td><td class="lap"></td><td>Declared finished: gears, the road's elevation, gentler steering corrections.</td></tr>
+        <tr data-v="v1.33"><td class="n"></td><td class="lap"></td><td>Reopened after watching the lap and seeing unused road. Every corner checked, four widened.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:2.4rem">Every batch</h3>
+  <div class="scroll">
+    <table id="batches">
+      <thead><tr><th class="n">Batch</th><th class="n">Versions</th><th class="n">Best lap</th><th>What it worked on</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap" id="rules">
+  <h2>Rules, and what we would submit instead</h2>
+  <div class="text">
+    <p>Six times the driver began to rely on something whose legality was not obvious. Four were put to the officials and confirmed. Two are our own reading of those answers and were not asked separately. Each one names the version we would submit if it were turned down.</p>
+  </div>
+  <div class="scroll">
+    <table id="rules-table">
+      <thead><tr><th>What the driver does</th><th class="n">Since</th><th>Status</th><th class="n">Fallback</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
+</section>
 </main>
 
 <footer>
   <div class="wrap">
-    One Qubit Racing, Adriano Torres. IBM Granite Racers: The AI Race Bot Showdown, submitted 11 October 2026.
+    One Qubit Racing, Adriano Torres. AI Racing League – Go FullSpeed with IBM Bob, submitted 11 October 2026.
     Code, telemetry and the record of every version: <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE</a>.
   </div>
 </footer>
