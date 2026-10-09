@@ -221,7 +221,7 @@
       if (d[2]) {                                          /* move the point the camera turns about, along the ground */
         const k = orbit.dist * 0.0016, sa = Math.sin(orbit.az), ca = Math.cos(orbit.az);
         orbit.t[0] += (sa * dx + ca * dy) * k; orbit.t[1] += (-ca * dx + sa * dy) * k; st.centre = false; paintBar();
-      } else { orbit.az -= dx * 0.006; orbit.el = RV.clamp(orbit.el + dy * 0.006, 0.05, 1.53); }
+      } else { orbit.az -= dx * 0.006; orbit.el = RV.clamp(orbit.el - dy * 0.006, 0.05, 1.53); }   /* dragging up lifts the camera, dragging down lowers it */
     });
     const up = () => { d = null; cv.classList.remove('drag'); };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);

@@ -32,6 +32,10 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   ok('and they are drawn: far more faces than the bare road', s.triangles > 20000, s.triangles);
   /* the mouse turns and zooms the orbit camera */
   const e0 = s.eye;
+  /* dragging up lifts the camera (user, 2026-10-08) */
+  await p.mouse('mousePressed', 700, 500); await p.mouse('mouseMoved', 700, 440); await p.mouse('mouseReleased', 700, 440); await p.sleep(200);
+  const eUp = (await p.ev(st)).eye;
+  ok('dragging up lifts the orbit camera', eUp[2] > e0[2] + 20, [Math.round(e0[2]), Math.round(eUp[2])]);
   await p.mouse('mousePressed', 700, 500); await p.mouse('mouseMoved', 820, 440); await p.mouse('mouseReleased', 820, 440); await p.sleep(200);
   await p.S('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 700, y: 500, deltaX: 0, deltaY: -600 }); await p.sleep(300);
   s = await p.ev(st);
