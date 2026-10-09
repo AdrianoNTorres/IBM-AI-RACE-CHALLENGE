@@ -17,7 +17,7 @@
      above the driver's head, which looks over the nose with both front wheels in sight, so the steering shows;
      the closed cars get a hood camera, low over the bonnet. */
   const CARS = [['race', 'Formula', [-0.9, 0, 1.6]], ['race-future', 'Future racer', [-0.9, 0, 1.6]], ['sedan-sports', 'Sports sedan', [1.5, 0, 1.45]], ['hatchback-sports', 'Hot hatch', [1.5, 0, 1.45]],
-    ['kart-oobi', 'Kart', [-0.7, 0, 1.35]], ['blocks', 'Blocks', [-0.35, 0, 1.0]]];
+    ['kart-oobi', 'Kart', [0.55, 0, 1.0]], ['blocks', 'Blocks', [-0.35, 0, 1.0]]];
   const cockpit = () => (CARS.find(c => c[0] === st.model) || CARS[0])[2].slice();
   const st = Object.assign({}, DEF, RV.uiGet('v3', {}));
   st.rel = (st.rel || DEF.rel).slice(0, 3);
@@ -227,7 +227,8 @@
       d[o] = n[0] * 255; d[o + 1] = n[1] * 255; d[o + 2] = n[2] * 255;
     }
     x.putImageData(px, 0, 0);
-    const t = map.clone(); t.image = cv; t.needsUpdate = true;
+    /* a picture of its own: a cloned texture shares the original's, and writing to that repainted every car at once */
+    const t = map.clone(); t.source = new T.Source(cv); t.needsUpdate = true;
     return want && t;
   }
   function modelCar(M, colour, ghost) {
@@ -241,7 +242,7 @@
       if (!o.isMesh) return;
       if (!mats.has(o.material)) {
         const m = o.material.clone();
-        if (m.map && M.paint) { m.map = repaint(m.map, M.paint, colour); g.userData.paint = [colour.r, colour.g, colour.b]; }
+        if (m.map && M.paint) { m.map = repaint(m.map, M.paint, colour); g.userData.paint = [colour.r, colour.g, colour.b]; g.userData.skin = m.map.source.uuid; }
         if (ghost) { m.transparent = true; m.opacity = 0.82; }
         mats.set(o.material, m);
       }
@@ -505,7 +506,7 @@
       if (st.cam === 'orbit') h += '<label class="check"><input type="checkbox" id="v3centre"' + (st.centre ? ' checked' : '') + '> Turn about the car</label>';
       if (st.cam === 'rel') h += '<div class="v3rel">' + slide('v3r0', 'Ahead', -60, 60, 0.5, st.rel[0], ' m') + slide('v3r1', 'Left', -30, 30, 0.5, st.rel[1], ' m') + slide('v3r2', 'Up', 0.3, 60, 0.1, st.rel[2], ' m') +
         '<label class="check"><input type="checkbox" id="v3look"' + (st.look ? ' checked' : '') + '> Look at the car</label>' +
-        '<button class="btn sm" id="v3cock" title="From the car, looking ahead: above the driver\u2019s head in the open-wheel cars, over the bonnet in the closed ones">Cockpit</button><button class="btn sm" id="v3back" title="Back to the offset this camera starts with">Reset</button></div>';
+        '<button class="btn sm" id="v3cock" title="From the car, looking ahead: above the driver\u2019s head in the open-wheel cars, over the bonnet in the closed ones, ahead of the driver in the kart">Cockpit</button><button class="btn sm" id="v3back" title="Back to the offset this camera starts with">Reset</button></div>';
     }
     bar.innerHTML = h;
     bar.classList.toggle('on3', st.on);
@@ -583,7 +584,7 @@
       if (!ready) return { on: st.on, ready: false };
       const i = ren.info.render, p = cam.position;
       const c0 = carsG && carsG.children[0];
-      return { on: st.on, ready: true, model: st.model, modelOn: !!(c0 && c0.userData.model), wheels: c0 ? c0.userData.wheelCount : 0, paint: c0 && c0.userData.paint, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
+      return { on: st.on, ready: true, model: st.model, modelOn: !!(c0 && c0.userData.model), wheels: c0 ? c0.userData.wheelCount : 0, paint: c0 && c0.userData.paint, skins: carsG ? new Set(carsG.children.map(g => g.userData.skin)).size : 0, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
         car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, fwd: focus ? [focus.fwd.x, focus.fwd.y, focus.fwd.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
     },
     camera(id) { st.cam = id; paintBar(); }, car(id) { st.model = id; if (st.cock) st.rel = cockpit(); paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
