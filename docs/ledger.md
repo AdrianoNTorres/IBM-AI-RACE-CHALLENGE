@@ -520,3 +520,48 @@ Rows for v1.03–v1.17 were transcribed on 2026-10-08 from `docs/batch.md` and t
 | v1.32 | W80c | investigation, whole lap | `W85c` at 0.80 | 12 (screen) | -0.359 | 0.016 | 0 of 12 | 0.931 @ 1,267 m | lost | 0.931 at 1,267 m; not raced here |
 | v1.32 | En95x85a72 | investigation, 770 m | `En95x85` with the apex at 0.72 | 12 (screen) | -0.145 | 0.004 | 0 of 12 | 0.912 @ 764 m | lost | 0.912 at the apex |
 | v1.32 | W90 | investigation, whole lap | limit 0.9, nothing held | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run off at 1,268 m (the kink) |
+| v1.33 | **chosen** | see title | The rest of the lap's bends on the wider stored line (446 m, the 770 m entry, 1,528 m, 1,931 m with its corner row +130), with the 770 m and 1,931 m apexes held tighter so the car stays off the inside kerbs | 70 (full) | -0.269 | 0.005 | 0 of 70 | 0.864 @ 1,036 m | kept | Kept: 0.269 s over 70 runs, 70 of 70 faster, every check 0 off, both apexes that the wider line brought to the kerb held clear of it. The 2,700 m apex (0.027 s on 12 runs) was left out as recommended. |
+| v1.33 | A130 | four corners, design A | the investigation's `ALL4` rebuilt (byte-identical): 446 m, 770 m entry 1.10, 1,528 m, 1,931 m apex 0.45 with row +130 | 12 (screen) | -0.276 | 0.009 | 0 of 12 | 0.863 @ 1,037 m | lost | 0.010 s more than the chosen, but two places on the inside kerbs under the follower's perturbations |
+| v1.33 | A130_kplo | margin | `A130` with `plan_kp` 0.35 | 12 (screen) | -0.244 | 0.029 | 0 of 12 | 0.922 @ 768 m | lost | 0.922 at the 770 m apex (base 0.907) |
+| v1.33 | A130_ffhi | margin | `A130` with `plan_ff` 13.2 | 12 (screen) | -0.124 | 0.019 | 0 of 12 | 0.928 @ 1,038 m | lost | 770 m apex 0.918; 1,931 m apex 0.845 at up to 272 km/h |
+| v1.33 | A130_lahi | margin | `A130` with `plan_la` 0.2 | 12 (screen) | -0.130 | 0.015 | 0 of 12 | 0.900 @ 1,037 m | lost | 1,931 m apex 0.858 |
+| v1.33 | A130_vd10 | margin | `A130` read 10 m late | 12 (screen) | +0.140 | 0.012 | 0 of 12 | 0.907 @ 769 m | lost | 770 m apex 0.907 (base 0.896) |
+| v1.33 | A130_vdm10 | margin | `A130` read 10 m early | 12 (screen) | -0.101 | 0.008 | 0 of 12 | 0.861 @ 1,652 m | lost | holds: 1,528 m exit 0.861 |
+| v1.33 | A130_vs104 | margin | `A130` at `plan_vs` 1.04 | 12 (screen) | -0.149 | 0.013 | 0 of 12 | 0.889 @ 1,650 m | lost | 1,528 m exit 0.889; 2,988 m exit 0.780: the investigation's 0.879 there belongs to the 2,700 m apex or to chance |
+| v1.33 | A125 | row +125, design C | `A130` with the 1,931 m row at +125 | 12 (screen) | -0.224 | 0.010 | 0 of 12 | 0.863 @ 1,037 m | lost | 0.052 s less than `A130` |
+| v1.33 | A3 | three corners, design B | `A130` without the 770 m entry | 12 (screen) | -0.221 | 0.014 | 0 of 12 | 0.864 @ 1,037 m | lost | 0.055 s less; 770 m apex 0.898 with `plan_kp` 0.35 |
+| v1.33 | A4m | 770 m entry 1.05 | `A130` with the entry drawn at 1.05 | 12 (screen) | -0.264 | 0.013 | 0 of 12 | 0.869 @ 768 m | lost | no milder at the apex: 0.920 with `plan_kp` 0.35, 0.911 read late |
+| v1.33 | H57 | design D, 770 m apex held | `A130` with the 770 m apex at 0.57 | 12 (screen) | -0.263 | 0.006 | 0 of 12 | 0.863 @ 1,037 m | lost | 770 m apex better than the base under every perturbation; 1,931 m still on the kerb |
+| v1.33 | H57_kplo | margin | `H57` with `plan_kp` 0.35 | 12 (screen) | -0.206 | 0.015 | 0 of 12 | 0.911 @ 1,038 m | lost | 770 m apex 0.893 |
+| v1.33 | H57_ffhi | margin | `H57` with `plan_ff` 13.2 | 12 (screen) | -0.110 | 0.013 | 0 of 12 | 0.928 @ 1,037 m | lost | 770 m apex 0.887; 1,931 m apex 0.845, one run at 272 km/h |
+| v1.33 | H57_vd10 | margin | `H57` read 10 m late | 12 (screen) | +0.175 | 0.011 | 0 of 12 | 0.899 @ 1,529 m | lost | 770 m apex 0.881 |
+| v1.33 | H54 | design D | `A130` with the 770 m apex at 0.54 | 12 (screen) | -0.239 | 0.005 | 0 of 12 | 0.864 @ 1,037 m | lost | 0.024 s less than `H57`; apex 0.864 with `plan_kp` 0.35 |
+| v1.33 | H57r135_ffhi | cliff | `H57` with row +135 and `plan_ff` 13.2 | 12 (screen) | -0.102 | 0.024 | 2 of 12 | 0.928 @ 1,037 m | lost | 2 runs end at 1,943 m on the inside kerb (273 and 275 km/h at 0.82) |
+| v1.33 | H57r135_lahi | cliff | `H57` with row +135 and `plan_la` 0.2 | 12 (screen) | -0.126 | 0.018 | 1 of 12 | 0.900 @ 1,036 m | lost | 1 run ends at 1,943 m (274 km/h at 0.83) |
+| v1.33 | H57r125 | row +125, design C | `H57` with row +125 | 12 (screen) | -0.197 | 0.009 | 0 of 12 | 0.863 @ 1,037 m | lost | 0.066 s less than `H57` |
+| v1.33 | H57r125_lahi | margin | `H57r125` with `plan_la` 0.2 | 12 (screen) | -0.069 | 0.016 | 0 of 12 | 0.900 @ 1,036 m | lost | still on the kerb: 0.871 at up to 263 km/h |
+| v1.33 | J38_ffhi | margin | the chosen with `plan_ff` 13.2 | 12 (screen) | -0.138 | 0.021 | 0 of 12 | 0.928 @ 1,037 m | lost | 1,931 m apex 0.751: off the kerb |
+| v1.33 | J38_lahi | margin | the chosen with `plan_la` 0.2 | 12 (screen) | -0.193 | 0.010 | 0 of 12 | 0.900 @ 1,036 m | lost | 1,931 m apex 0.773 |
+| v1.33 | J38_fflo | margin | the chosen with `plan_ff` 10.8 | 12 (screen) | -0.005 | 0.013 | 0 of 12 | 0.887 @ 695 m | lost | 1,931 m exit 0.886; 770 m entry 0.887 at 695 m |
+| v1.33 | J38_lalo | margin | the chosen with `plan_la` 0.1 | 12 (screen) | -0.036 | 0.016 | 0 of 12 | 0.898 @ 1,988 m | lost | 1,931 m exit 0.898 |
+| v1.33 | J38r135_ffhi | margin | the chosen's line with row +135 and `plan_ff` 13.2 | 12 (screen) | -0.141 | 0.010 | 0 of 12 | 0.928 @ 1,037 m | lost | clean: +130 is one measured step below |
+| v1.33 | J38r135_lahi | margin | the chosen's line with row +135 and `plan_la` 0.2 | 12 (screen) | -0.216 | 0.014 | 0 of 12 | 0.900 @ 1,036 m | lost | clean |
+| v1.33 | B_ffhi | margin | base (v1.32) with `plan_ff` 13.2 | 12 (screen) | +0.161 | 0.018 | 0 of 12 | 0.926 @ 1,037 m | lost | 770 m apex 0.912, 1,931 m apex 0.874 at up to 259 km/h |
+| v1.33 | B_kplo | margin | base with `plan_kp` 0.35 | 12 (screen) | +0.048 | 0.024 | 0 of 12 | 0.911 @ 1,037 m | lost | 770 m apex 0.907 |
+| v1.33 | B_lahi | margin | base with `plan_la` 0.2 | 12 (screen) | +0.130 | 0.025 | 0 of 12 | 0.899 @ 1,037 m | lost | 1,931 m apex 0.883 at up to 254 km/h |
+| v1.33 | C1931r130 | investigation, 1,931 m | in / out 0.85, apex 0.45, row +130, splice 1,700-2,200 m | 12 (screen) | -0.101 | 0.007 | 0 of 12 | 0.862 @ 1,037 m | lost | the 1,931 m part of `A130` |
+| v1.33 | C1931r135 | investigation, 1,931 m | the same with row +135 | 12 (screen) | -0.111 | 0.015 | 0 of 12 | 0.862 @ 1,037 m | lost | clean on the standard screen only (see `H57r135_ffhi`) |
+| v1.33 | C1931r140 | investigation, 1,931 m | the same with row +140 | 12 (screen) | n/a | n/a | 12 of 12 | none on track | lost | every run ends at 1,943 m |
+| v1.33 | D1931r135 | investigation, 1,931 m | in / out 0.95 with row +135 | 12 (screen) | -0.109 | 0.008 | 7 of 12 | 0.913 @ 1,853 m | lost | 7 off; 0.913 at 1,854 m |
+| v1.33 | G1528 | investigation, 1,528 m | in / out 0.85, apex 0.61, speed x0.98, splice 1,300-1,800 m | 12 (screen) | -0.075 | 0.005 | 0 of 12 | 0.862 @ 1,037 m | lost | the 1,528 m part of the chosen |
+| v1.33 | C1528 | investigation, 1,528 m | in / out 0.85, apex not held, speed x1.0 | 12 (screen) | -0.097 | 0.003 | 0 of 12 | 0.913 @ 1,646 m | lost | 0.913 at the 1,646 m exit |
+| v1.33 | C1528s97_vd10 | investigation, 1,528 m | in / out 0.85, speed x0.97, apex not held, read 10 m late | 12 (screen) | +0.400 | 0.006 | 0 of 12 | 0.948 @ 1,529 m | lost | 0.948 at the apex |
+| v1.33 | C446 | investigation, 446 m | in 290-400 m and out 535-600 m at 0.85, splice 250-620 m | 12 (screen) | -0.071 | 0.013 | 0 of 12 | 0.864 @ 1,037 m | lost | the 446 m part of the chosen |
+| v1.33 | C446a72_vd10 | investigation, 446 m | `C446` with the apex at 0.72, read 10 m late | 12 (screen) | +0.367 | 0.012 | 0 of 12 | 0.923 @ 438 m | lost | 0.923 at 438 m for no gain |
+| v1.33 | En110 | investigation, 770 m | entry drawn at 1.10, splice 540-990 m | 12 (screen) | -0.067 | 0.014 | 0 of 12 | 0.865 @ 1,038 m | lost | the 770 m entry of the chosen, before the apex was held |
+| v1.33 | En115 | investigation, 770 m | entry drawn at 1.15 | 12 (screen) | -0.081 | 0.010 | 0 of 12 | 0.910 @ 694 m | lost | 0.910 at 694 m |
+| v1.33 | T2700 | investigation, 2,700 m | apex 0.58, splice 2,550-2,900 m | 12 (screen) | -0.027 | 0.009 | 0 of 12 | 0.864 @ 2,688 m | lost | 0.027 s; not taken (the orchestrator's recommendation) |
+| v1.33 | ALL | investigation, five corners | `A130` with the 2,700 m apex at 0.58 | 12 (screen) | -0.295 | 0.008 | 0 of 12 | 0.867 @ 2,688 m | lost | 0.019 s more than `A130`; not taken |
+| v1.33 | ALL_vs104 | investigation, margin | `ALL` at `plan_vs` 1.04 | 12 (screen) | -0.184 | 0.015 | 0 of 12 | 0.889 @ 1,650 m | lost | 0.889 at 1,650 m; 0.879 at the 2,988 m exit |
+| v1.33 | K200 | investigation, start kink | 90-175 m and 235-290 m at 0.85 | 12 (screen) | -0.018 | 0.010 | 0 of 12 | 0.862 @ 1,037 m | lost | no room |
+| v1.33 | F85 | investigation, flick | flick entry 2,385-2,425 m at 0.85 | 12 (screen) | +0.060 | 0.007 | 0 of 12 | 0.862 @ 1,037 m | lost | slower |
