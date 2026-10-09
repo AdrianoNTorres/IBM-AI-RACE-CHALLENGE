@@ -2369,6 +2369,22 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept — the first lap under 1:06. The car is frozen here for the submission. |
 | **Learned** | Just before this, the work had been declared finished: every idea on the list was worth a few hundredths of a second. That list only held ideas already written down, and nobody had gone back to the oldest assumption, how much of the road the line may use. It took a person watching the lap to see it. The widest version of the idea was twice as fast on the test laps but put the car off the road in a check, so the version kept uses the wide line with a little less speed. |
 
+## v1.33 — The whole road at four more corners
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.33 |
+| **What changed** | The planned line was redrawn wider at four more places: the long double left-hander at 446 m, the way into the corner at 770 m, the corner at 1,528 m and the fast bend at 1,931 m, where the car is also allowed 10 km/h more. At two of them the line is kept a little further from the inside kerb than the widest version would be. |
+| **Why** | After v1.32 every corner was checked for road the car was not using. Five had room; four were clearly worth taking. |
+| **Prediction** | About 0.27 s gained, spread over the four corners. |
+| **Lap time** | 1:05:56 |
+| **Damage** | 0 |
+| **Top speed** | 296 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:05:56 (0.28 s faster than v1.32), damage 0. All 70 test laps were faster, by 0.27 s on average, and none left the road; none left the road in the four checks either (660 laps). The car uses no more of the road at its widest point than before (0.86 of the way to the edge). |
+| **Decision** | ✅ Kept. The car is frozen here for the submission. |
+| **Learned** | The fastest version on the test laps was not the one kept. With small errors added to the steering, it ran over the inside kerb of the fast bend at more than 270 km/h, and a little faster than that the car was thrown off and the run ended. Aiming slightly further from that kerb cost one hundredth of a second and removed the danger. Two things the driver of the project had suspected turned out not to cost time: sliding the car more is slower in every test, and the corner where the car seems to hesitate on the throttle is simply at the limit of its grip. |
+
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.32 run (the last version).*
+*Simplified from CHANGELOG.md as it stood after the v1.33 run (the last version).*
