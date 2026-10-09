@@ -21,7 +21,7 @@
     T('win-close', 'Panel window button: close', 'over'), T('win-fold', 'Panel window button: fold', 'over'), T('win-home', 'Panel window button: back to its place', 'over'), T('win-one', 'Panel window button: only the car in focus', 'over'),
 
     T('map-bg', 'Map background', 'map'), T('map-ink', 'Distance labels', 'map'), T('road', 'Road surface', 'map'), T('road-edge', 'Track edges and finish line', 'map'),
-    T('road-mark', 'Road markings and car details', 'map'), T('grass', '3D: grass beside the road', 'map'), T('sand', '3D: sand traps', 'map'), T('kerb', '3D: kerbs, first colour', 'map'), T('kerb-2', '3D: kerbs, second colour', 'map'), T('wall', '3D: walls and fences', 'map'), T('best', 'Sector lines and the slowest-corner pin', 'map'), T('tyre', 'Tyres and the steering wheel', 'map'),
+    T('road-mark', 'Road markings and car details', 'map'), T('grass', '3D: grass beside the road', 'map'), T('sand', '3D: sand traps', 'map'), T('kerb', '3D: kerbs, first colour', 'map'), T('kerb-2', '3D: kerbs, second colour', 'map'), T('wall', '3D: walls and fences', 'map'), T('sky', 'Advanced 3D: sky', 'map'), T('best', 'Sector lines and the slowest-corner pin', 'map'), T('tyre', 'Tyres and the steering wheel', 'map'),
     T('car-line', 'Car outline', 'map'), T('helmet', 'Driver’s helmet', 'map'), T('label-bg', 'Speed label: background', 'map'), T('label-ink', 'Speed label: text', 'map'),
 
     T('sp-1', 'Driven line by speed: slowest', 'over'), T('sp-2', 'Driven line by speed: slow', 'over'), T('sp-3', 'Driven line by speed: middle', 'over'),

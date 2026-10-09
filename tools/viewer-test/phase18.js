@@ -1,4 +1,4 @@
-/* Phase 18.2: the Track page in 3D. The switch is there and 3D is off when a page opens; the 3D library is not
+/* Phase 18.2 and 18.3: the Track page in 3D, and the advanced view. The switch is there and 3D is off when a page opens; the 3D library is not
    fetched before 3D is asked for; in 3D the track is drawn, the cars stand on the road surface with the road's
    slope, the three cameras and the height factor work, the replay moves the car, and 2D comes back as it was.
    Writes phase18-*.png: look at them. */
@@ -13,7 +13,7 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
 (async () => {
   const p = await open('tab=pm&pause&run=v1.31&cmp=v1.30', { view: 'detailed' });
   await p.until('RV.S.ds && RV.S.R && RV.S.CM.length === 1'); await p.sleep(400);
-  ok('the switch is over the map, 3D is off, and the library has not been fetched', (await p.ev("document.querySelectorAll('#v3bar .seg button').length")) === 2 && !(await p.ev('RV.view3d.isOn()')) && !(await p.ev(three)));
+  ok('the switch is over the map, 3D is off, and the library has not been fetched', (await p.ev("document.querySelectorAll('#v3bar .seg button').length")) === 3 && !(await p.ev('RV.view3d.isOn()')) && !(await p.ev(three)));
   await p.ev('RV.play.go(RV.idxAtD(RV.S.R, 2380))');                       /* the climb to the Corkscrew */
   await p.ev("document.querySelector('#v3bar .seg button[data-v=\"3d\"]').click()");
   await p.until('RV.view3d.isOn()', 20000); await p.sleep(1200);
@@ -70,6 +70,26 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   s = await p.ev(st); z = await p.ev(roadZ(3));
   ok('height x3: the road and the car are three times as high', Math.abs(s.car[2] - z) < 0.3, [s.car[2], z]);
 
+  /* 18.3: the advanced view: the driver's seat, the sensors and the planned speed on the road; the wheels steer */
+  await p.ev("document.querySelector('#v3cam button[data-v=\"orbit\"]').click()"); await p.sleep(200);
+  await p.ev('RV.play.go(RV.idxAtD(RV.S.R, 2440))'); await p.sleep(200);
+  await p.ev("document.querySelector('#v3bar .seg button[data-v=\"adv\"]').click()"); await p.sleep(900);
+  s = await p.ev(st);
+  await p.shot('phase18-advanced');
+  d = Math.hypot(s.eye[0] - s.car[0], s.eye[1] - s.car[1], s.eye[2] - s.car[2]);
+  ok('advanced: opens in the cockpit, with sky and haze', s.adv && s.cam === 'rel' && d < 1.6 && s.fog, { cam: s.cam, d: d });
+  ok('advanced: the sensors that read something are drawn, and the planned speed lies on the road ahead', s.beams >= 10 && s.beams <= 19 && s.plan > 20, { beams: s.beams, plan: s.plan });
+  const want = await p.ev('RV.S.R.st[RV.S.i] * 21 * Math.PI / 180');
+  ok('the front wheels are turned as the recording says', Math.abs(s.steer - want) < 0.02 && Math.abs(want) > 0.01, [s.steer, want]);
+  await p.ev("document.getElementById('v3sens').click(); document.getElementById('v3plan').click()"); await p.sleep(300);
+  s = await p.ev(st);
+  ok('both overlays can be switched off', s.beams === 0 && s.plan === 0, [s.beams, s.plan]);
+  await p.ev("document.getElementById('v3sens').click(); document.getElementById('v3plan').click()");
+  await p.ev("document.querySelector('#v3cam button[data-v=\"chase\"]').click()"); await p.sleep(900);
+  await p.shot('phase18-advanced-chase');
+  await p.ev("document.querySelector('#v3bar .seg button[data-v=\"3d\"]').click()"); await p.sleep(400);
+  s = await p.ev(st);
+  ok('plain 3D again: no sensors, no carpet, no haze', !s.adv && s.beams === 0 && s.plan === 0 && !s.fog, s);
   /* a dark theme: the scene takes its colours */
   await p.ev("RV.prefs.theme = 'dark'; RV.theme.apply ? RV.theme.apply() : (RV.applyTheme && RV.applyTheme())"); await p.sleep(600);
   await p.ev("document.querySelector('#v3cam button[data-v=\"orbit\"]').click()"); await p.sleep(600);

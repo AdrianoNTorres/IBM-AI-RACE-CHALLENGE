@@ -2,16 +2,20 @@
    hills and banking (js/track.js builds both from the track file). Drawn with Three.js, which is kept in
    viewer/vendor/ and loaded only when 3D is first switched on; the 2D map does not depend on anything here.
 
+   "Advanced 3D" is the same scene from the driver's seat, with what the driver program saw and planned drawn in it:
+   its 19 distance sensors and the speed its plan allowed on the road ahead.
+
    Three cameras: Orbit (the whole track, turned and zoomed with the mouse), Chase (behind the car) and Relative
    (anywhere the reader puts it, as an offset from the car). Colours are the theme's own tokens (RV.pal), so the
    3D track looks like the 2D one; grass, sand, kerbs and walls have tokens of their own. The world is in metres: x and y as on the 2D map, z up. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$;
-  const DEF = { on: false, cam: 'orbit', k: 1, rel: [-9, 0, 3.5], look: true, centre: false };
+  const DEF = { on: false, adv: false, cam: 'orbit', k: 1, rel: [-9, 0, 3.5], look: true, centre: false, sens: true, plan: true };
+  const COCKPIT = [-0.35, 0, 1.0];                         /* the driver's eye: just above the tub */
   const st = Object.assign({}, DEF, RV.uiGet('v3', {}));
   st.rel = (st.rel || DEF.rel).slice(0, 3);
-  st.on = false;                                           /* a page always opens in 2D: 3D is asked for */
+  st.on = false; st.adv = false;                           /* a page always opens in 2D: 3D is asked for */
   const CAMS = [['orbit', 'Orbit', 'The whole track. Drag to turn it, wheel to zoom, Shift-drag to move, double-click to start again.'],
     ['chase', 'Chase', 'Behind and above the car, following it. The wheel moves the camera closer or further.'],
     ['rel', 'Relative', 'Anywhere you put it, measured from the car: ahead or behind, left or right, and how high.']];
@@ -21,8 +25,9 @@
   let trackG = null, lineM = null, carsG = null, built = { trk: null, k: 0, theme: -1 }, lineOf = null, carKey = '';
   const orbit = { az: -1.9, el: 0.62, dist: 900, t: [0, 0, 0], set: false };
   let chaseDist = 1, eye = null, lastCam = '', focus = null;
+  let beamL = null, beamP = null, planM = null, skyOf = '', beamsNow = 0, planNow = 0, steerNow = 0;
 
-  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre });
+  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan });
   const trkNow = () => (S.ds && S.ds.trk) || null;
   const col = (name, dflt) => new T.Color(RV.pal[name] || dflt);
 
@@ -123,7 +128,7 @@
     (trk.sectors.cuts || []).forEach((d, k) => { trackG.add(across(d, col('best', RV.pal.accent || '#7a4cc0'), 0.08)); trackG.add(label('S' + (k + 2) + ' starts', surf(trk, d, hw + 6, 5), 4.5)); });
     for (let m = 500; m < trk.total - 100; m += 500) trackG.add(label(RV.fmtInt(m) + ' m', surf(trk, m, -hw - 6, 4), 4));
     scene.add(trackG);
-    scene.background = bg;
+    sky();
     built = { trk: trk, k: st.k, theme: RV.themeRev };
     if (!orbit.set) { orbit.t = [(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, (trk.zbox[0] + trk.zbox[1]) / 2 * st.k]; orbit.dist = Math.max(w, h) * 0.95; orbit.set = true; }
     lineOf = null; carKey = '';
@@ -162,8 +167,15 @@
     box(0.5, 0.36, 0.34, -0.55, 0, 0.74, dark);          /* the driver's head and the air box */
     box(0.36, 1.86, 0.06, 2.35, 0, 0.16, body);          /* front wing */
     box(0.42, 1.5, 0.08, -2.05, 0, 0.92, body); box(0.3, 0.06, 0.5, -2.05, 0.72, 0.7, body); box(0.3, 0.06, 0.5, -2.05, -0.72, 0.7, body);   /* rear wing */
+    /* the wheels: each on a pivot (the front two are steered about it) and turning about its axle; a pale bar across
+       the rim shows it turn */
+    const rim = new T.MeshLambertMaterial({ color: 0x9aa0ab, transparent: ghost, opacity: ghost ? 0.82 : 1 });
+    g.userData.front = []; g.userData.wheels = [];
     for (const [x, y] of [[1.55, 0.86], [1.55, -0.86], [-1.55, 0.86], [-1.55, -0.86]]) {
-      const w = new T.Mesh(new T.CylinderGeometry(0.33, 0.33, 0.34, 18), dark); w.position.set(x, y, 0.33); g.add(w);   /* a cylinder's axis is y: across the car */
+      const piv = new T.Group(), w = new T.Group(); piv.position.set(x, y, 0.33);
+      w.add(new T.Mesh(new T.CylinderGeometry(0.33, 0.33, 0.34, 18), dark));        /* a cylinder's axis is y: across the car */
+      const bar = new T.Mesh(new T.BoxGeometry(0.5, 0.36, 0.09), rim); w.add(bar);
+      piv.add(w); g.add(piv); g.userData.wheels.push(w); if (x > 0) g.userData.front.push(piv);
     }
     return g;
   }
@@ -186,6 +198,97 @@
     const flat = new T.Vector3(Math.cos(c.p[2]), Math.sin(c.p[2]), 0);
     const fwd = flat.sub(up.clone().multiplyScalar(flat.dot(up))).normalize(), left = new T.Vector3().crossVectors(up, fwd);
     return { pos: new T.Vector3(c.p[0], c.p[1], here[2]), fwd: fwd, left: left, up: up };
+  }
+
+  /* ---------- the advanced view: what the driver program saw and planned ---------- */
+  /* the sky, and the haze that hides the far end of the ground, in the advanced view; the map's own background otherwise */
+  function sky() {
+    const c = st.adv ? col('sky', '#bcd7ee') : col('map-bg', '#e9e4d8');
+    scene.background = c;
+    scene.fog = st.adv ? new T.Fog(c, 350, 3200) : null;
+    skyOf = (st.adv ? 'a' : 'm') + RV.themeRev;
+  }
+  /* the height of the ground at a point of the plan near distance s0 along the track (a beam's end, for one):
+     the nearest station of the centre line within reach, then the road surface there, level beyond its edges */
+  function groundAt(trk, x, y, s0) {
+    const C = trk.centre, n = C.length - 1, i0 = Math.round(((s0 % trk.total) + trk.total) % trk.total / trk.total * n);
+    let best = 1e18, bi = i0;
+    for (let d = -20; d <= 115; d++) { const i = ((i0 + d) % n + n) % n, dx = C[i][0] - x, dy = C[i][1] - y, q = dx * dx + dy * dy; if (q < best) { best = q; bi = i; } }
+    const s = trk.total * bi / n, p = RV.track.pose(trk, s), off = -(x - p[0]) * Math.sin(p[2]) + (y - p[1]) * Math.cos(p[2]);
+    return surf(trk, s, RV.clamp(off, -trk.hw, trk.hw))[2];
+  }
+  const rgb = css => { const m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(css); return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : [1, 1, 1]; };
+  /* the 19 distance sensors of the car in focus: a line from the car to the point of the track edge each one
+     measured, coloured as on the 2D map (close to far), and a dot where it ends; a beam that found nothing
+     within 200 m is faint */
+  function buildBeams() {
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(19 * 6), 3)); g.setAttribute('color', new T.BufferAttribute(new Float32Array(19 * 6), 3));
+    beamL = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95 }));
+    const d = new T.BufferGeometry();
+    d.setAttribute('position', new T.BufferAttribute(new Float32Array(19 * 3), 3)); d.setAttribute('color', new T.BufferAttribute(new Float32Array(19 * 3), 3));
+    beamP = new T.Points(d, new T.PointsMaterial({ vertexColors: true, size: 7, sizeAttenuation: false }));
+    beamL.frustumCulled = beamP.frustumCulled = false; beamL.renderOrder = beamP.renderOrder = 3;
+    scene.add(beamL); scene.add(beamP);
+  }
+  function placeBeams(trk, c, F) {
+    const r = c.r, show = st.adv && st.sens && !!r.b;
+    beamL.visible = beamP.visible = show; beamsNow = 0;
+    if (!show) return;
+    const A = RV.TRACK_ANGLES, o = c.k * 19, lp = beamL.geometry.attributes.position.array, lc = beamL.geometry.attributes.color.array;
+    const pp = beamP.geometry.attributes.position.array, pc = beamP.geometry.attributes.color.array;
+    const from = F.pos.clone().addScaledVector(F.up, 0.45), fog = scene.background;
+    for (let k = 0; k < 19; k++) {
+      const d = r.b[o + k], q = k * 6;
+      let ex = from.x, ey = from.y, ez = from.z, cr = [0, 0, 0], hit = false;
+      if (d >= 0) {
+        const a = c.p[2] - A[k] * Math.PI / 180; hit = d < 199.5;
+        ex = c.p[0] + d * Math.cos(a); ey = c.p[1] + d * Math.sin(a); ez = groundAt(trk, ex, ey, r.s[c.k]) + 0.3;
+        cr = rgb(RV.beamCol(d, 1));
+        if (!hit) cr = [cr[0] * 0.3 + fog.r * 0.7, cr[1] * 0.3 + fog.g * 0.7, cr[2] * 0.3 + fog.b * 0.7];
+        beamsNow++;
+      }
+      lp[q] = from.x; lp[q + 1] = from.y; lp[q + 2] = from.z; lp[q + 3] = ex; lp[q + 4] = ey; lp[q + 5] = ez;
+      lc[q] = lc[q + 3] = cr[0]; lc[q + 1] = lc[q + 4] = cr[1]; lc[q + 2] = lc[q + 5] = cr[2];
+      const e = hit ? [ex, ey, ez] : [from.x, from.y, from.z];             /* no dot where nothing was found */
+      pp[k * 3] = e[0]; pp[k * 3 + 1] = e[1]; pp[k * 3 + 2] = e[2]; pc[k * 3] = cr[0]; pc[k * 3 + 1] = cr[1]; pc[k * 3 + 2] = cr[2];
+    }
+    for (const m of [beamL, beamP]) { m.geometry.attributes.position.needsUpdate = true; m.geometry.attributes.color.needsUpdate = true; }
+  }
+  /* The speed the driver's plan allowed, as a carpet on the road for the next 300 m: the colours of the driven line
+     (red slow, green fast), so the road turns red ahead of a corner where the plan will make the car brake. One
+     strip for the whole lap; each frame only the stretch ahead of the car is drawn. */
+  const PLAN_AHEAD = 300;
+  function buildPlan(trk, r) {
+    clear(planM); planM = null;
+    if (!r || !r.x || !r.al) return;
+    let lo = 1e9, hi = -1e9, any = false;
+    for (let i = 0; i < r.n; i++) { if (r.v[i] < lo) lo = r.v[i]; if (r.v[i] > hi) hi = r.v[i]; if (r.al[i] > 0) any = true; }
+    if (!any) return;
+    const hw = trk.hw * 0.94, pos = [], cols = [], c = new T.Color(), row = i => [surf(trk, r.s[i], hw, 0.05), surf(trk, r.s[i], -hw, 0.05)];
+    for (let i = 0; i + 2 < r.n; i += 2) {
+      let a = row(i), b = row(i + 2);
+      if (Math.abs(r.s[i + 2] - r.s[i]) > 60) b = a;                       /* nothing across the start line */
+      pos.push(a[0][0], a[0][1], a[0][2], a[1][0], a[1][1], a[1][2], b[0][0], b[0][1], b[0][2], a[1][0], a[1][1], a[1][2], b[1][0], b[1][1], b[1][2], b[0][0], b[0][1], b[0][2]);
+      c.set(RV.speedCol(RV.clamp(hi > lo ? (r.al[i] - lo) / (hi - lo) : 1, 0, 1)));
+      for (let k = 0; k < 6; k++) cols.push(c.r, c.g, c.b);
+    }
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T.Float32BufferAttribute(cols, 3));
+    planM = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false, side: T.DoubleSide }));
+    planM.frustumCulled = false; planM.renderOrder = 1;
+    scene.add(planM);
+  }
+  function placePlan(trk, c) {
+    planNow = 0;
+    if (!planM) return;
+    planM.visible = st.adv && st.plan;
+    if (!planM.visible) return;
+    const r = c.r, q0 = Math.floor(c.k / 2), total = trk.total;
+    let q = q0;
+    while (q * 2 + 2 < r.n && q - q0 < 900 && ((r.s[q * 2] - r.s[c.k]) % total + total) % total <= PLAN_AHEAD) q++;
+    planNow = q - q0;
+    planM.geometry.setDrawRange(q0 * 6, planNow * 6);
   }
 
   /* ---------- the cameras ---------- */
@@ -244,7 +347,9 @@
     if (!W || !H) return;
     if (cv.width !== Math.round(W * ren.getPixelRatio()) || cv.height !== Math.round(H * ren.getPixelRatio())) { ren.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); }
     if (built.trk !== trk || built.k !== st.k || built.theme !== RV.themeRev) buildTrack(trk);
-    if (lineOf !== S.R) buildLine(trk, S.R);
+    if (skyOf !== (st.adv ? 'a' : 'm') + RV.themeRev) sky();
+    if (lineOf !== S.R) { buildLine(trk, S.R); buildPlan(trk, S.R); }
+    if (!beamL) buildBeams();
     const cars = RV.map.cars3(), key = cars.map(c => c.id + RV.col(c.id)).join('|');
     if (key !== carKey) { buildCars(cars); carKey = key; }
     focus = null;
@@ -253,7 +358,10 @@
       if (!g) return;
       g.position.copy(F.pos);
       g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(F.fwd, F.left, F.up));
-      if (k === 0) focus = F;
+      /* the front wheels turn with the recorded steering (full lock is 21 degrees), all four with the speed */
+      const steer = RV.clamp(c.p[3] || 0, -1, 1) * 21 * Math.PI / 180, roll = (S.playing ? c.r.v[c.k] / 3.6 * dt / 0.33 : 0);
+      g.userData.front.forEach(pv => { pv.rotation.z = steer; }); g.userData.wheels.forEach(w => { w.rotation.y += roll; });
+      if (k === 0) { focus = F; steerNow = steer; placeBeams(trk, c, F); placePlan(trk, c); }
     });
     aim(dt, focus);
     ren.render(scene, cam);
@@ -264,10 +372,12 @@
   const slide = (id, text, min, max, step, val, unit) => '<label class="v3s">' + text + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '"><span class="num">' + val + unit + '</span></label>';
   function paintBar() {
     if (!bar) return;
-    let h = seg([['2d', '2D'], ['3d', '3D']], st.on ? '3d' : '2d', 'The map in 2D or 3D');
+    let h = seg([['2d', '2D', 'The flat map'], ['3d', '3D', 'The track with its hills and banking'], ['adv', 'Advanced 3D', 'From the driver\u2019s seat, with what the driver program saw and planned drawn on the road']], !st.on ? '2d' : st.adv ? 'adv' : '3d', 'The map in 2D, in 3D, or the advanced 3D view');
     if (st.on && loading) h += '<span class="note">Loading the 3D view …</span>';
     if (st.on && ready) {
       h += '<span id="v3cam">' + seg(CAMS, st.cam, 'Camera') + '</span>' + slide('v3k', 'Height', 1, 5, 0.5, st.k, '×');
+      if (st.adv) h += '<label class="check" title="The 19 distance sensors, each drawn to the point of the track edge it measured"><input type="checkbox" id="v3sens"' + (st.sens ? ' checked' : '') + '> Sensors</label>' +
+        '<label class="check" title="The speed the driver\u2019s plan allowed over the next 300 m, in the colours of the driven line"><input type="checkbox" id="v3plan"' + (st.plan ? ' checked' : '') + '> Planned speed</label>';
       if (st.cam === 'orbit') h += '<label class="check"><input type="checkbox" id="v3centre"' + (st.centre ? ' checked' : '') + '> Turn about the car</label>';
       if (st.cam === 'rel') h += '<div class="v3rel">' + slide('v3r0', 'Ahead', -60, 60, 0.5, st.rel[0], ' m') + slide('v3r1', 'Left', -30, 30, 0.5, st.rel[1], ' m') + slide('v3r2', 'Up', 0.3, 60, 0.1, st.rel[2], ' m') +
         '<label class="check"><input type="checkbox" id="v3look"' + (st.look ? ' checked' : '') + '> Look at the car</label>' +
@@ -275,14 +385,16 @@
     }
     bar.innerHTML = h;
     bar.classList.toggle('on3', st.on);
-    bar.querySelectorAll('.seg').forEach((s, k) => s.querySelectorAll('button').forEach(b => { b.onclick = () => { if (k === 0) set(b.dataset.v === '3d'); else { st.cam = b.dataset.v; save(); paintBar(); } }; }));
+    bar.querySelectorAll('.seg').forEach((s, k) => s.querySelectorAll('button').forEach(b => { b.onclick = () => { if (k === 0) mode(b.dataset.v); else { st.cam = b.dataset.v; save(); paintBar(); } }; }));
     const on = (id, ev, fn) => { const e = $(id); if (e) e[ev] = fn; };
     const live = (id, fn, unit) => on(id, 'oninput', e => { fn(+e.target.value); e.target.nextElementSibling.textContent = e.target.value + unit; save(); });
     live('v3k', v => { st.k = v; }, '×');
     live('v3r0', v => { st.rel[0] = v; }, ' m'); live('v3r1', v => { st.rel[1] = v; }, ' m'); live('v3r2', v => { st.rel[2] = v; }, ' m');
     on('v3centre', 'onchange', e => { st.centre = e.target.checked; if (st.centre) orbit.dist = Math.min(orbit.dist, 220); save(); });
     on('v3look', 'onchange', e => { st.look = e.target.checked; save(); });
-    on('v3cock', 'onclick', () => { st.rel = [-0.35, 0, 1.0]; st.look = false; save(); paintBar(); });
+    on('v3sens', 'onchange', e => { st.sens = e.target.checked; save(); });
+    on('v3plan', 'onchange', e => { st.plan = e.target.checked; save(); });
+    on('v3cock', 'onclick', () => { st.rel = COCKPIT.slice(); st.look = false; save(); paintBar(); });
     on('v3back', 'onclick', () => { st.rel = DEF.rel.slice(); st.look = true; save(); paintBar(); });
   }
 
@@ -306,9 +418,17 @@
     wrap.classList.toggle('in3d', is3);
     paintBar();
   }
+  /* '2d', '3d' or 'adv'. The advanced view opens from the driver's seat unless the reader has chosen a camera of
+     their own for it since. */
+  function mode(m) {
+    const adv = m === 'adv';
+    if (adv && !st.adv && st.cam === 'orbit') { st.cam = 'rel'; st.rel = COCKPIT.slice(); st.look = false; }
+    st.adv = adv;
+    return set(m !== '2d');
+  }
   /* 3D on or off. The library is fetched the first time it is wanted. */
   function set(on) {
-    st.on = !!on;
+    st.on = !!on; if (!st.on) st.adv = false;
     if (!st.on || ready) { show(); return Promise.resolve(ready); }
     if (loading) return Promise.resolve(false);
     loading = true; paintBar();
@@ -331,13 +451,13 @@
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', init); else init();
 
   RV.view3d = {
-    set: set,
+    set: set, mode: mode,
     isOn: () => st.on && ready,
     /* for the browser test: what is drawn and from where */
     state() {
       if (!ready) return { on: st.on, ready: false };
       const i = ren.info.render, p = cam.position;
-      return { on: st.on, ready: true, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
+      return { on: st.on, ready: true, adv: st.adv, beams: beamL && beamL.visible ? beamsNow : 0, plan: planM && planM.visible ? planNow : 0, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
         car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
     },
     camera(id) { st.cam = id; paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
