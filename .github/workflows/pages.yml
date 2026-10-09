@@ -1,14 +1,14 @@
-# Publishes the run viewer (the viewer/ folder) on GitHub Pages.
-# The site is static: no build step, the folder is uploaded as it is.
+# Publishes the site on GitHub Pages: the presentation (the site/ folder) at the root and the
+# run viewer (the viewer/ folder) under /viewer/. Both are static: no build step.
 # Needs, once, in the repository settings: Pages > Source = "GitHub Actions", and
 # Environments > github-pages > Deployment branches must allow the branch named below.
-name: Publish the run viewer
+name: Publish the presentation and the run viewer
 
 on:
   push:
-    branches: [viewer_no_login]   # change to main when the viewer moves there
+    branches: [main]
     # the site itself, and the data its summary is made from
-    paths: ['viewer/**', '.github/workflows/pages.yml', 'tools/viewer-summary/**', 'docs/CHANGELOG.md', 'runs/**', 'track.xml']
+    paths: ['site/**', 'viewer/**', '.github/workflows/pages.yml', 'tools/viewer-summary/**', 'docs/CHANGELOG.md', 'runs/**', 'track.xml']
   workflow_dispatch:
 
 permissions:
@@ -33,9 +33,14 @@ jobs:
       - name: Write the summary
         continue-on-error: true
         run: node tools/viewer-summary/build.js
+      - name: Put the presentation at the root and the viewer under /viewer/
+        run: |
+          mkdir _site
+          cp -r site/. _site/
+          cp -r viewer _site/viewer
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: viewer
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
