@@ -30,6 +30,8 @@
     const subs = [];
     let x = 0, y = 0, alf = 0, tot = 0;
     let ze = 0, etgt = 0, bke = 0;                      /* where the segment before ended: height, slope, banking */
+    /* what lies beside the road, per side; a segment that says nothing about a part keeps what the one before had */
+    const beside = { Left: { bw: 0, bh: 0, bs: 'plan', w: 0, surf: 'grass', kh: 0, ks: 'none' }, Right: { bw: 0, bh: 0, bs: 'plan', w: 0, surf: 'grass', kh: 0, ks: 'none' } };
     for (const p of parts) {
       const head = p.split('<section name="Left')[0].split('<section name="Right')[0];
       const num = function (name, dflt) {
@@ -64,6 +66,20 @@
         if (has('profil end tangent')) etgt = num('profil end tangent', 0) / 100;
       } else stgt = etgt = length ? (ze - zs) / length : 0;   /* a straight slope */
       const segLen = length, bkEnd = bke;
+      const sideNow = {};
+      for (const sd of ['Left', 'Right']) {
+        const c = beside[sd], part = nm => { const m = new RegExp('<section name="' + sd + ' ' + nm + '">([\\s\\S]*?)</section>').exec(p); return m ? m[1] : null; };
+        const nv = (t, nm, d) => { const m = new RegExp('<attnum name="' + nm + '"[^>]*val="([-\\d.eE]+)"').exec(t); return m ? parseFloat(m[1]) : d; };
+        const sv = (t, nm, d) => { const m = new RegExp('<attstr name="' + nm + '"[^>]*val="([^"]*)"').exec(t); return m ? m[1] : d; };
+        const bo = part('Border'), si = part('Side'), ba = part('Barrier');
+        if (bo != null) { c.bw = nv(bo, 'width', c.bw); c.bh = nv(bo, 'height', c.bh); c.bs = sv(bo, 'style', c.bs); }
+        const w0 = si != null ? nv(si, 'start width', nv(si, 'width', c.w)) : c.w, w1 = si != null ? nv(si, 'end width', nv(si, 'width', w0)) : w0;
+        if (si != null) c.surf = sv(si, 'surface', c.surf);
+        if (ba != null) { c.kh = nv(ba, 'height', c.kh); c.ks = sv(ba, 'style', c.ks); }
+        sideNow[sd] = { bw: c.bw, bh: c.bh, bs: c.bs, w0: w0, w1: w1, surf: c.surf, kh: c.kh, ks: c.ks };
+        c.w = w1;
+      }
+      const sideAt = (q, a, b) => ({ bw: q.bw, bh: q.bh, bs: q.bs, w0: q.w0 + (q.w1 - q.w0) * a, w1: q.w0 + (q.w1 - q.w0) * b, surf: q.surf, kh: q.kh, ks: q.ks });
       let zPrev = zs;
       let curArc = arc / steps, curLen = length / steps, drad = (rend - radius) / steps;
       if (rend !== radius && steps !== 1) {
@@ -78,6 +94,7 @@
         const t0 = k / steps, t1 = (k + 1) / steps;
         seg.z0 = zPrev; seg.z1 = zPrev = spline(zs, ze, stgt * segLen, etgt * segLen, t1);
         seg.b0 = bks + (bkEnd - bks) * t0; seg.b1 = bks + (bkEnd - bks) * t1;
+        seg.L = sideAt(sideNow.Left, t0, t1); seg.R = sideAt(sideNow.Right, t0, t1);
         subs.push(seg);
         if (typ === 'str') {
           x += curLen * Math.cos(alf); y += curLen * Math.sin(alf);
@@ -128,6 +145,18 @@
     return [g.z0 + (g.z1 - g.z0) * f, g.b0 + (g.b1 - g.b0) * f];
   }
   const RV_clamp = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+  /* What lies beside the road at distance s, on the left (L) and the right (R): the border at the edge (bw wide, bh
+     high, style bs: curb, plan or wall), the side beyond it (w wide, surface surf) and the barrier at its far end
+     (kh high, style ks: wall or fence). */
+  function verge(trk, s) {
+    const subs = trk.subs, total = trk.total;
+    s = ((s % total) + total) % total;
+    let lo = 0, hi = subs.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (subs[mid].s0 <= s) lo = mid; else hi = mid - 1; }
+    const g = subs[lo], f = g.length > 0 ? RV_clamp((s - g.s0) / g.length) : 0;
+    const one = q => ({ bw: q.bw, bh: q.bh, bs: q.bs, w: q.w0 + (q.w1 - q.w0) * f, surf: q.surf, kh: q.kh, ks: q.ks });
+    return { L: one(g.L), R: one(g.R) };
+  }
   /* A point of the road surface in space: at distance s, `off` metres to the left of the centre line: [x, y, z]. */
   function point(trk, s, off) {
     const p = pose(trk, s), l = level(trk, s);
@@ -183,5 +212,5 @@
   /* Name for display: "corkscrew" becomes "Corkscrew". */
   function title(trk) { return trk.name.charAt(0).toUpperCase() + trk.name.slice(1); }
 
-  RV.track = { parse: parse, pose: pose, level: level, point: point, title: title };
+  RV.track = { parse: parse, pose: pose, level: level, point: point, verge: verge, title: title };
 })();

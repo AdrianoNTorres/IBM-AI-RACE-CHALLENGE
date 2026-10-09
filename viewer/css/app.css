@@ -31,6 +31,7 @@
   /* map: the road is dark in both themes so the colour scales read the same */
   --map-bg: #dedbd0; --map-grid: #d2cec2; --map-ink: #2b2f38;
   --road: #353a45; --road-edge: #ffffff; --road-mark: #aab0bd; --tyre: #0c0d10; --car-line: #14161b;
+  --grass: #6f9a58; --sand: #d6c493; --kerb: #c8372d; --kerb-2: #f4f1ea; --wall: #9aa0ab;   /* the 3D view */
   /* one colour per selected run: on light surfaces, and brighter on the dark road */
   --run-1: #1565d8; --run-2: #d1490c; --run-3: #0a8a66; --run-4: #a56f00; --run-5: #c22f74; --run-6: #6a54d9;
   --runmap-1: #5aa5ff; --runmap-2: #ff7a3d; --runmap-3: #2fd3a0; --runmap-4: #f2b72c; --runmap-5: #ff6fa8; --runmap-6: #a99bff;
@@ -81,6 +82,7 @@
   --focus: #8ab4ff;
   --map-bg: #090b0f; --map-grid: #12161d; --map-ink: #c0c4ce;
   --road: #272d39; --road-edge: #f4f2ec; --road-mark: #8d93a1; --tyre: #050608; --car-line: #0c0e13;
+  --grass: #2f4a2b; --sand: #6b6046; --kerb: #a83228; --kerb-2: #cfccc4; --wall: #5a606c;
   --run-1: #5aa5ff; --run-2: #ff7a3d; --run-3: #2fd3a0; --run-4: #f2b72c; --run-5: #ff6fa8; --run-6: #a99bff;
   --in-throttle: #35d07f; --in-brake: #ff5a4d; --in-clutch: #5aa5ff;
   --brake-none: #5aa5ff; --brake-full: #ff4d4d;

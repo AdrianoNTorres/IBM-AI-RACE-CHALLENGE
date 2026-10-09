@@ -25,6 +25,11 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   ok('the car leans with the road (its "up" is close to vertical, not exactly)', s.up[2] > 0.9 && s.up[2] < 0.99999, s.up);
   ok('the 2D canvas is hidden and the panels are still there', (await p.ev("getComputedStyle(document.getElementById('c')).visibility")) === 'hidden' && (await p.ev("document.getElementById('win-hud').getClientRects().length")) > 0);
 
+  /* 18.2.1: what lies beside the road comes from the track file: kerbs, grass or sand, walls and fences */
+  const vg = await p.ev("(() => { const t = RV.S.ds.trk, at = s => RV.track.verge(t, s), k = {}; for (let s = 0; s < t.total; s += 5) for (const q of [at(s).L, at(s).R]) { k[q.bs] = 1; k[q.surf] = 1; k['bar:' + q.ks] = 1; } return { kinds: Object.keys(k).sort().join(' '), start: at(10), cork: at(2490) }; })()");
+  console.log('  beside the road:', vg.kinds, '| at 10 m', JSON.stringify(vg.start), '| at 2,490 m', JSON.stringify(vg.cork));
+  ok('the track file gives kerbs, walls, fences and sand as well as the plain sides', /curb/.test(vg.kinds) && /wall/.test(vg.kinds) && /bar:fence/.test(vg.kinds) && /sand/.test(vg.kinds) && vg.start.L.bs === 'wall' && vg.start.L.bh === 1, vg.kinds);
+  ok('and they are drawn: far more faces than the bare road', s.triangles > 20000, s.triangles);
   /* the mouse turns and zooms the orbit camera */
   const e0 = s.eye;
   await p.mouse('mousePressed', 700, 500); await p.mouse('mouseMoved', 820, 440); await p.mouse('mouseReleased', 820, 440); await p.sleep(200);

@@ -4,7 +4,7 @@
 
    Three cameras: Orbit (the whole track, turned and zoomed with the mouse), Chase (behind the car) and Relative
    (anywhere the reader puts it, as an offset from the car). Colours are the theme's own tokens (RV.pal), so the
-   3D track looks like the 2D one. The world is in metres: x and y as on the 2D map, z up. */
+   3D track looks like the 2D one; grass, sand, kerbs and walls have tokens of their own. The world is in metres: x and y as on the 2D map, z up. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$;
@@ -54,24 +54,64 @@
   }
   function clear(g) { if (!g) return; g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } }); scene.remove(g); }
 
-  /* the road with its hills and banking, a verge on both sides, the slope down to the ground, the lines across */
+  /* What lies beside the road is in the track file too (js/track.js, verge()): a border at each edge (a kerb, a flat
+     strip or a low wall), then the side (grass, sand or tarmac) and a barrier at its far end (a wall or a fence).
+     Each is drawn as plain coloured faces, level with the edge of the road it belongs to. */
+  const SURF = { sand: 'sand', road: 'road', concrete: 'wall', tirewall: 'wall' };
+  function faces() {
+    const pos = [], cols = [];
+    return {
+      quad(a, b, c, d, colour) { pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2]); for (let k = 0; k < 6; k++) cols.push(colour.r, colour.g, colour.b); },
+      mesh(opts) {
+        const g = new T.BufferGeometry();
+        g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T.Float32BufferAttribute(cols, 3)); g.computeVertexNormals();
+        return new T.Mesh(g, new T.MeshLambertMaterial(Object.assign({ vertexColors: true, side: T.DoubleSide }, opts || {})));
+      },
+    };
+  }
+  /* the road with its hills and banking; kerbs, grass, sand, walls and fences beside it; the slope down to the ground */
   function buildTrack(trk) {
     clear(trackG); trackG = new T.Group();
-    const n = trk.centre.length - 1, hw = trk.hw, VERGE = 9, ground = trk.zbox[0] * st.k - 2;
-    const L = [], R = [], LV = [], RV_ = [], LS = [], RS = [], Le = [], Re = [];
+    const n = trk.centre.length - 1, hw = trk.hw, ground = trk.zbox[0] * st.k - 2;
+    const bg = col('map-bg', '#e9e4d8'), road = col('road', '#2b2f36'), slope = bg.clone().lerp(road, 0.1);
+    const C = { grass: col('grass', '#5f8f4e'), sand: col('sand', '#cdb98a'), road: road, wall: col('wall', '#8a8f99'), kerbA: col('kerb', '#c8372d'), kerbB: col('kerb-2', '#f2f0ea'),
+      plan: road.clone().lerp(col('road-edge', '#ffffff'), 0.22) };
+    const solid = faces(), fence = faces(), L = [], R = [], Le = [], Re = [];
+    /* one station: the road's two edges and, on each side, the points where the border, the side and the slope end */
+    const rows = [];
     for (let i = 0; i <= n; i++) {
-      const s = i < n ? trk.total * i / n : 0, p = RV.track.pose(trk, s), sn = Math.sin(p[2]), cs = Math.cos(p[2]);
-      const l = surf(trk, s, hw), r = surf(trk, s, -hw), plan = off => [p[0] - off * sn, p[1] + off * cs];
+      const s = i < n ? trk.total * i / n : 0, p = RV.track.pose(trk, s), sn = Math.sin(p[2]), cs = Math.cos(p[2]), v = RV.track.verge(trk, s);
+      const l = surf(trk, s, hw), r = surf(trk, s, -hw);
       L.push(l); R.push(r); Le.push([l[0], l[1], l[2] + 0.06]); Re.push([r[0], r[1], r[2] + 0.06]);
-      const a = plan(hw + VERGE), b = plan(-hw - VERGE);
-      LV.push([a[0], a[1], l[2] - 0.25]); RV_.push([b[0], b[1], r[2] - 0.25]);
-      const a2 = plan(hw + VERGE + Math.max(2, (l[2] - ground) * 1.8)), b2 = plan(-hw - VERGE - Math.max(2, (r[2] - ground) * 1.8));
-      LS.push([a2[0], a2[1], ground]); RS.push([b2[0], b2[1], ground]);
+      const row = { s: s };
+      for (const [key, sg, e, q] of [['L', 1, l, v.L], ['R', -1, r, v.R]]) {
+        const at = (off, z) => [p[0] - sg * off * sn, p[1] + sg * off * cs, z], z = e[2];
+        const b = hw + q.bw, o = b + q.w;
+        row[key] = { q: q, e: e, b: at(b, z), o: at(o, z), g: at(o + Math.max(2, (z - ground) * 1.8), ground), at: at, z: z, bOff: b, oOff: o };
+      }
+      rows.push(row);
     }
-    const bg = col('map-bg', '#e9e4d8'), road = col('road', '#2b2f36'), verge = bg.clone().lerp(road, 0.22), slope = bg.clone().lerp(road, 0.1);
+    for (let i = 0; i < n; i++) {
+      for (const key of ['L', 'R']) {
+        const a = rows[i][key], c = rows[i + 1][key], q = a.q, up = (pt, h) => [pt[0], pt[1], pt[2] + h];
+        /* the border */
+        if (q.bw > 0) {
+          if (q.bs === 'curb') {                           /* a kerb: red and white by turns, rising a little away from the road */
+            const kc = Math.floor(a.s / 3) % 2 ? C.kerbA : C.kerbB;
+            solid.quad(a.e, c.e, up(c.b, 0.07), up(a.b, 0.07), kc);
+          } else if (q.bs === 'wall' && q.bh > 0) {         /* a low wall right at the edge: its face to the road, its top, its back */
+            solid.quad(a.e, c.e, up(c.e, q.bh), up(a.e, q.bh), C.wall); solid.quad(up(a.e, q.bh), up(c.e, q.bh), up(c.b, q.bh), up(a.b, q.bh), C.wall); solid.quad(a.b, c.b, up(c.b, q.bh), up(a.b, q.bh), C.wall);
+          } else solid.quad(a.e, c.e, c.b, a.b, C.plan);
+        }
+        /* the side: grass unless the file says sand, tarmac or concrete */
+        if (q.w > 0.05) solid.quad(a.b, c.b, c.o, a.o, C[SURF[/^road/.test(q.surf) ? 'road' : q.surf] || 'grass']);
+        /* the barrier at the far end of the side: a wall is solid, a fence is seen through */
+        if (q.kh > 0) (q.ks === 'fence' ? fence : solid).quad(a.o, c.o, up(c.o, q.kh), up(a.o, q.kh), C.wall);
+        solid.quad(a.o, c.o, c.g, a.g, slope);
+      }
+    }
     trackG.add(band(L, R, road));
-    trackG.add(band(LV, L, verge)); trackG.add(band(R, RV_, verge));
-    trackG.add(band(LS, LV, slope)); trackG.add(band(RV_, RS, slope));
+    trackG.add(solid.mesh()); trackG.add(fence.mesh({ transparent: true, opacity: 0.35, depthWrite: false }));
     trackG.add(polyline(Le, col('road-edge', '#ffffff'))); trackG.add(polyline(Re, col('road-edge', '#ffffff')));
     const b = trk.box, w = b[1] - b[0], h = b[3] - b[2];
     const plane = new T.Mesh(new T.PlaneGeometry(w + 1600, h + 1600), new T.MeshLambertMaterial({ color: bg }));
@@ -80,7 +120,7 @@
     const across = (s, colour, lift) => polyline([surf(trk, s, hw, lift), surf(trk, s, -hw, lift)], colour);
     trackG.add(across(0, col('road-mark', '#ffffff'), 0.08)); trackG.add(across(0.6, col('road-mark', '#ffffff'), 0.08));
     trackG.add(label('Start / finish', surf(trk, 0, hw + 6, 5), 5));
-    (trk.sectors.cuts || []).forEach((d, k) => { trackG.add(across(d, col('sector', RV.pal.accent || '#7a4cc0'), 0.08)); trackG.add(label('S' + (k + 2) + ' starts', surf(trk, d, hw + 6, 5), 4.5)); });
+    (trk.sectors.cuts || []).forEach((d, k) => { trackG.add(across(d, col('best', RV.pal.accent || '#7a4cc0'), 0.08)); trackG.add(label('S' + (k + 2) + ' starts', surf(trk, d, hw + 6, 5), 4.5)); });
     for (let m = 500; m < trk.total - 100; m += 500) trackG.add(label(RV.fmtInt(m) + ' m', surf(trk, m, -hw - 6, 4), 4));
     scene.add(trackG);
     scene.background = bg;
