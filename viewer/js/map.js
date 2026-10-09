@@ -1437,6 +1437,10 @@
       if (S.sideTab === 'layers') buildSide();
     },
     LAYERS: LAYERS, PANELS: OVER,
+    /* for the 3D view: every car shown, the one in focus first: its run, the step it is at (k, and f of the way to
+       the next), and where it is drawn (x, y, heading), smoothed exactly as on the 2D map */
+    cars3: () => (S.R ? [{ id: S.sel[0], r: S.R, k: S.i, f: S.i < S.R.n - 1 ? S.camFrac : 0, p: poseAt(S.R, S.i, S.camFrac) }]
+      .concat(others().map(m => ({ id: m.id, r: m.r, k: RV.ghostIdx(m.r), f: 0, p: ghostPose(m.r) }))) : []),
     /* switches a compared car on or off for the deltas and the charts; every place that shows it follows */
     setCmp(id, on) { if (on) delete S.cmpOff[id]; else S.cmpOff[id] = true; legend(); S.chartsDirty = true; RV.tele.build(); if (S.sideTab === 'cars') buildSide(); },
     /* the reference lap of the sector table, the delta bar and the analysis: the fastest lap recorded */

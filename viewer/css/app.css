@@ -364,6 +364,17 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 .incar.small .wheel { width: 46px; height: 46px; } .incar.small .wheelWrap { width: 104px; flex-direction: row; justify-content: center; gap: 2px; } .incar.small .steerVal { min-width: 36px; font-size: 11px; }
 .incar.small .pedBars { height: 38px; } .incar.small .pedals { height: 32px; }
 .incar.small { padding: 0; } .incar + .incar.small { padding-top: 4px; margin-top: 3px; } .incar.small .pedkey { font-size: 11px; margin-top: 1px; }
+/* the Track page in 3D (js/view3d.js): its canvas lies where the 2D one does, under the panels; the switch and
+   the camera controls sit over the map, top centre */
+#c3 { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#c3[hidden] { display: none; } #c3.drag { cursor: grabbing; }
+#v3bar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 7; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: center;
+  padding: 6px 8px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); max-width: min(720px, calc(100% - 560px)); font-size: 13px; }
+#v3bar:not(.on3) { padding: 4px; }
+#v3bar .seg button { padding: 5px 12px; } #v3bar .note { margin: 0; }
+.v3s { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; } .v3s input { width: 92px; } .v3s .num { min-width: 46px; color: var(--ink); }
+.v3rel { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center; flex-basis: 100%; padding-top: 6px; border-top: 1px solid var(--line); }
+@media (max-width: 1280px) { #v3bar { max-width: calc(100% - 24px); } }
 /* ends a looped section: on the map itself, so a touch screen without an Esc key has it in reach */
 #loopEnd { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; box-shadow: var(--shadow); }
 #loopEnd[hidden] { display: none; }
