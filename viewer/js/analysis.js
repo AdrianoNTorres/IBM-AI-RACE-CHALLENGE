@@ -125,7 +125,7 @@
   function loop(z) {
     const R = S.R;
     RV.play.setLoop([z.from, z.d1]); RV.play.go(RV.idxAtD(R, z.from)); RV.play.set(true);
-    RV.toast('Playing ' + RV.fmtInt(z.from) + '–' + RV.fmtInt(z.d1) + ' m on a loop. ' + RV.keyLabel(RV.keyOf('endloop')) + ' ends it.');
+    RV.toast('Playing ' + RV.fmtInt(z.from) + '–' + RV.fmtInt(z.d1) + ' m on a loop. ' + RV.loopHint());
   }
 
   /* ---------- the popup that explains a problem area ---------- */

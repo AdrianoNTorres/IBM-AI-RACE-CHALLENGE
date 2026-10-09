@@ -180,11 +180,13 @@
   function setLoop(range) {
     S.loop = range; S.loopDraft = null;
     const chip = $('loopChip');
-    chip.hidden = !range;
-    if (range) chip.textContent = 'Loop ' + RV.fmtInt(range[0]) + '\u2013' + RV.fmtInt(range[1]) + ' m  \u00d7';
+    chip.hidden = !range; $('loopEnd').hidden = !range;      /* the same button twice: in the bar, and on the map where the loop was made */
+    if (range) chip.textContent = 'End loop (' + RV.fmtInt(range[0]) + '\u2013' + RV.fmtInt(range[1]) + ' m)';
     S.chartsDirty = true;
   }
   RV.play = { go: go, set: setPlaying, setLoop: setLoop };
+  /* how a loop is ended, for the message shown when one starts: the button, and on a PC the key as well */
+  RV.loopHint = () => '\u201cEnd loop\u201d' + (RV.device && RV.device.kind() !== 'pc' ? '' : ' or ' + RV.keyLabel(RV.keyOf('endloop'))) + ' ends it.';
 
   let last = null;
   function tick(now) {
@@ -364,7 +366,7 @@
     document.querySelectorAll('.tab').forEach(b => { b.onclick = () => showTab(b.dataset.t); });
     document.querySelectorAll('#viewsw button').forEach(b => { b.onclick = () => setView(b.dataset.m); });
     $('clr').onclick = () => RV.sel.only(S.sel[0]);
-    $('loopChip').onclick = () => setLoop(null);
+    $('loopChip').onclick = $('loopEnd').onclick = () => setLoop(null);
     const paintAuto = () => { const b = $('autoLoop'); b.setAttribute('aria-pressed', !!RV.prefs.autoLoop); b.title = RV.prefs.autoLoop ? 'Auto loop is on: at the end of the lap the replay starts again, once every car has finished. Click to switch it off.' : 'Auto loop: at the end of the lap, start the replay again by itself'; };
     $('autoLoop').onclick = () => { RV.prefs.autoLoop = !RV.prefs.autoLoop; RV.savePrefs(); paintAuto(); if (RV.prefs.autoLoop && S.R && !S.playing && S.i >= S.R.n - 1) setPlaying(true); };
     paintAuto();

@@ -1360,7 +1360,7 @@
     drag = null; sel = null; c.classList.remove('drag'); c.classList.remove('pick');
     if (picked && moved >= 5) {                           /* a stretch was selected: play it on a loop, the rest of the map dimmed */
       S.loopDraft = null;
-      if (picked[1] - picked[0] >= 5) { RV.play.setLoop(picked); RV.play.go(RV.idxAtD(S.R, picked[0])); RV.play.set(true); RV.toast('Playing ' + RV.fmtInt(picked[0]) + '\u2013' + RV.fmtInt(picked[1]) + ' m on a loop. ' + RV.keyLabel(RV.keyOf('endloop')) + ' ends it.'); }
+      if (picked[1] - picked[0] >= 5) { RV.play.setLoop(picked); RV.play.go(RV.idxAtD(S.R, picked[0])); RV.play.set(true); RV.toast('Playing ' + RV.fmtInt(picked[0]) + '\u2013' + RV.fmtInt(picked[1]) + ' m on a loop. ' + RV.loopHint()); }
       return;
     }
     S.loopDraft = null;

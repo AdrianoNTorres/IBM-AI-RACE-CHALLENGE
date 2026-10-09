@@ -364,6 +364,9 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 .incar.small .wheel { width: 46px; height: 46px; } .incar.small .wheelWrap { width: 104px; flex-direction: row; justify-content: center; gap: 2px; } .incar.small .steerVal { min-width: 36px; font-size: 11px; }
 .incar.small .pedBars { height: 38px; } .incar.small .pedals { height: 32px; }
 .incar.small { padding: 0; } .incar + .incar.small { padding-top: 4px; margin-top: 3px; } .incar.small .pedkey { font-size: 11px; margin-top: 1px; }
+/* ends a looped section: on the map itself, so a touch screen without an Esc key has it in reach */
+#loopEnd { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; box-shadow: var(--shadow); }
+#loopEnd[hidden] { display: none; }
 #mapmsg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; }
 #mapmsg .card { max-width: 520px; } #mapmsg h3 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin-bottom: 8px; }
 

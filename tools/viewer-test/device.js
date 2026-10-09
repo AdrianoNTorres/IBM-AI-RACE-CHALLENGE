@@ -68,6 +68,13 @@ const note = `(() => { const b = document.getElementById('devnote'), c = documen
   await touch('touchEnd', []); await p.sleep(300);
   const z2 = await p.ev(scale);
   ok('two fingers together zoom it out again', Math.abs(z2 / z0 - 1) < 0.15, [z0, z2]);
+  /* 19.2: a looped section has a button to end it, on the map and in the bar; a tap on it ends the loop */
+  await p.ev('RV.play.setLoop([600, 900]); RV.play.go(RV.idxAtD(RV.S.R, 600)); RV.play.set(true)'); await p.sleep(400);
+  const eb = await p.ev("(() => { const b = document.getElementById('loopEnd'), r = b.getBoundingClientRect(), k = document.getElementById('loopChip'); return { x: r.left + r.width / 2, y: r.top + r.height / 2, shown: !b.hidden && r.width > 0 && r.bottom <= innerHeight, top: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b, chip: !k.hidden && k.innerText }; })()");
+  await p.shot('device-loop');
+  ok('a loop shows "End loop" on the map, on top, and in the bar', eb.shown && eb.top && /End loop/.test(eb.chip), eb);
+  await touch('touchStart', [[eb.x, eb.y]]); await touch('touchEnd', []); await p.sleep(400);
+  ok('a tap on it ends the loop and both buttons go', !(await p.ev('!!RV.S.loop')) && (await p.ev("document.getElementById('loopEnd').hidden && document.getElementById('loopChip').hidden")));
   await p.shot('device-pinch');
   ok('no script error after the pinch', p.errors.length === 0, p.errors);
   await p.close();
