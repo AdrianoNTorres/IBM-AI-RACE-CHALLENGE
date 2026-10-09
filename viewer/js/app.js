@@ -357,7 +357,7 @@
 
     /* options in the address, e.g. #tab=pm&run=v1.05&cmp=v1.01,v0.96&frame=1539&mode=adv&list=gain */
     const H = {};
-    location.hash.slice(1).split('&').forEach(q => { const p = q.split('='); if (p[0]) H[p[0]] = p[1] === undefined ? true : decodeURIComponent(p[1]); });
+    location.hash.slice(1).split('&').forEach(q => { const p = q.split('='); if (!p[0]) return; let v = p[1]; try { v = decodeURIComponent(v); } catch (e) { /* a stray %: taken as written */ } H[p[0]] = p[1] === undefined ? true : v; });
     if (H.mode) RV.prefs.view = (H.mode === 'simple' || H.mode === 'basic') ? 'basic' : 'detailed';
     if (H.list) S.listMode = H.list;
     RV.map.fromHash(H);
@@ -408,9 +408,9 @@
     setPlaying(RV.prefs.autoplay && !H.pause && !H.frame);
     loadAtStart({
       run: H.run, cmp: H.cmp, detail: H.detail,
-      then() { if (H.frame) go(+H.frame - 1); },
+      then() { const f = Math.round(+H.frame); if (f >= 1) go(f - 1); },
     }).then(() => {
-      if (S.ds && H.tab && H.tab !== 'ps' && H.tab !== 'ph' && !H.help) showTab(H.tab);
+      if (S.ds && ['pv', 'pm', 'pt'].includes(H.tab) && !H.help) showTab(H.tab);
       /* first visit: the welcome. Not on an address with options, which asks for a particular state. */
       /* on a phone or a tablet, first the note that the site was built for a PC (once) */
       const hasOpts = !!location.hash.slice(1).replace(/(^|&)device=\w+/, '');

@@ -17,7 +17,7 @@
     if (html != null) e.innerHTML = html;
     return e;
   };
-  RV.esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  RV.esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   RV.clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   RV.sgn = (x, d) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d);
   /* lap time the way the project writes it: m:ss:cc */
@@ -75,6 +75,8 @@
     if (!p.ui || typeof p.ui !== 'object') p.ui = {};
     if (!p.apiKeys || typeof p.apiKeys !== 'object') p.apiKeys = {};
     p.themes = (Array.isArray(p.themes) ? p.themes : []).filter(t => t && t.id && t.colors && typeof t.colors === 'object');
+    /* what is stored is put into styles and markup as it is: keep only what the theme editor writes, #rrggbb or rgba(r, g, b, a) */
+    p.themes.forEach(t => { t.base = t.base === 'dark' ? 'dark' : 'light'; for (const k in t.colors) if (!/^[\w-]+$/.test(k) || !/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(String(t.colors[k]))) delete t.colors[k]; });
     if (!['fit', 'follow', 'up'].includes(p.camera)) p.camera = 'fit';
     if (!(p.loopDim >= 0 && p.loopDim <= 0.9)) p.loopDim = 0.55;
     if (!(p.carSize >= 0.3 && p.carSize <= 4)) p.carSize = 1;

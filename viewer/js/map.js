@@ -1413,7 +1413,7 @@
     fromHash(H) {
       if (H.follow || H.zoom || H.all || H.fixed) { view.follow = true; view.rot = !H.fixed; view.fit = false; hashCam = true; }
       if (H.all) view.all = true;
-      if (H.zoom) view.z = +H.zoom;
+      if (+H.zoom > 0 && isFinite(+H.zoom)) view.z = +H.zoom;
     },
     viewDefaults: viewDefaults, defaults: defaults,
     /* the camera a run opens with (Settings, Replay), unless the address asked for one */

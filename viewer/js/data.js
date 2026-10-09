@@ -97,9 +97,9 @@
       const t = parseFloat(p[iT]);
       if (!(t >= 0)) continue;
       let ok = true;
-      for (let k = 0; k < REQUIRED.length; k++) if (isNaN(parseFloat(p[idx[k]]))) { ok = false; break; }
+      for (let k = 0; k < REQUIRED.length; k++) if (!isFinite(parseFloat(p[idx[k]]))) { ok = false; break; }
       if (!ok) continue;
-      for (let k = 0; k < names.length; k++) { const v = parseFloat(p[idx[k]]); col[names[k]].push(isNaN(v) ? 0 : v); }
+      for (let k = 0; k < names.length; k++) { const v = parseFloat(p[idx[k]]); col[names[k]].push(isFinite(v) ? v : 0); }
       n++;
     }
     return { n: n, col: col, has: c => header.indexOf(c) >= 0 };
@@ -114,6 +114,7 @@
     if (!n) throw new RVError('csv', 'This recording has no rows of a lap (it is empty, or it stopped before the start line).');
     let maxS = 0;
     for (let i = 0; i < n; i++) if (C.distFromStart[i] > maxS) maxS = C.distFromStart[i];
+    if (maxS > 1e5) throw new RVError('csv', 'This recording gives a distance of ' + maxS.toExponential(1) + ' m from the start line, which no lap can have.');
     /* The run fits the track if its longest distance is the track's length. A recording that stopped within
        seconds of the start has not been round the lap, so it only has to stay inside the track's length. */
     const brief = C.curLapTime[n - 1] < 8 && C.lastLapTime[n - 1] <= 0;
@@ -214,6 +215,7 @@
     let s = String(input || '').trim().replace(/^git@github\.com:/i, '').replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '')
       .replace(/[?#].*$/, '').replace(/\/+$/, '');
     const p = s.split('/');
+    if (p.some(q => q === '.' || q === '..')) return null;   /* would read another repository than the one named */
     if (p.length < 2 || !/^[\w.-]+$/.test(p[0]) || !/^[\w.-]+$/.test(p[1])) return null;
     let rest = [];
     if (p.length > 2) { if (p[2] !== 'tree' && p[2] !== 'blob') return null; rest = p.slice(3); }

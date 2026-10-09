@@ -53,6 +53,8 @@
         const sl = num('profil steps length', gstep);
         steps = sl ? Math.trunc(length / sl) + 1 : 1;
       }
+      /* a file from outside: a segment of a real track is at most a few km in a few hundred pieces */
+      if (!(steps >= 0 && steps <= 5000) || !(length >= 0 && length <= 1e5) || subs.length > 2e5) throw new RV.RVError('track', 'This track file describes a segment no track can have (its length or its number of steps).');
       /* height: starts where the last segment ended unless it says otherwise; ends at "z end", or by its grade (%) */
       const has = name => new RegExp('<attnum name="' + name + '"').test(head);
       const zs = has('z start') ? num('z start', 0) : ze;
