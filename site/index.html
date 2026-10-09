@@ -108,6 +108,8 @@ td q { color: var(--muted); font-style: italic; }
 .slot strong { display: block; color: var(--ink); font: 600 1.2rem var(--display); }
 .slot.filled { display: block; padding: 0; border-style: solid; aspect-ratio: auto; align-self: start; }
 .slot.filled img { display: block; height: auto; }
+.slot.video { aspect-ratio: 16 / 9; }
+.slot.video iframe { display: block; width: 100%; height: 100%; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
 .slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
 .button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
@@ -166,10 +168,8 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
 <section class="wrap" id="lap">
   <h2>The lap</h2>
   <div class="slots">
-    <!-- Lap video: replace the two lines inside this div with the <iframe> or <video> of the recording. -->
-    <div class="slot wide" id="slot-lap">
-      <strong>Lap video</strong>
-      Not uploaded yet. It will show the 1:05.56 lap on the Corkscrew with the lap time on screen.
+    <div class="slot wide filled video" id="slot-lap">
+      <iframe src="https://www.youtube-nocookie.com/embed/yuep0Uarx2Y" title="One Qubit Racing: one lap of the Corkscrew in 1:05.56 (TORCS)" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
@@ -277,7 +277,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
   </div>
   <ul class="check">
     <li><span>Team video (3 minutes)</span><span class="todo">not uploaded yet</span></li>
-    <li><span>Race lap video with lap time and track name</span><span class="todo">not uploaded yet</span></li>
+    <li><span><a href="https://youtu.be/yuep0Uarx2Y">Race lap video with lap time and track name</a></span><span class="done">on this page</span></li>
     <li><span><a href="#summary">Technical summary</a></span><span class="done">on this page</span></li>
     <li><span><a href="https://skills.yourlearning.ibm.com/certificate/share/0970ff6c5bewogICJvYmplY3RUeXBlIiA6ICJBQ1RJVklUWSIsCiAgImxlYXJuZXJDTlVNIiA6ICI4ODkwMzgxUkVHIiwKICAib2JqZWN0SWQiIDogIkFMTS1DT1VSU0VfNDA1ODkxNCIKfQ1ad7799a7c-10">IBM SkillsBuild certificate: IBM Granite Models for Software Development</a></span><span class="done">on this page</span></li>
     <li><span>Technical video (5 minutes)</span><span class="todo">not uploaded yet</span></li>
