@@ -7,12 +7,16 @@
   let V = [], LV = [];                 /* all versions; those with a lap time (the chart's points) */
   let pr = [-0.5, 0.5], progHover = -1;
   let anchorId = null, dragSel = null;
+  let bulk = null, bulkMsg = '';       /* loading every recording: {ds, done, total, failed} while it runs; the last outcome */
 
+  if (!['all', 'fast', 'gain', 'loss', 'top', 'extra'].includes(S.listMode)) S.listMode = 'all';
   const LISTS = [['all', 'All versions'], ['fast', 'Fastest laps'], ['gain', 'Biggest gains'], ['loss', 'Biggest losses'], ['top', 'Top speeds']];
   /* chart classes: [palette key, filled dot?, meaning] */
   const CLS = {
-    kb: ['best', true, 'Kept, new best lap'], ks: ['kept', true, 'Kept, not a new best lap'],
-    rf: ['best', false, 'Rejected, although its single lap was faster'], rs: ['mute', false, 'Rejected, slower or equal'],
+    kb: ['v-best', true, 'Kept, new best lap'], ks: ['v-kept', true, 'Kept, not a new best lap'],
+    ke: ['warn', true, 'Kept, enabling change'],
+    rf: ['v-rej', false, 'Rejected, although its single lap was faster'], rs: ['v-rej', true, 'Rejected, slower or equal'],
+    re: ['mute', false, 'Rejected, enabling change'],
   };
 
   /* each version against the best kept lap before it */
@@ -21,18 +25,24 @@
     let best = null, bestId = null;
     for (const v of LV) {
       v.dbest = best == null ? null : +(v.lap - best).toFixed(2);
-      v.cls = !v.kept ? (v.dbest != null && v.dbest < 0 ? 'rf' : 'rs') : (v.dbest == null || v.dbest < 0 ? 'kb' : 'ks');
+      v.cls = !v.kept
+        ? (v.enableChange ? 're' : v.dbest != null && v.dbest < 0 ? 'rf' : 'rs')
+        : (v.enableChange ? 'ke' : v.dbest == null || v.dbest < 0 ? 'kb' : 'ks');
       v.bestBefore = best; v.bestBeforeId = bestId;
       if (v.kept && (best == null || v.lap < best)) { best = v.lap; bestId = v.id; }
       v.bestAfter = best;
     }
     S.ds.bestId = bestId;
+    /* the fastest lap ever recorded, kept or rejected: the reference of the live sector table and the delta bar */
+    const rec = LV.filter(v => v.file);
+    S.ds.fastId = rec.length ? rec.reduce((a, b) => (b.lap < a.lap ? b : a)).id : null;
+    bulk = null; bulkMsg = '';
     pr = [-0.5, LV.length - 0.5];
   }
 
   function listRows() {
     if (S.listMode === 'extra') return S.ds.extras;
-    if (S.listMode === 'all') return V.slice().reverse();
+    if (S.listMode === 'all') return (S.keptAll ? V.filter(v => v.kept) : V).slice().reverse();
     let a = V;
     if (S.keptOnly) a = a.filter(v => v.kept);
     if (S.listMode === 'fast') return a.filter(v => v.lap).sort((x, y) => x.lap - y.lap).slice(0, 10);
@@ -42,8 +52,12 @@
   }
   function badge(v) {
     if (v.kept == null) return '<span class="badge">Recording</span>';
+    if (v.kept && v.enableChange) return '<span class="badge warn-badge"><i>&#10003;</i>Enabling change</span>';
+    if (!v.kept && v.enableChange) return '<span class="badge rej dim-badge"><i>&#10005;</i>Enabling change</span>';
     return v.kept ? '<span class="badge kept"><i>&#10003;</i>Kept</span>' : '<span class="badge rej"><i>&#10005;</i>Rejected</span>';
   }
+  /* a version entered by hand: kept in this browser, not in the source (js/entry.js) */
+  const localBadge = v => (v.local ? ' <span class="badge local" title="Entered by hand: kept in this browser only until it is exported">Local</span>' : '');
   function deltaTxt(d) { return RV.simple() ? (d === 0 ? 'the same' : Math.abs(d).toFixed(2) + ' s ' + (d < 0 ? 'faster' : 'slower')) : sgn(d, 2) + ' s'; }
   function deltaCell(d) { return d == null ? '<td></td>' : '<td class="num ' + (d < 0 ? 'faster' : d > 0 ? 'slower' : '') + '">' + deltaTxt(d) + '</td>'; }
   function recording(v) {
@@ -58,43 +72,75 @@
     const kept = LV.filter(v => v.kept), best = kept.slice().sort((a, b) => a.lap - b.lap)[0] || LV.slice().sort((a, b) => a.lap - b.lap)[0];
     const first = LV[0], lastV = V[V.length - 1], nk = V.filter(v => v.kept).length;
     const t = (cap, big, sub, cls) => '<div class="tile ' + (cls || '') + '"><div class="cap">' + cap + '</div><div class="big num">' + big + '</div><div class="sub">' + sub + '</div></div>';
-    return '<div class="tiles">' +
+    /* best theoretical lap: the best S1, S2 and S3 of the versions whose recordings have been opened, kept or not */
+    const sv = V.filter(v => v.sec && v.sec.every(x => x != null));
+    let theo = '';
+    if (!RV.simple() && sv.length >= 2) {
+      const who = [0, 1, 2].map(k => sv.reduce((a, b) => (b.sec[k] < a.sec[k] ? b : a)));
+      theo = t('Best theoretical', fmtLap(who.reduce((s, b, k) => s + b.sec[k], 0)),
+        who.map((b, k) => 'S' + (k + 1) + ' ' + esc(b.id)).join(', ') + (S.ds.summary ? ', the best of ' + sv.length + ' recordings' : ', from the ' + sv.length + ' recordings loaded so far'));
+    }
+    return '<div class="tiles' + (theo ? ' five' : '') + '">' +
       t('Best lap', fmtLap(best.lap), esc(best.id) + ', the fastest kept version', 'hero') +
       t('Gained since ' + esc(first.id), (first.lap - best.lap).toFixed(2) + ' s', 'from ' + fmtLap(first.lap) + ' down to ' + fmtLap(best.lap)) +
       t('Versions', String(V.length), nk + ' kept, ' + (V.length - nk) + ' rejected') +
-      t('Latest', esc(lastV.id), (lastV.lap ? fmtLap(lastV.lap) + ', ' : '') + (lastV.kept ? 'kept' : 'rejected')) + '</div>';
+      t('Latest', esc(lastV.id), (lastV.lap ? fmtLap(lastV.lap) + ', ' : '') + (lastV.kept ? 'kept' : 'rejected')) + theo + '</div>';
+  }
+
+  /* Detailed view: the sector times of every version whose recording has been opened, kept or not. */
+  function sectorGrid() {
+    const sum = !!S.ds.summary, all = sum && S.secAll;
+    if (RV.simple() || (all ? RV.sectors.known() : RV.sectors.opened()).length < 2 && !sum) return '';
+    return '<div class="card sumcard seccard"><div class="cardhead"><h3>Sectors across versions</h3><span class="note">' +
+      (all ? 'Every version with a recording, from the summary made when the site was published. ' : 'Only versions that have been opened (selected or compared) are listed; \u201cLoad all versions\u201d adds none. ') + RV.sectors.NOTE + '</span></div>' +
+      (sum ? '<label class="check secall"><input type="checkbox" id="secAll"' + (S.secAll ? ' checked' : '') + '> Every version, not only the opened ones</label>' : '') + RV.sectors.table(false) + '</div>';
   }
 
   function render() {
     if (!S.ds) return;
     const box = $('vmain'), sm = RV.simple(), mode = S.listMode, rank = mode !== 'all' && mode !== 'extra', extra = mode === 'extra';
     const notes = {
-      all: '', extra: 'CSV files in the folder’s runs/ that no changelog entry names, newest first. A lap time appears once a recording has been opened.',
+      all: '', extra: 'CSV files in the folder\u2019s runs/ that no changelog entry names, newest first. A lap time appears once a recording has been opened.',
       fast: sm ? 'The ten quickest laps.' : 'Ten lowest single-lap times.',
       gain: sm ? 'The ten changes that cut the most time off the lap, compared with the last kept version before them.' : 'Largest lap-time reductions against the previous kept version.',
       loss: sm ? 'The ten changes that added the most time, compared with the last kept version before them.' : 'Largest lap-time increases against the previous kept version.',
       top: 'The ten highest top speeds.',
     };
     const lists = LISTS.concat(S.ds.extras.length ? [['extra', 'Other recordings (' + S.ds.extras.length + ')']] : []);
-    let h = tiles() +
+    /* detailed view: the sector times of the opened versions have a tab of their own, so the chart and the list stay near the top */
+    const vtabs = sm ? '' : '<div class="seg subtabs" role="tablist" id="vtabs">' + [['overview', 'Lap times and versions'], ['sectors', 'Sectors across versions']].map(t =>
+      '<button role="tab" data-v="' + t[0] + '" class="' + (S.verTab === t[0] ? 'on' : '') + '" aria-selected="' + (S.verTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
+    const wireTabs = () => box.querySelectorAll('#vtabs button').forEach(b => { b.onclick = () => { S.verTab = b.dataset.v; RV.uiSet('verTab', S.verTab); render(); }; });
+    if (!sm && S.verTab === 'sectors') {
+      box.innerHTML = tiles() + vtabs + (sectorGrid() || '<div class="card"><p class="lead">No sector times to compare yet.</p><p class="note">Sector times come from a version\u2019s recording. Open two or more versions (select one, or compare several) and they are listed here side by side.</p></div>');
+      wireTabs(); RV.sectors.wire(box); renderDetail();
+      if ($('secAll')) $('secAll').onchange = e => { S.secAll = e.target.checked; RV.uiSet('secAll', S.secAll); render(); };
+      return;
+    }
+    let h = tiles() + vtabs +
       '<div class="card chartcard"><div class="cardhead"><h3>' + (sm ? 'Lap time, version by version' : 'Lap time by version') + '</h3>' +
       '<div class="key">' + Object.keys(CLS).map(k => '<span><i class="' + (CLS[k][1] ? 'dot' : 'ring') + ' c-' + CLS[k][0] + '"></i>' + CLS[k][2] + '</span>').join('') + '<span><i class="ln"></i>Best lap so far</span></div></div>' +
       '<canvas id="prog" tabindex="0" aria-label="Lap time of every version; lower is faster"></canvas>' +
       '<p class="note">' + (sm ? 'Each dot is one version; lower is faster. Point at a dot to compare it with the best lap before it. Use the mouse wheel over the chart to zoom in on the later versions.'
         : 'Hover: difference to the best kept lap before each version. Wheel zooms the version axis, drag pans, double-click resets, click opens the details.') + '</p></div>' +
       '<div id="vbar"><div class="seg wrap" id="lists" role="group" aria-label="Which versions to list">' + lists.map(l => '<button data-l="' + l[0] + '" class="' + (l[0] === mode ? 'on' : '') + '" aria-pressed="' + (l[0] === mode) + '">' + l[1] + '</button>').join('') + '</div>' +
-      (rank ? '<label class="check"><input type="checkbox" id="ko" ' + (S.keptOnly ? 'checked' : '') + '> Kept versions only</label>' : '') + '</div>' +
+      (extra ? '' : '<label class="check"><input type="checkbox" id="ko" ' + ((rank ? S.keptOnly : S.keptAll) ? 'checked' : '') + '> Kept versions only</label>') + '</div>' +
       '<p class="note">' + notes[mode] + (notes[mode] ? ' ' : '') +
       (sm ? 'Click a version to select it. To compare several, drag across them, or hold Shift and click to select everything in between, or hold Ctrl and click to add or remove one.'
         : 'Click selects one run. Drag or Shift-click selects a range, Ctrl-click adds or removes one (up to ' + RV.MAX_RUNS + ' runs). The run clicked first is in focus.') + '</p>';
+    h += '<div id="bulkBar" class="acts" style="margin:8px 0 4px"><button class="btn sm" id="bulkLoad" title="Read the recording of every version: quicker to open afterwards, and all of them count for the best theoretical lap. They are not added to the sector table.">Load all versions</button>' +
+      '<button class="btn sm" id="bulkUnload" title="Free the memory of every recording that is not selected">Unload non-selected</button>' +
+      '<button class="btn sm" id="addVer" title="Enter a version by hand, or import several from CSV files. They are kept in this browser until you export them.">+ Add versions \u2026</button>' +
+      (S.ds.local.size || S.ds.localStale.length ? '<button class="link" id="addMine">' + (S.ds.local.size + S.ds.localStale.length) + ' kept in this browser</button>' : '') +
+      '<span id="bulkStatus" class="note" role="status" style="margin-left:6px"></span></div>';
     h += '<div class="tablewrap"><table id="vt"><thead><tr>' + (rank ? '<th>#</th>' : '') + '<th class="l">' + (extra ? 'Recording' : 'Version') + '</th>' +
       (extra ? '<th>Size</th>' : '<th class="l">' + (sm ? 'What it changed' : 'Change') + '</th>') + '<th>Lap time</th>' +
-      (extra ? '' : '<th>' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
-      (sm || extra ? '' : '<th class="xcol">Top</th><th class="xcol">Slowest corner</th>') + (extra ? '' : '<th class="l">Result</th>') + '<th class="l xcol">Recording</th></tr></thead><tbody>';
+      (extra ? '' : '<th title="Lap time difference vs the best lap at that point in development">' + (sm ? 'Against the best before it' : 'vs best so far') + '</th>') +
+      (sm || extra ? '' : '<th class="xcol" title="Top speed reached during the lap (km/h)">Top</th><th class="xcol">Slowest corner</th>') + (extra ? '' : '<th class="l">Result</th>') + '<th class="l xcol">Recording</th></tr></thead><tbody>';
     listRows().forEach((v, k) => {
       const lapTxt = v.lap != null ? fmtLap(v.lap) : (v.sum && !v.sum.complete ? 'stopped at ' + RV.fmtInt(v.sum.stoppedAt) + ' m' : v.extra ? (v.size < 1000 ? 'empty' : 'not opened yet') : 'no lap');
       h += '<tr data-id="' + esc(v.id) + '" tabindex="0" class="' + (v.file && !v.bad ? '' : 'nofile') + '">' + (rank ? '<td class="num">' + (k + 1) + '</td>' : '') +
-        '<td class="l num id">' + esc(v.id) + '</td>' + (extra ? '<td class="num">' + RV.fmtInt(v.size / 1000) + ' kB</td>' : '<td class="l w"><span>' + esc(sm && v.st ? v.st : v.title) + '</span></td>') +
+        '<td class="l num id">' + esc(v.id) + localBadge(v) + '</td>' + (extra ? '<td class="num">' + RV.fmtInt(v.size / 1000) + ' kB</td>' : '<td class="l w"><span>' + esc(sm && v.st ? v.st : v.title) + '</span></td>') +
         '<td class="num lap">' + lapTxt + '</td>' + (extra ? '' : deltaCell(v.dbest)) +
         (sm || extra ? '' : '<td class="num xcol">' + (v.top ? v.top + ' km/h' : '') + '</td><td class="num xcol">' + (v.slow ? v.slow + ' km/h' : '') + '</td>') +
         (extra ? '' : '<td class="l">' + badge(v) + '</td>') + '<td class="l xcol note">' + recording(v) + '</td></tr>';
@@ -104,9 +150,60 @@
     box.innerHTML = h + '</tbody></table></div>';
     box.scrollTop = keep;
     if (focusRow) { const tr = box.querySelector('#vt tbody tr[data-id="' + CSS.escape(focusRow) + '"]'); if (tr) tr.focus({ preventScroll: true }); }
-    box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; render(); }; });
-    if ($('ko')) $('ko').onchange = e => { S.keptOnly = e.target.checked; render(); };
+    box.querySelectorAll('#lists button').forEach(b => { b.onclick = () => { S.listMode = b.dataset.l; RV.uiSet('listMode', S.listMode); render(); }; });
+    /* the full list starts with every version; the rankings start with the kept ones */
+    if ($('ko')) $('ko').onchange = e => { if (S.listMode === 'all') S.keptAll = e.target.checked; else S.keptOnly = e.target.checked; RV.uiSet('keptAll', S.keptAll); RV.uiSet('keptOnly', S.keptOnly); render(); };
+    wireTabs();
     paintRows(); setupProg(); renderDetail();
+    wireBulk();
+  }
+
+  /* The table is rebuilt while recordings arrive, so the progress is kept here and painted into whatever
+     bar is on the page now. */
+  function paintBulk() {
+    const st = $('bulkStatus');
+    if (!st) return;
+    st.textContent = bulk ? bulk.done + ' / ' + bulk.total + ' loaded \u2026' : bulkMsg;
+    $('bulkLoad').disabled = $('bulkUnload').disabled = !!bulk;
+  }
+  function wireBulk() {
+    if (!$('bulkLoad')) return;
+    $('addVer').onclick = () => { if (!RV.tutorial.isOpen()) RV.entry.open('one'); };   /* entered versions would not be put back */
+    if ($('addMine')) $('addMine').onclick = () => RV.entry.open('mine');
+    $('bulkLoad').onclick = async () => {
+      if (bulk) return;
+      const ds = S.ds, pending = ds.versions.filter(v => v.file && !v.bad && !v.sum);
+      if (!pending.length) { bulkMsg = 'Every recording is already loaded.'; paintBulk(); return; }
+      const job = bulk = { ds: ds, done: 0, total: pending.length, failed: 0 };
+      paintBulk();
+      /* four at a time: quicker than one by one, and gentle on the host */
+      const next = async () => {
+        while (pending.length && bulk === job) {
+          const v = pending.shift();
+          v.bulk = true;                                  /* loaded in bulk, not opened: kept out of the sector table */
+          try { await ds.loadRun(v.id); } catch (e) { job.failed++; }
+          job.done++;
+          if (bulk === job) paintBulk();
+        }
+      };
+      await Promise.all([next(), next(), next(), next()]);
+      if (bulk !== job) return;                           /* another data set was opened meanwhile */
+      bulk = null;
+      const ok = job.done - job.failed;
+      bulkMsg = ok + ' recording' + (ok === 1 ? '' : 's') + ' loaded' + (job.failed ? ', ' + job.failed + ' could not be read' : '') + '.';
+      RV.versions.render(); RV.map.buildSide();
+    };
+    $('bulkUnload').onclick = () => {
+      if (bulk) return;
+      /* kept: the runs on screen, the previous best of the run in focus, and the fastest lap (the map's reference) */
+      const ds = S.ds, keep = S.sel.concat(S.applied, [RV.refIdFor(S.sel[0]), ds.fastId]);
+      let count = 0;
+      for (const v of ds.versions.concat(ds.extras)) if (!keep.includes(v.id) && ds.unloadRun(v.id)) count++;
+      bulkMsg = '';
+      RV.toast(count ? count + ' recording' + (count === 1 ? '' : 's') + ' unloaded.' : 'Nothing to unload.');
+      RV.versions.render(); RV.map.buildSide();
+    };
+    paintBulk();
   }
   function paintRows() {
     document.querySelectorAll('#vt tbody tr').forEach(tr => {
@@ -174,11 +271,13 @@
     const box = $('vside'), v = S.ds.byId[S.detailId];
     if (!v) { box.innerHTML = '<h3>Details</h3><p class="note">Select a version in the table.</p>'; return; }
     const sm = RV.simple(), on = S.sel.includes(v.id), ref = S.sel[0] === v.id, can = !!v.file && !v.bad, sum = v.sum;
-    let h = '<div class="dhead"><span class="vid num">' + esc(v.id) + '</span>' + badge(v) + '</div><p class="dtitle">' + esc(sm && v.st ? v.st : v.title) + '</p>' +
+    let h = '<div class="dhead"><span class="vid num">' + esc(v.id) + '</span>' + badge(v) + localBadge(v) + '</div><p class="dtitle">' + esc(sm && v.st ? v.st : v.title) + '</p>' +
       '<div class="acts"><button class="btn prim" id="dv" ' + (can ? '' : 'disabled') + '>Replay on the track</button><button class="btn" id="dt" ' + (can ? '' : 'disabled') + '>Telemetry</button>' +
       '<button class="btn" id="dc" ' + (can && !(on && S.sel.length === 1) ? '' : 'disabled') + '>' + (on ? 'Remove from comparison' : 'Add to comparison') + '</button>' +
       (on && !ref ? '<button class="btn" id="dr">Put in focus</button>' : '') + '</div>';
+    if (v.local) h += '<p class="note localnote">Entered by hand and kept in this browser only. <button class="link" id="dLocal">Export, change or delete it</button></p>';
     if (v.bad) h += '<p class="warn">' + esc(v.bad) + '</p>';
+    else if (v.missing && v.local) h += '<p class="warn">The recording stored with this version in this browser is gone.</p>';
     else if (v.missing) h += '<p class="warn">The changelog names runs/' + esc(v.named) + ', but that file is not in the source.</p>';
     else if (!v.file) h += '<p class="note">No lap was recorded for this version, so it cannot be replayed.</p>';
     if (sum && !sum.complete) h += '<p class="warn">This recording is not a complete lap: it stops at ' + RV.fmtInt(sum.stoppedAt) + ' m.</p>';
@@ -192,7 +291,7 @@
     if (v.damage) add('Damage', esc(v.damage));
     if (!sm && sum) {
       add('Closest to the edge', sum.maxtp.toFixed(3) + ' at ' + RV.fmtInt(sum.maxtp_at) + ' m');
-      add('Braking', sum.brake + ' % of the lap'); add('Full throttle', sum.full + ' % of the lap');
+      add('Braking', sum.brake + ' % of the lap'); add('% of the lap at full throttle', sum.full + ' %');
     }
     h += '<dl class="kv">' + kv.join('') + '</dl>';
     if (!sm) h += RV.sectorsBlock(v.id);
@@ -212,6 +311,7 @@
     $('dt').onclick = () => { const f = () => RV.showTab('pt'); on ? RV.sel.makeRef(v.id, f) : RV.sel.only(v.id, f); };
     $('dc').onclick = () => RV.sel.toggle(v.id);
     if ($('dr')) $('dr').onclick = () => RV.sel.makeRef(v.id);
+    if ($('dLocal')) $('dLocal').onclick = () => RV.entry.open('mine');
   }
 
   /* ---------- the lap-time chart ---------- */

@@ -1,0 +1,41 @@
+# Publishes the run viewer (the viewer/ folder) on GitHub Pages.
+# The site is static: no build step, the folder is uploaded as it is.
+# Needs, once, in the repository settings: Pages > Source = "GitHub Actions", and
+# Environments > github-pages > Deployment branches must allow the branch named below.
+name: Publish the run viewer
+
+on:
+  push:
+    branches: [viewer_no_login]   # change to main when the viewer moves there
+    # the site itself, and the data its summary is made from
+    paths: ['viewer/**', '.github/workflows/pages.yml', 'tools/viewer-summary/**', 'docs/CHANGELOG.md', 'runs/**', 'track.xml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # viewer/summary.json: lap and sector times of every recording, so the page knows them without reading the
+      # recordings. If it cannot be made the site is published without it and works as before.
+      - name: Write the summary
+        continue-on-error: true
+        run: node tools/viewer-summary/build.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: viewer
+      - id: deployment
+        uses: actions/deploy-pages@v4

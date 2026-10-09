@@ -16,20 +16,20 @@ Serving the folder also works and uses the local copy of the track file: `python
 
 ## Where the data comes from
 
-By default the page reads `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE`, branch `main`. Another source is chosen in **Settings**.
+By default the page reads the repository and branch in `RV.DEFAULT_LINK` (`js/core.js`); at present that is `https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE`, branch `viewer_no_login`. Point it (and `RV.TRACK_URL`) at the branch the site is published from. Another source is chosen in **Settings**.
 
 | Shown | Source file | When it is read |
 |---|---|---|
-| Version list, lap times, top speed, slowest corner, kept / rejected, the technical record | `CHANGELOG.md` (required) | when the page opens |
-| Plain-language titles and texts (the basic view) | `CHANGELOG-simple.md` (optional) | when the page opens |
-| Replays and charts | `runs/run_<date>_<time>.csv`, the first one each changelog entry names | when that run is opened or compared; kept for the session |
+| Version list, lap times, top speed, slowest corner, kept / rejected, the technical record | `docs/CHANGELOG.md` (required) | when the page opens |
+| Plain-language titles and texts (the basic view) | `docs/CHANGELOG-simple.md` (optional) | when the page opens |
+| Replays and charts | `runs/run_<date>_<time>.csv`: the first one named in the entry's Observed field, otherwise the first one anywhere in the entry | when that run is opened or compared; kept for the session |
 | Track outline | `track.xml` in the source (optional), otherwise the bundled `tracks/corkscrew.xml` (from GitHub when the page is opened from disk) | when the page opens |
 
-Files come from `raw.githubusercontent.com`, which allows requests from other sites and has no hourly limit of 60 requests. The GitHub API is called only in two cases: to find out why `CHANGELOG.md` could not be read (repository missing or private, branch missing, file missing), and once when a source is applied in Settings, to check which run CSVs exist.
+Files come from `raw.githubusercontent.com`, which allows requests from other sites and has no hourly limit of 60 requests. The GitHub API is called only in two cases: to find out why `docs/CHANGELOG.md` could not be read (repository missing or private, branch missing, file missing), and once when a source is applied in Settings, to check which run CSVs exist.
 
 The full description of the data format is on the Settings page ("Data format"). In short:
 
-- `CHANGELOG.md`: one entry per version, a heading `## vX.Y — Title` and a two-column table with rows `| **Field** | text |`. Fields read: Lap time, Top speed, Min speed, Damage, Decision (a ✅ means kept), and the texts.
+- `docs/CHANGELOG.md`: one entry per version, a heading `## vX.Y — Title` and a two-column table with rows `| **Field** | text |`. Fields read: Lap time, Top speed, Min speed, Damage, Decision (a ✅ means kept), and the texts.
 - `runs/*.csv`: one row per simulation step. Required columns: `curLapTime`, `lastLapTime`, `distFromStart`, `speedX`, `gear`, `accel`, `brake`, `steer`, `trackPos`, `angle`, `damage`. Optional: `allowed`, `track0`–`track18`, `focA`, `foc0`–`foc4`.
 - `track.xml`: the TORCS track file of the track the runs were driven on. Supplying it is the job of whoever owns the data. If a run does not fit the track in use (its longest `distFromStart` differs from the track length by more than 5 m), the Track tab says so and does not draw the run on a wrong map.
 
@@ -42,17 +42,23 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 - **Selecting runs:** click a version to select it. To compare several (up to six), drag across the rows, or hold Shift and click to select everything between two rows, or hold Ctrl and click to add or remove one. Each selected run gets its own colour. The run clicked first is the car in focus: the map follows it and time gaps are measured against it.
 - **Keyboard:** Tab to the table, arrow keys move between rows, Enter selects the row, Space adds it to or removes it from the comparison. On the chart, the left and right arrows step through the versions, `+` and `-` zoom, `0` resets.
 - **Details:** the panel on the right shows what the last clicked version changed, why, and what was decided. Its buttons replay it on the track, open its telemetry, add or remove it from the comparison, or put it in focus. In the detailed view the technical record from `CHANGELOG.md` is folded underneath.
-- **Chart:** filled purple dot = kept and a new best lap; filled green dot = kept but not a new best; purple ring = rejected although its single lap was faster; grey ring = rejected. The step line is the best kept lap so far. Selected runs are ringed in their colour.
+- **Chart:** filled green dot = kept and a new best lap; filled blue dot = kept but not a new best; filled yellow dot = kept as an enabling change; red ring = rejected although its single lap was faster; filled red dot = rejected, slower or equal; grey ring = a rejected enabling change. Time differences everywhere are green when faster and red when slower. The step line is the best kept lap so far. Selected runs are ringed in their colour.
 
-**Track.** The replay. The car's path is coloured by speed (blue slowest, yellow fastest; in the detailed view Layers, Car and path, "Colour path by" switches it to brake pressure, blue none to red full) and each sensor beam by its length (pink close, cyan far), with a dot where it meets the edge of the road.
+**Track.** The replay. The car's path is coloured by speed (red slowest, green fastest; in the detailed view Layers, Car and path, "Colour path by" switches it to brake pressure, blue none to red full) and each sensor beam by its length (pink close, cyan far), with a dot where it meets the edge of the road.
 
 - Drag to pan, mouse wheel to zoom, double-click to return to the car. Dragging takes over the camera: "Follow car", "Keep all cars in view" and "Car points up" switch off and the view stays where it was. While "Keep all cars in view" is on, zoom is automatic.
 - Space plays and pauses. The left and right arrow keys move one step; holding one plays at 0.1x, then 0.25x, then 0.5x. `+` and `-` zoom, `F` toggles following, Home returns to the start.
 - The side panel has the same three sections in both views: **Camera**, **Layers** and **Help**. The basic view shows the main switches. The detailed view adds the zoom slider and, under Layers, the groups Track, Car and path, Sensors, Compared runs and Panels on the map, one open at a time; every layer has a switch, a description and an opacity slider.
 - Compared runs appear as cars and thin lines in their own colours. A Cars table at the top of the side panel lists them with lap time, gap and speed. Click a row there, a car on the map, or a name in the top bar to put that car in focus.
 - The cars are drawn as car1-ow1, to scale; the front wheels turn with the recorded steering.
+- At 1x and slower every car (the one in focus and the compared ones), the beams and the camera move smoothly between the recorded steps; above 1x they jump from step to step. The replay pauses on the last frame; Play starts it again from the line.
+- Under the overview map, on the left: the live sector table (each sector's time of the car in focus once it has passed it, with the difference to the reference) and the lap delta bar (every selected car against the reference at the same point of the track; the bar of the car in focus is a fifth larger). The reference is always the fastest lap ever recorded: the fastest lap time among the versions that have a recording, whether or not that version is selected; its recording is read in the background. Both panels are switched under Layers, Panels on the map; the colour keys are top right.
+- Bottom right: a steering wheel, brake and throttle bars and a pedal graph for the car in focus and, smaller, for every compared car ("Wheel and pedals of every car" under Layers switches the compared cars' rows off).
+- A section selected on a Telemetry chart is played on a loop and the rest of the map is dimmed; Esc or the Loop button ends it.
+- Camera has a size slider per car; the narrow button between the map and the side panel hides the panel.
+- Versions: "Load all versions" reads every recording (four at a time) and "Unload non-selected" frees all but the selected runs and the previous best of the run in focus. Telemetry: a range field sets the charts' distance range, and the section table's gap can be 25 to 500 m or typed.
 
-**Telemetry.** A summary of the selected runs and charts along the lap, each with a one-line caption and, for the run in focus, the lowest, mean and highest value of that channel over the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. On the speed chart the line of the run in focus is coloured by speed (red slow, green fast) and, when the recording has an `allowed` column, the planned speed is drawn dashed. The detailed view adds more channels and a second section, "100 m sections": click a column heading to sort by it (again to reverse), and "Export CSV" downloads the rows in the order shown as `sections_<version>.csv`, with the gear range and, per compared run, the differences in time, minimum speed and maximum brake.
+**Telemetry.** A summary of the selected runs and charts along the lap, each with a one-line caption and, for the run in focus, the lowest, mean and highest value of that channel over the lap. Wheel zooms the distance axis, drag pans, click moves the car to that point. With one run selected its lines are coloured by value (speed red slow to green fast, throttle, brake, steering, track position); while runs are compared every car has one solid colour of its own. The gear chart is a plain step line. On the speed chart, when the recording has an `allowed` column, the planned speed is drawn dashed. The detailed view adds more channels and a second section, "100 m sections": click a column heading to sort by it (again to reverse), and "Export CSV" downloads the rows in the order shown as `sections_<version>.csv`, with the gear range and, per compared run, the differences in time, minimum speed and maximum brake.
 
 **Sectors (detailed view only).** The lap is split into three sectors. Corkscrew is modelled on Laguna Seca, so it uses that circuit's official timing sectors, from IMSA's sector map: S1 4,514 ft 10 in, S2 4,793 ft 3 in, S3 2,508 ft 7 in (together the 2.238-mile lap). The TORCS start line is taken as the finish line and each boundary is placed at the same share of the lap: S2 starts at 1,379 m (on the straight before Turn 5) and S3 at 2,842 m (after Turn 9, Rainey Curve). A track without known sectors is split into thirds. The definition is `REAL_SECTORS` in `js/track.js`.
 
@@ -69,13 +75,38 @@ Four pages, chosen in the top bar, and a **Basic view / Detailed view** switch.
 
 - **GitHub repository:** `https://github.com/owner/repo`, the same with `/tree/<branch>` or `/tree/<branch>/<folder>`, or `owner/repo`.
 - **Local folder:** chosen with the browser's folder picker, or dropped on the Settings page. The folder is read in the browser and nothing is uploaded. Browsers do not keep folder access, so after a reload the page returns to the GitHub repository.
-- A source is checked before the page switches to it. Without a `CHANGELOG.md` that has at least one version entry it is refused and the current source stays. The result says how many versions and run CSVs were found and whether a simplified changelog and a track file are present.
+- A source is checked before the page switches to it. Without a `docs/CHANGELOG.md` that has at least one version entry it is refused and the current source stays. The result says how many versions and run CSVs were found and whether a simplified changelog and a track file are present.
 
 **Welcome and tutorial.** On the first visit the page shows a welcome and offers a tour of about a minute: ten steps, each pointing at one part of the page (Next, Back, End the tour; Esc closes it, the arrow keys move between steps). It is shown once; whether it has been seen is saved with the other settings. It does not appear when the address carries options. The **Help** tab of Settings has a summary of the site (pages, selecting and comparing, mouse and keyboard, colours, own data, common problems) and a "Redo the tutorial" button. `#help` in the address opens it. The tour is `js/tutorial.js`; its steps are the `STEPS` list there.
 
-**Basic view and Detailed view.** The basic view uses the plain-language texts from `CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
+**Basic view and Detailed view.** The basic view uses the plain-language texts from `docs/CHANGELOG-simple.md`, fewer numbers and the main controls. The detailed view shows the technical titles, all channels and all controls, in the same places. When a source has no simplified changelog the basic view cannot be selected and the switch says why.
 
-Settings are saved in the browser (`localStorage`, key `rv_prefs`).
+Settings are saved in the browser (`localStorage`, key `rv_prefs`), together with a random viewer ID made on the first visit, the replay keys you changed (Settings, **Controls**: press Change, then the key) and the layout you left: which layers and panels are on, their opacity and line width, the open tabs, the versions list and the section gap. "Reset to defaults" puts all of it back except the ID and your API keys. Nothing is sent anywhere.
+
+**Replay defaults** (Settings, Replay): speed, start playing when a run opens, where compared cars are placed, the camera a run opens with, smooth motion on or off, the default car size and how dark the map is outside a looped section. A size given to a single car on the Track tab is remembered.
+
+**Customization** (Settings, Customization): the colour of everything on the site can be changed and saved as themes of your own, each starting from Light or Dark. Basic mode changes groups of related colours with one choice (backgrounds, text, buttons, the low and high end of a scale, each car); Advanced lists every colour one by one. A colour is chosen from preset swatches, on a colour wheel, or typed (HEX, RGB, HSL, a name). Light, Dark and System stay as they are: the first change makes a copy. Themes are saved in this browser and survive "Reset to defaults". The list of colours and the groups are in `js/theme.js`.
+
+**API keys** (Settings, API keys): the page needs no key for public repositories. With a GitHub token of your own it can read a private repository of yours and is not held to GitHub's 60 checks an hour. The key is stored in this browser only, shown masked, sent to GitHub and to nobody else, and can be replaced or deleted at any time; the card says for each feature whether it works or is blocked, and a blocked feature asks for the key when clicked (with steps for getting one). The system is `js/keys.js`.
+
+Under Layers in the detailed view every layer has a switch and an opacity slider, and every layer that is a line a width slider; the panels on the map have a switch and an opacity slider. New layers and panels are added in code with `RV.map.addLayer` and `RV.map.addPanel` (`js/map.js`) and get the same controls.
+
+## Finding your way
+
+The top bar has five pages: Versions, Track, Telemetry, Help and Settings.
+
+- **Help** lists its subjects on the left and shows one at a time; the search box finds a word in all of them. The data format is one of the subjects. `#help` in the address opens it.
+- **Settings** has five tabs: General (theme, view, viewer ID, reset), Replay, Data (the source and your API keys), Customization and Controls.
+- **Track**'s side panel has Camera, Cars (the selected cars, where compared cars are placed, the size of each), Layers, Sectors and Help.
+- **Telemetry** shows one of Charts along the lap, Summary, Sectors and Sections at a time.
+- **Versions**, in the detailed view, has the sector times of the opened versions on a tab of their own.
+- **The panels on the map are small windows.** Drag any of them to where you want it. With the mouse over a panel three buttons appear at its top left: red closes it (Layers, Panels on the map, brings it back), yellow folds it into a small tab (click the tab to open it), and green puts it back in its place at its normal size. While cars are compared, a fourth, blue button limits that panel to the car in focus. The grip at a panel's bottom right corner resizes it (double-click the grip for the normal size; Layers has a Size slider too). Where you put them and how large they are is remembered; "Restore the default layers" puts everything back.
+- **Where the time goes.** The run in focus is measured against the fastest lap recorded. The Sectors tab of the Track side panel shows each sector as green, yellow or red, a racing-line accuracy percentage, and the stretches that lose the most time. Those stretches have numbered pins on the map (click one to play it on a loop) and coloured bands on the telemetry charts (click a band's tag for what the car does differently there). Layers, Analysis, has the pins and two optional paths: the driven line coloured by its distance from the fastest lap's line, and that lap's line itself.
+- **Comparing.** A delta is always a time gap at the same point of the track. Layers, Compared runs, "Delta to the compared cars" colours the line of the car in focus by its gap to the compared cars (green level, red largest; their average when there are several). The Telemetry page has a "Compared cars" table above the charts: untick a car to hide it on every chart and leave it out of that delta, and fade the compared cars' lines with the opacity slider. The same ticks are under Cars on the Track page.
+- **Auto loop**, beside the playback buttons, starts the lap again when it ends; with compared cars it waits until the last one has crossed the line.
+- **Drag along the road** to pick a stretch to loop; drag beside the road to move the map (Shift moves it from the road too).
+
+Some older paragraphs in this file still say "the Help tab of Settings" or describe the Telemetry page as one long page; the list above is current.
 
 ## Opening the page in a particular state
 

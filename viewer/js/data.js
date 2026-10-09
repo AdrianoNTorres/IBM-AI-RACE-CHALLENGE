@@ -46,12 +46,17 @@
     let base = null;
     for (const [vid, e] of full) {
       const f = e.f, sm = simple && simple.get(vid) ? simple.get(vid) : { title: '', f: {} };
-      const m = /runs\/(run_\d+_\d+\.csv)/.exec(e.body);
+      /* The version's own recording is the one its Observed field names. Other fields may name an earlier
+         version's run (the analysis a change started from), so the rest of the entry is only a fallback. */
+      const RUN = /runs\/(run_\d+_\d+\.csv)/;
+      const m = RUN.exec(f['Observed'] || '') || RUN.exec(e.body);
       const kept = (f['Decision'] || '').indexOf('✅') >= 0;
+      /* "Kept — enabling change: …" is one; a decision that only mentions the words ("not an enabling change") is not */
+      const enableChange = /^\W*\w+\s*[—–-]\s*(an\s+)?enabling\s+change/i.test(f['Decision'] || '');
       const lap = lapSeconds(f['Lap time']);
       const v = {
         id: vid, title: clean(e.title), lap: lap, top: kmh(f['Top speed']), slow: kmh(f['Min speed']),
-        damage: clean(f['Damage']), kept: kept, base: base,
+        damage: clean(f['Damage']), kept: kept, enableChange: enableChange, base: base,
         delta: (lap && base) ? rnd(lap - laps[base], 2) : null,
         st: clean(sm.title).replace(/\s*\((?:[^()]*; )?rejected\)$/, ''),
         what: clean(sm.f['What changed']), why: clean(sm.f['Why']), learned: clean(sm.f['Learned']), decision: clean(sm.f['Decision']),
@@ -75,7 +80,7 @@
     if (header.length < 2 && !header[0]) throw new RVError('csv', 'This recording is empty.');
     const missing = REQUIRED.filter(c => header.indexOf(c) < 0);
     if (missing.length) throw new RVError('csv', 'This recording lacks the column' + (missing.length > 1 ? 's ' : ' ') + missing.join(', ') + '.',
-      'See the data format guide in Settings for the columns a run CSV needs.');
+      'Help, Data format, lists the columns a run CSV needs.');
     const want = REQUIRED.concat(['allowed', 'focA', 'clutch']);
     for (let k = 0; k < 19; k++) want.push('track' + k);
     for (let k = 0; k < 5; k++) want.push('foc' + k);
@@ -92,9 +97,9 @@
       const t = parseFloat(p[iT]);
       if (!(t >= 0)) continue;
       let ok = true;
-      for (let k = 0; k < REQUIRED.length; k++) if (isNaN(parseFloat(p[idx[k]]))) { ok = false; break; }
+      for (let k = 0; k < REQUIRED.length; k++) if (!isFinite(parseFloat(p[idx[k]]))) { ok = false; break; }
       if (!ok) continue;
-      for (let k = 0; k < names.length; k++) { const v = parseFloat(p[idx[k]]); col[names[k]].push(isNaN(v) ? 0 : v); }
+      for (let k = 0; k < names.length; k++) { const v = parseFloat(p[idx[k]]); col[names[k]].push(isFinite(v) ? v : 0); }
       n++;
     }
     return { n: n, col: col, has: c => header.indexOf(c) >= 0 };
@@ -109,6 +114,7 @@
     if (!n) throw new RVError('csv', 'This recording has no rows of a lap (it is empty, or it stopped before the start line).');
     let maxS = 0;
     for (let i = 0; i < n; i++) if (C.distFromStart[i] > maxS) maxS = C.distFromStart[i];
+    if (maxS > 1e5) throw new RVError('csv', 'This recording gives a distance of ' + maxS.toExponential(1) + ' m from the start line, which no lap can have.');
     /* The run fits the track if its longest distance is the track's length. A recording that stopped within
        seconds of the start has not been round the lap, so it only has to stay inside the track's length. */
     const brief = C.curLapTime[n - 1] < 8 && C.lastLapTime[n - 1] <= 0;
@@ -160,17 +166,17 @@
     else if (complete) lap = C.curLapTime[e] + Math.max(0, total - C.distFromStart[e]) / Math.max(C.speedX[e] / 3.6, 1);
     /* slowest corner: the slowest point away from the start line (the standing start is slower than any corner) */
     const hi = Math.abs(total - 3608.5) < 1 ? 3500 : total - 108.5;
-    let top = -1e9, slow = 1e9, k = 0, nb = 0, nf = 0;
+    let top = -1e9, slow = 1e9, slowIdx = 0, k = 0, nb = 0, nf = 0;
     for (let i = 0; i < n; i++) {
       if (R.v[i] > top) top = R.v[i];
-      if (R.s[i] > 100 && R.s[i] < hi && R.t[i] > 8 && R.v[i] < slow) slow = R.v[i];
+      if (R.s[i] > 100 && R.s[i] < hi && R.t[i] > 8 && R.v[i] < slow) { slow = R.v[i]; slowIdx = i; }
       if (Math.abs(R.tp[i]) > Math.abs(R.tp[k])) k = i;
       if (R.br[i] > 0) nb++;
       if (R.th[i] >= 0.99) nf++;
     }
     R.sum = {
       lap: lap == null ? null : rnd(lap, 3), complete: complete, stoppedAt: complete ? null : Math.max(0, Math.round(R.d[e])),
-      top: top, slow: slow === 1e9 ? 0 : slow, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
+      top: top, slow: slow === 1e9 ? 0 : slow, slow_at: slow === 1e9 ? 0 : slowIdx, maxtp: rnd(Math.abs(R.tp[k]), 3), maxtp_at: roundHalfEven(R.s[k]),
       damage: C.damage[e], brake: rnd(100 * nb / n, 1), full: rnd(100 * nf / n, 1), frames: n,
     };
     /* sector times: the lap clock at each sector boundary, read between the two rows around it */
@@ -209,6 +215,7 @@
     let s = String(input || '').trim().replace(/^git@github\.com:/i, '').replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '')
       .replace(/[?#].*$/, '').replace(/\/+$/, '');
     const p = s.split('/');
+    if (p.some(q => q === '.' || q === '..')) return null;   /* would read another repository than the one named */
     if (p.length < 2 || !/^[\w.-]+$/.test(p[0]) || !/^[\w.-]+$/.test(p[1])) return null;
     let rest = [];
     if (p.length > 2) { if (p[2] !== 'tree' && p[2] !== 'blob') return null; rest = p.slice(3); }
@@ -226,24 +233,45 @@
     const api = 'https://api.github.com/repos/' + name;
     src.where = () => name + (src.branch && src.branch !== 'HEAD' ? ', branch ' + src.branch : ', default branch') + (src.dir ? ', folder ' + src.dir.replace(/\/$/, '') : '');
     src.label = () => 'GitHub: ' + src.where();
-    src.readText = async (path, what) => (await http(raw(src.branch, src.dir, path), what || path)).text();
+    /* The reader's own GitHub token, if one is stored (js/keys.js). With it the GitHub API answers more often and a
+       private repository can be read: raw.githubusercontent.com takes no token from a web page, so a file it does
+       not have is then asked for through the API. */
+    const token = () => (RV.apiKeys ? RV.apiKeys.get('github') : '');
+    const auth = extra => { const t = token(); return t ? { headers: Object.assign({ Authorization: 'Bearer ' + t }, extra || {}) } : (extra ? { headers: extra } : undefined); };
+    async function read(branch, dir, path, what) {
+      let miss;
+      try { return await (await http(raw(branch, dir, path), what)).text(); } catch (e) {
+        /* no token, or one GitHub has refused: the file is simply missing, as it is for everyone */
+        if (e.code !== 'missing' || !token() || RV.apiKeys.status('github') === 'bad') throw e;
+        miss = e;
+      }
+      let res;
+      try { res = await fetch(api + '/contents/' + enc(dir + path) + (branch !== 'HEAD' ? '?ref=' + encodeURIComponent(branch) : ''), auth({ Accept: 'application/vnd.github.raw+json' })); }
+      catch (e) { throw new RVError('offline', what + ' could not be loaded: the request to GitHub did not get through.', 'Check the network connection.'); }
+      if (res.status === 404) throw new RVError('missing', what + ' was not found.');
+      if (res.status === 401) throw miss;                 /* a token that no longer works must not break a public repository */
+      if (!res.ok) throw new RVError(res.status === 403 || res.status === 429 ? 'rate' : 'http', what + ' could not be loaded from GitHub (HTTP ' + res.status + ').', 'Try again in a moment.');
+      return res.text();
+    }
+    src.readText = (path, what) => read(src.branch, src.dir, path, what || path);
 
     /* Why CHANGELOG.md was not found: the only place the GitHub API is needed (it allows 60 requests an hour). */
     async function diagnose(branch) {
       let r;
-      try { r = await fetch(api); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
+      try { r = await fetch(api, auth()); } catch (e) { return new RVError('offline', 'GitHub could not be reached to check ' + name + '.', 'Check the network connection.'); }
       if (r.status === 404) return new RVError('repo', 'The repository ' + name + ' was not found, or it is private.',
-        'The page reads public repositories only. Check the spelling of the owner and the repository name.');
+        token() ? 'Check the spelling of the owner and the repository name, and that your GitHub token (Settings, Data) may read this repository.'
+          : 'Check the spelling of the owner and the repository name. A private repository needs your own GitHub token: Settings, Data.');
       if (!r.ok) return new RVError('rate', 'CHANGELOG.md could not be read from ' + name + ", and GitHub\u2019s request limit prevented checking why (HTTP " + r.status + ').',
         'Check the link, or wait a few minutes and try again.');
       const info = await r.json();
       if (branch !== 'HEAD') {
-        const b = await fetch(api + '/branches/' + enc(branch)).catch(() => null);
+        const b = await fetch(api + '/branches/' + enc(branch), auth()).catch(() => null);
         if (b && b.status === 404) return new RVError('branch', 'The repository ' + name + ' has no branch called "' + branch + '".',
           'Its default branch is "' + info.default_branch + '".');
       }
       return new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + name + ' (' + (branch === 'HEAD' ? 'default branch' : 'branch ' + branch) + ').',
-        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
+        'A source needs a docs/CHANGELOG.md. Help, Data format, describes it.');
     }
     /* Reads CHANGELOG.md and, on the way, settles which part of the link is the branch and which a folder. */
     src.readChangelog = async function () {
@@ -252,7 +280,7 @@
       for (let k = 1; k <= r.length; k++) cands.push([r.slice(0, k).join('/'), r.slice(k).length ? r.slice(k).join('/') + '/' : '']);
       for (const [branch, dir] of cands) {
         try {
-          const text = await (await http(raw(branch, dir, 'docs/CHANGELOG.md'), 'docs/CHANGELOG.md')).text();
+          const text = await read(branch, dir, 'docs/CHANGELOG.md', 'docs/CHANGELOG.md');
           src.branch = branch; src.dir = dir;
           return text;
         } catch (e) { if (e.code !== 'missing') throw e; }
@@ -262,7 +290,7 @@
     /* The CSVs in runs/, by one API call; null if that is not possible (rate limit). */
     src.listRuns = async function () {
       try {
-        const r = await fetch(api + '/contents/' + enc(src.dir + 'runs') + (src.branch !== 'HEAD' ? '?ref=' + encodeURIComponent(src.branch) : ''));
+        const r = await fetch(api + '/contents/' + enc(src.dir + 'runs') + (src.branch !== 'HEAD' ? '?ref=' + encodeURIComponent(src.branch) : ''), auth());
         if (!r.ok) return r.status === 404 ? new Map() : null;
         const out = new Map();
         for (const f of await r.json()) if (f.type === 'file' && /\.csv$/i.test(f.name)) out.set(f.name, f.size);
@@ -285,7 +313,7 @@
         return await (await d.getFileHandle(parts[parts.length - 1])).getFile();
       } catch (e) {
         if (e && (e.name === 'NotFoundError' || e.name === 'TypeMismatchError')) throw new RVError('missing', path + ' was not found.');
-        throw new RVError('access', path + ' could not be read: ' + (e && e.message ? e.message : e), 'Choose the folder again in Settings.');
+        throw new RVError('access', path + ' could not be read: ' + (e && e.message ? e.message : e), 'Choose the folder again under Settings, Data.');
       }
     }
     src.readText = async path => (await file(path)).text();
@@ -344,6 +372,20 @@
     return bundled;
   }
 
+  /* The summary of the site's own repository, or null: not for another source, not for a page opened from disk, and
+     never an error (the page works without it, only with fewer sector times at the start). */
+  async function readSummary(src) {
+    try {
+      if (src.kind !== 'github' || location.protocol === 'file:') return null;
+      const r = await fetch('summary.json', { cache: 'no-cache' });
+      if (!r.ok) return null;
+      const s = await r.json(), from = s && s.source;
+      if (!from || !s.versions || typeof s.versions !== 'object') return null;
+      if (String(from.repo).toLowerCase() !== (src.owner + '/' + src.repo).toLowerCase() || from.branch !== src.branch || (from.dir || '') !== (src.dir || '')) return null;
+      return s;
+    } catch (e) { return null; }
+  }
+
   /* ---------- a data set: one source, validated and ready to show ---------- */
 
   /* Reads and validates a source. Throws an RVError if it cannot be used; the caller keeps its current data set.
@@ -351,26 +393,48 @@
   async function openSource(src, opts) {
     opts = opts || {};
     const step = opts.onStep || function () {};
+    /* opts.reuse: a data set of the same source that is open now. Its files are not read again and its loaded runs
+       are kept: used when only the versions kept in this browser have changed (js/entry.js). */
+    const re = opts.reuse && opts.reuse.src === src ? opts.reuse : null;
     step('Reading docs/CHANGELOG.md');
     let text;
-    try { text = await src.readChangelog(); } catch (e) {
+    if (re) text = re.raw.full;
+    else try { text = await src.readChangelog(); } catch (e) {
       if (e.code === 'missing') throw new RVError('nochangelog', 'docs/CHANGELOG.md is missing from ' + src.where() + '.',
-        'A source needs a docs/CHANGELOG.md. The data format guide in Settings describes it.');
+        'A source needs a docs/CHANGELOG.md. Help, Data format, describes it.');
       throw e;
     }
     const full = parseChangelog(text);
     if (!full.size) throw new RVError('format', 'docs/CHANGELOG.md was found in ' + src.where() + ', but it has no version entries.',
-      'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See the data format guide in Settings.');
+      'An entry starts with a heading such as "## v0.1 — Title", followed by a two-column table. See Help, Data format.');
 
     step('Reading CHANGELOG-simple.md');
-    let simple = null;
-    try { simple = parseChangelog(await src.readText('docs/CHANGELOG-simple.md')); } catch (e) { if (e.code !== 'missing') throw e; }
+    let simple = null, simpleText = re ? re.raw.simple : null;
+    if (!re) try { simpleText = await src.readText('docs/CHANGELOG-simple.md'); } catch (e) { if (e.code !== 'missing') throw e; }
+    if (simpleText != null) simple = parseChangelog(simpleText);
     if (simple && !simple.size) simple = null;
 
+    /* Versions entered by hand in this browser (js/local.js) come after the source's own. One whose name the
+       source has meanwhile (it was exported and committed) is left out and listed in localStale. */
+    const local = new Map(), localStale = [];
+    let mine = [];
+    try { mine = RV.local ? await RV.local.list(RV.local.keyOf(src)) : []; } catch (e) { mine = []; }
+    for (const rec of mine) {
+      if (full.has(rec.id)) { localStale.push(rec.id); continue; }
+      let e = null;
+      try { e = parseChangelog(RV.local.entryText(rec)).get(rec.id); } catch (err) { /* a record that cannot be written as an entry is skipped */ }
+      if (!e) continue;
+      full.set(rec.id, e);
+      if (simple) simple.set(rec.id, e);
+      local.set(rec.id, rec);
+    }
+
     step('Reading the track');
-    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map() };
+    /* runs: the load of each run, by id (a promise); loaded: the runs that have arrived, for code that cannot wait */
+    const ds = { src: src, trk: null, trkOwn: false, trkNote: '', hasSimple: !!simple, runs: new Map(), loaded: new Map(), local: local, localStale: localStale };
     let own = null;
-    try { own = await src.readText('track.xml'); } catch (e) { if (e.code !== 'missing') throw e; }
+    if (re) { ds.trk = re.trk; ds.trkOwn = re.trkOwn; ds.trkNote = re.trkNote; }
+    else try { own = await src.readText('track.xml'); } catch (e) { if (e.code !== 'missing') throw e; }
     if (own != null) {
       try { ds.trk = RV.track.parse(own); ds.trkOwn = true; }
       catch (e) { ds.trkNote = 'The source has a track.xml, but it could not be read as a TORCS track file (' + e.message + ') The bundled Corkscrew map is used instead.'; }
@@ -380,9 +444,13 @@
     }
 
     let files = null;
-    if (src.kind === 'local' || opts.checkFiles) { step('Looking for run CSVs'); files = await src.listRuns(); }
+    if (re) files = re.raw.files;
+    else if (src.kind === 'local' || opts.checkFiles) { step('Looking for run CSVs'); files = await src.listRuns(); }
+    ds.raw = { full: text, simple: simpleText, files: files };
     ds.filesKnown = !!files;
     ds.versions = buildVersions(full, simple, files);
+    /* an entered version's recording is the one stored with it, whatever its texts name */
+    for (const v of ds.versions) { const rec = local.get(v.id); if (rec) { v.local = true; v.named = v.file = rec.csvName || null; } }
     /* recordings in a local folder that no changelog entry names (manual laps) */
     ds.extras = [];
     if (files && src.kind === 'local') {
@@ -395,11 +463,31 @@
     }
     ds.byId = {};
     ds.versions.concat(ds.extras).forEach(v => { ds.byId[v.id] = v; });
+    /* The site's summary (summary.json next to the page, written when the site is published: tools/viewer-summary):
+       lap, sector times and sensors of every recording of the site's own repository, so they are known without
+       reading the recordings. It is used only for the repository and branch it was made from, and for a version only
+       while that version still names the recording the summary read. A loaded recording replaces what it says. */
+    ds.summary = re ? re.summary : await readSummary(src);
+    if (ds.summary) for (const v of ds.versions) {
+      const e = ds.summary.versions[v.id];
+      if (e && !v.local && e.file === v.named && Array.isArray(e.sec)) { v.pre = e; v.sec = e.sec; v.beams = !!e.beams; }
+    }
     ds.report = {
-      versions: ds.versions.length, named: ds.versions.filter(v => v.named).length,
-      withFile: files ? ds.versions.filter(v => v.file).length : null,
-      simple: ds.hasSimple, ownTrack: ds.trkOwn, extras: ds.extras.length,
+      versions: ds.versions.length - local.size, named: ds.versions.filter(v => v.named && !v.local).length,
+      withFile: files ? ds.versions.filter(v => v.file && !v.local).length : null,
+      simple: ds.hasSimple, ownTrack: ds.trkOwn, extras: ds.extras.length, local: local.size,
     };
+    /* what a loaded run tells about its version */
+    const adopt = function (v, run) {
+      v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
+      if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
+    };
+    if (re) for (const [id, run] of re.loaded) {
+      const v = ds.byId[id], was = re.byId[id];
+      if (!v || !was || v.file !== was.file || !!v.local !== !!was.local || v.local) continue;
+      adopt(v, run); if (was.bulk) v.bulk = true;
+      ds.loaded.set(id, run); ds.runs.set(id, Promise.resolve(run));
+    }
 
     /* A run by id; read and built once, then kept for the session. */
     ds.loadRun = function (id) {
@@ -407,7 +495,11 @@
       const v = ds.byId[id];
       const job = (async function () {
         let csv;
-        try { csv = await src.readText('runs/' + v.file, 'The recording of ' + id + ' (runs/' + v.file + ')'); } catch (e) {
+        if (v.local) {
+          csv = await RV.local.csv(local.get(id).key);
+          if (csv == null) { v.file = null; v.missing = true; throw new RVError('missing', 'The recording stored with ' + id + ' in this browser is gone.'); }
+        }
+        else try { csv = await src.readText('runs/' + v.file, 'The recording of ' + id + ' (runs/' + v.file + ')'); } catch (e) {
           if (e.code === 'missing') {
             v.file = null; v.missing = true;
             throw new RVError('missing', 'The changelog names runs/' + v.named + ' for ' + id + ', but that file is not in ' + src.where() + '.');
@@ -419,13 +511,22 @@
           if (e.code === 'csv') { v.bad = e.message; throw new RVError('csv', id + ': ' + e.message.charAt(0).toLowerCase() + e.message.slice(1), e.hint); }
           throw e;
         }
-        v.sum = run.sum; v.beams = run.beams; v.sec = run.sec || null;
-        if (v.extra) { v.lap = run.sum.lap; v.top = Math.trunc(run.sum.top); v.slow = Math.trunc(run.sum.slow); v.damage = String(run.sum.damage); }
+        if (ds.runs.get(id) !== job) return run;               /* unloaded meanwhile: the version stays unloaded */
+        adopt(v, run);
+        if (ds.runs.get(id) === job) ds.loaded.set(id, run);   /* not if it was unloaded while it was being read */
         return run;
       })();
       ds.runs.set(id, job);
-      job.catch(() => ds.runs.delete(id));
+      job.catch(() => { if (ds.runs.get(id) === job) ds.runs.delete(id); });
       return job;
+    };
+    /* Forgets a loaded run to free its memory; loadRun reads it again. False if it was not loaded. */
+    ds.unloadRun = function (id) {
+      const v = ds.byId[id];
+      if (!v || !v.sum) return false;
+      v.sum = null; v.sec = v.pre ? v.pre.sec : null; v.beams = v.pre ? !!v.pre.beams : null; delete v.refTried; delete v.fastTried; delete v.bulk;
+      ds.runs.delete(id); ds.loaded.delete(id);
+      return true;
     };
     return ds;
   }

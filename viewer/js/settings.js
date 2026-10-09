@@ -1,5 +1,6 @@
-/* Run viewer: the Settings page. Theme, view, the data source (with validation before switching to it),
-   replay preferences, and the guide to the data format. */
+/* Run viewer: the Settings page, in five tabs. General (theme, view, this browser, reset), Replay (how a replay
+   starts and looks), Data (the source, checked before the page switches to it, and the reader's API keys),
+   Customization (js/theme.js) and Controls (the replay keys). The help and the data format are js/help.js. */
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$, esc = RV.esc;
@@ -8,6 +9,52 @@
   let srcKind = null;                  /* which kind of source the form shows: github | local */
   let result = null;                   /* outcome of the last attempt to apply a source: {ok, html} */
   let working = false;
+  let capturing = null;                /* the action whose new key is being waited for (Controls tab) */
+  let shown = null;                    /* the service whose key is shown in full for the moment (API keys) */
+
+  /* The API keys card: every service, its key (masked) and what each feature that needs it can do now. */
+  function keysHtml() {
+    const K = RV.apiKeys, link = S.ds && S.ds.src.kind === 'github' ? 'https://github.com/' + S.ds.src.name : RV.prefs.source.link;
+    const word = { none: 'no key', ok: 'the key works', bad: 'GitHub refused this key', unknown: 'not checked (no connection)', checking: 'checking \u2026' };
+    return '<div class="card keyscard"><div class="cardhead"><h3>API keys</h3><span class="note">Your own keys for outside services. Optional.</span></div>' +
+      '<p class="note">Repository in use: <a href="' + esc(link) + '" target="_blank" rel="noopener">' + esc(link) + '</a></p>' +
+      K.SERVICES.map(sv => {
+        const st = K.status(sv.id), key = K.get(sv.id);
+        return '<div class="field"><div><b>' + esc(sv.name) + '</b><p class="note">' + esc(sv.what) + '</p>' +
+          (key ? '<p><code class="uid">' + esc(shown === sv.id ? key : K.masked(key)) + '</code> <span class="' + (st === 'bad' ? 'warn' : 'note') + '">' + word[st] + '</span></p>' : '') + '</div>' +
+          '<div class="acts"><button class="btn' + (key ? '' : ' prim') + '" data-keyset="' + sv.id + '">' + (key ? 'Replace' : 'Enter a key') + '</button>' +
+          (key ? '<button class="btn" data-keyshow="' + sv.id + '" aria-pressed="' + (shown === sv.id) + '">' + (shown === sv.id ? 'Hide' : 'Show') + '</button><button class="btn" data-keyclear="' + sv.id + '">Delete</button>' : '') + '</div></div>' +
+          '<ul class="keyfeat">' + sv.features.map(f => { const b = K.blocked(f.id); return '<li class="' + (b ? 'blocked' : 'working') + '"><b>' + esc(f.name) + '</b> <span>' + (b ? 'blocked' : 'working') + '</span>' +
+            (b ? '<small>' + esc(f.why.charAt(0).toUpperCase() + f.why.slice(1)) + '</small>' : '') + '</li>'; }).join('') + '</ul>';
+      }).join('') +
+      '<p class="note">A key is kept in this browser only, under your viewer ID, and is never part of the site or its repository. \u201cReset to defaults\u201d leaves it; Delete removes it.</p></div>';
+  }
+
+  /* While a key is being chosen, the next key press is the choice: nothing else on the page sees it. */
+  addEventListener('keydown', e => {
+    if (!capturing) return;
+    if (S.tab !== 'ps' || S.setTab !== 'controls') { capturing = null; return; }
+    e.preventDefault(); e.stopPropagation();
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;       /* a modifier on its way down */
+    const act = RV.KEYS.find(a => a.id === capturing);
+    if (e.key === 'Escape') { capturing = null; render(); return; }
+    if (e.key === 'Tab') { RV.toast('Tab moves between controls and cannot be a replay key.'); return; }
+    const k = RV.normKey(e.key), clash = RV.KEYS.find(a => a.id !== act.id && RV.normKey(RV.keyOf(a.id)) === k);
+    if (clash) { RV.toast(RV.keyLabel(k) + ' is already the key for \u201c' + clash.label + '\u201d. Change that one first.'); return; }
+    if (k === RV.normKey(act.def)) delete RV.prefs.keys[act.id]; else RV.prefs.keys[act.id] = k;
+    RV.savePrefs(); capturing = null; render(); RV.map.buildSide();
+  }, true);
+  function controlsHtml() {
+    const changed = RV.KEYS.some(a => RV.prefs.keys[a.id]);
+    return '<div class="card"><div class="cardhead"><h3>Replay keys</h3><span class="note">On the Track and Telemetry pages</span></div>' +
+      '<table class="spec keyst"><tr><th>Action</th><th>Key</th><th></th></tr>' + RV.KEYS.map(a => '<tr><td>' + a.label + '</td><td>' +
+        (capturing === a.id ? '<span class="warn">Press the new key \u2026</span>' : RV.kbd(a.id) + (RV.prefs.keys[a.id] ? ' <span class="note">default: ' + esc(RV.keyLabel(a.def)) + '</span>' : '')) +
+        '</td><td><button class="btn sm" data-key="' + a.id + '">' + (capturing === a.id ? 'Cancel' : 'Change') + '</button></td></tr>').join('') + '</table>' +
+      '<div class="acts"><button class="btn" id="kReset"' + (changed ? '' : ' disabled') + '>Reset the keys</button></div>' +
+      '<p class="note">Press Change, then the key you want. Esc cancels, so Esc itself can only be the key it is by default. A key that another action uses is refused. ' +
+      'With Ctrl, Alt or the Command key held, a key is left to the browser. Space and Enter still press a button that has the focus.</p>' +
+      '<p class="note">Fixed keys: in the versions table \u2191 \u2193 move between rows, Enter selects and Space adds to the comparison; on the lap-time chart \u2190 \u2192 step through the versions, + and \u2212 zoom, 0 resets.</p></div>';
+  }
 
   function seg(id, items, cur, label) {
     return '<div class="seg" id="' + id + '" role="group" aria-label="' + label + '">' + items.map(it =>
@@ -17,6 +64,7 @@
   function reportHtml(ds) {
     const r = ds.report, li = [];
     li.push('<b>' + r.versions + '</b> version' + (r.versions === 1 ? '' : 's') + ' in docs/CHANGELOG.md');
+    if (r.local) li.push('<b>' + r.local + '</b> more entered by hand, kept in this browser');
     li.push(r.withFile != null ? '<b>' + r.withFile + '</b> of them have a run CSV in runs/' + (r.named > r.withFile ? ' (' + (r.named - r.withFile) + ' more are named in the changelog but the file is missing)' : '')
       : '<b>' + r.named + '</b> of them name a run CSV (whether each file exists was not checked)');
     li.push(r.simple ? 'Simplified changelog: <b>found</b>, so the basic view is available' : 'Simplified changelog: <b>not found</b>, so only the detailed view is available');
@@ -76,146 +124,69 @@
     apply(async () => RV.data.handleSource(h));
   });
 
-  /* ---------- the data-format guide ---------- */
-  const GUIDE = {
-    layout: ['Folder layout',
-      '<p>A data source is a public GitHub repository or a folder on this computer, laid out like this:</p>' +
-      '<pre>docs/\n  CHANGELOG.md        required   one entry per version\n  CHANGELOG-simple.md optional   the same entries in plain language\ntrack.xml               optional   the TORCS track file of the track driven\nruns/\n  run_20261003_220700.csv          one telemetry file per version\n  run_&lt;date&gt;_&lt;time&gt;.csv</pre>' +
-      '<p>The page only reads. It writes nothing to the source; settings stay in this browser.</p>' +
-      '<p>From GitHub the page fetches <code>docs/CHANGELOG.md</code>, <code>docs/CHANGELOG-simple.md</code> and <code>track.xml</code> when it opens, and a run CSV only when that run is opened or compared. A link may end in <code>/tree/&lt;branch&gt;</code> or <code>/tree/&lt;branch&gt;/&lt;folder&gt;</code>; without it the default branch is read.</p>'],
-    changelog: ['docs/CHANGELOG.md',
-      '<p>One entry per version: a heading, then a two-column table whose rows are <code>| **Field** | text |</code>.</p>' +
-      '<pre>## v0.7 — Steer toward the open road\n\n| Field | Value |\n|---|---|\n| **What changed** | … |\n| **Lap time** | 2:19.31 |\n| **Top speed** | 148 km/h |\n| **Min speed** | 41 km/h |\n| **Damage** | 0 |\n| **Observed** | … Telemetry: runs/run_20261001_154006.csv |\n| **Decision** | ✅ Kept — faster, no damage |\n| **Learned** | … |</pre>' +
-      '<table class="spec"><tr><th>Part</th><th>Rule</th><th>Used for</th></tr>' +
-      '<tr><td>Heading</td><td><code>## vX.Y — Title</code> (a dash or a hyphen)</td><td>the version’s name and its title in the detailed view</td></tr>' +
-      '<tr><td>Lap time</td><td>starts with <code>m:ss.cc</code> or <code>m:ss:cc</code></td><td>the lap time, the chart, the rankings</td></tr>' +
-      '<tr><td>Top speed, Min speed</td><td>start with <code>NNN km/h</code></td><td>the Top and Slowest corner columns</td></tr>' +
-      '<tr><td>Damage</td><td>any text</td><td>shown in the details</td></tr>' +
-      '<tr><td>Decision</td><td>contains ✅ if the version was kept</td><td>Kept or Rejected; gains are measured against the last kept version</td></tr>' +
-      '<tr><td>Run CSV</td><td>the first <code>runs/run_&lt;digits&gt;_&lt;digits&gt;.csv</code> anywhere in the entry</td><td>the recording that is replayed</td></tr>' +
-      '<tr><td>What changed, Why, Observed, Learned</td><td>any text</td><td>the technical record in the details panel</td></tr></table>' +
-      '<p>The file must hold at least one such entry, or the source is refused. An entry without a lap time is listed but left out of the chart.</p>'],
-    csv: ['Run CSVs',
-      '<p>One row per simulation step, with a header row. Plain numbers separated by commas.</p>' +
-      '<table class="spec"><tr><th>Column</th><th></th><th>Meaning</th></tr>' +
-      '<tr><td><code>curLapTime</code></td><td>required</td><td>seconds since the start of the lap; rows below 0 are before the start and are dropped</td></tr>' +
-      '<tr><td><code>lastLapTime</code></td><td>required</td><td>0 during the lap; the official lap time on rows after the finish line</td></tr>' +
-      '<tr><td><code>distFromStart</code></td><td>required</td><td>metres along the track from the start line</td></tr>' +
-      '<tr><td><code>speedX</code></td><td>required</td><td>speed, km/h</td></tr>' +
-      '<tr><td><code>gear</code>, <code>accel</code>, <code>brake</code>, <code>steer</code></td><td>required</td><td>gear; throttle and brake 0 to 1; steering −1 to +1 (+1 = full left)</td></tr>' +
-      '<tr><td><code>trackPos</code></td><td>required</td><td>sideways position: 0 centre, +1 left edge, −1 right edge</td></tr>' +
-      '<tr><td><code>angle</code></td><td>required</td><td>angle between the car and the track direction, radians</td></tr>' +
-      '<tr><td><code>damage</code></td><td>required</td><td>damage points; the last row’s value is shown</td></tr>' +
-      '<tr><td><code>allowed</code></td><td>optional</td><td>the speed the driver’s plan allows, km/h; without it the grey line on the speed chart is missing</td></tr>' +
-      '<tr><td><code>track0</code> … <code>track18</code></td><td>optional</td><td>the 19 distance sensors, metres (−1 off track); without them the run replays without beams</td></tr>' +
-      '<tr><td><code>focA</code>, <code>foc0</code> … <code>foc4</code></td><td>optional</td><td>focus rays: centre angle and five distances; without them no focus rays</td></tr></table>' +
-      '<p><b>Lap time of a recording:</b> the <code>lastLapTime</code> of the first row after the line if there is one; otherwise the last clock reading plus the remaining distance at the last speed. <b>Slowest corner:</b> the lowest speed more than 100 m from the start line and after the first 8 seconds. Other columns are ignored.</p>' +
-      '<p>A version without a CSV is listed but cannot be replayed. A recording that stops early is shown as an incomplete lap; an empty one is reported as such.</p>'],
-    optional: ['Optional files',
-      '<h4>docs/CHANGELOG-simple.md</h4><p>Same format as <code>docs/CHANGELOG.md</code>, same version names. Its title and its What changed, Why, Decision and Learned fields are the texts of the <b>basic view</b>. Without this file the basic view cannot be selected and the page uses the detailed view.</p>' +
-      '<h4>track.xml</h4><p>The map is computed from a TORCS track file. <b>Supplying it is your job:</b> to see your own track, put the track’s TORCS file (for example <code>tracks/road/&lt;name&gt;/&lt;name&gt;.xml</code> from a TORCS install) at the root of the repository or folder, named <code>track.xml</code>.</p>' +
-      '<p>Without it the page uses the Corkscrew track bundled with it. If a run does not fit the track in use (its longest <code>distFromStart</code> differs from the track length by more than ' + RV.data.FIT_TOL + ' m), the Track tab says so instead of drawing the run on a wrong map; Versions and Telemetry still work.</p>' +
-      '<h4>Other CSVs in runs/</h4><p>In a local folder, CSVs that no changelog entry names (manual laps) are listed under “Other recordings” on the Versions tab. From GitHub only the recordings named in the changelog are read.</p>'],
-  };
-
-  /* 9: the name TORCS carries its explanation */
-  for (const k in GUIDE) GUIDE[k][1] = GUIDE[k][1].replace(/TORCS/g, RV.TORCS);
-
-  /* ---------- the Help tab ---------- */
-  function helpHtml() {
-    const ds = S.ds, k = s => '<kbd>' + s + '</kbd>';
-    const card = (title, body) => '<div class="card helpcard"><div class="cardhead"><h3>' + title + '</h3></div>' + body + '</div>';
-    return '<div class="setgrid"><div class="col">' +
-      card('New here?', '<p>The tutorial walks through the three pages in about a minute and points at each part of the screen in turn.</p>' +
-        '<div class="acts"><button class="btn prim" id="hTour">Redo the tutorial</button></div>') +
-      card('What this site is', '<p>The run viewer replays the laps of a self-driving racing car in the simulator ' + RV.TORCS + '. The car\u2019s driver is a set of hand-written rules that was improved one version at a time; each version drove one measured lap, and each was either kept or rejected.</p>' +
-        '<p>The site only reads data. It changes nothing in the source, and nothing you open is uploaded anywhere. Your settings are saved in this browser.</p>') +
-      card('The pages', '<dl class="helpdl">' +
-        '<dt>Versions</dt><dd>Every version with its lap time, the lap-time chart, the rankings, and a panel that explains what the selected version changed and why.</dd>' +
-        '<dt>Track</dt><dd>The replay on a map of the track: the car, the line it drove, and its sensor beams.</dd>' +
-        '<dt>Telemetry</dt><dd>Charts of speed, throttle, brake and more along the lap, and in the detailed view sector times and a table of 100 m sections.</dd>' +
-        '<dt>Settings</dt><dd>Theme, view, data source and replay preferences, the guide to the data format, and this help.</dd></dl>') +
-      card('Selecting and comparing', '<ul class="helpul"><li><b>Select one version:</b> click its row on the Versions page.</li>' +
-        '<li><b>Compare several (up to ' + RV.MAX_RUNS + '):</b> drag across rows, or Shift-click for a range, or Ctrl-click to add or remove one. Each gets its own colour.</li>' +
-        '<li><b>The car in focus</b> is the one clicked first: the map follows it and time gaps are measured against it. Click another car on the map, its row in the Cars table, or its name in the top bar to put that one in focus.</li>' +
-        '<li><b>Remove one:</b> the \u00d7 beside its name in the top bar. \u201cClear comparison\u201d keeps only the car in focus.</li></ul>') +
-      card('Basic view and Detailed view', '<p>The switch in the top bar. <b>Basic view</b> uses plain-language descriptions and shows the main controls. <b>Detailed view</b> adds the technical record of each version, every telemetry channel, sector times and all the map layers. Nothing moves between the two: the detailed view adds to what the basic view shows.</p>' +
-        (ds && !ds.hasSimple ? '<p class="warn">' + RV.NO_BASIC + '</p>' : '')) +
-      '</div><div class="col">' +
-      card('Mouse and keyboard', '<table class="spec"><tr><th>Where</th><th>Do this</th><th>To</th></tr>' +
-        '<tr><td>Replay</td><td>' + k('Space') + '</td><td>play or pause</td></tr>' +
-        '<tr><td>Replay</td><td>' + k('\u2190') + ' ' + k('\u2192') + '</td><td>move one step; hold for slow motion (0.1\u00d7, then 0.25\u00d7, then 0.5\u00d7)</td></tr>' +
-        '<tr><td>Replay</td><td>' + k('Home') + '</td><td>back to the start of the lap</td></tr>' +
-        '<tr><td>Map</td><td>drag, wheel, double-click</td><td>move the map, zoom, return to the car</td></tr>' +
-        '<tr><td>Map</td><td>' + k('+') + ' ' + k('\u2212') + ', ' + k('F') + '</td><td>zoom; follow the car or stop following</td></tr>' +
-        '<tr><td>Charts</td><td>wheel, drag, click, double-click</td><td>zoom the distance axis, pan, move the car there, show the whole lap</td></tr>' +
-        '<tr><td>Versions table</td><td>' + k('\u2191') + ' ' + k('\u2193') + ', ' + k('Enter') + ', ' + k('Space') + '</td><td>move between rows, select the row, add it to or remove it from the comparison</td></tr>' +
-        '<tr><td>Lap-time chart</td><td>' + k('\u2190') + ' ' + k('\u2192') + ', ' + k('+') + ' ' + k('\u2212') + ', ' + k('0') + '</td><td>step through the versions, zoom, reset</td></tr>' +
-        '<tr><td>Anywhere</td><td>' + k('Tab') + '</td><td>move to the next control</td></tr></table>') +
-      card('Reading the colours', '<ul class="helpul"><li><b>Path on the map:</b> blue where the car was slowest, yellow where it was fastest. In the detailed view it can show braking instead.</li>' +
-        '<li><b>Sensor beams:</b> pink means the edge of the road is close, cyan means it is far.</li>' +
-        '<li><b>Lap-time chart:</b> filled purple = kept and a new best lap; filled green = kept; purple ring = rejected although its lap was faster; grey ring = rejected.</li>' +
-        '<li><b>Time differences:</b> a minus sign, or \u201cfaster\u201d, means time gained.</li></ul>') +
-      card('Using your own data', '<p>The site can show any project laid out the same way: a public GitHub repository, or a folder on this computer. Choose it under Settings, Data source. The source is checked first, and the page says what it found.</p>' +
-        '<div class="acts"><button class="btn" id="hFormat">Show the data format</button></div>' +
-        '<p class="note">Now showing: ' + (ds ? esc(ds.src.label()) : 'nothing is loaded') + '.</p>') +
-      card('If something does not work', '<dl class="helpdl">' +
-        '<dt>\u201cThe data could not be loaded\u201d</dt><dd>The page needs the network to read from GitHub. Check the connection and press Try again. A firewall or an extension that blocks raw.githubusercontent.com has the same effect.</dd>' +
-        '<dt>A version cannot be replayed</dt><dd>It has no recording: the changelog names no run file for it, or the file is missing from the source.</dd>' +
-        '<dt>\u201cThis run does not fit the track map\u201d</dt><dd>The runs were driven on another track than the map in use. The source needs its own track.xml (see the data format).</dd>' +
-        '<dt>Basic view cannot be chosen</dt><dd>The source has no simplified changelog (docs/CHANGELOG-simple.md).</dd>' +
-        '<dt>A local folder is gone after a reload</dt><dd>Browsers do not keep access to a folder. Choose it again under Settings, Data source.</dd></dl>') +
-      card('Links to a particular state', '<p>Options after <code>#</code> in the address open the page in a given state, for example <code>#tab=pm&amp;run=v1.05&amp;cmp=v0.96&amp;mode=detailed</code>. <code>tab</code> is <code>pv</code>, <code>pm</code>, <code>pt</code> or <code>ps</code>; <code>run</code> and <code>cmp</code> name versions; <code>frame</code> pauses on a frame; <code>help</code> opens this page. The README lists them all.</p>') +
-      '</div></div>';
-  }
-
+  const TABS = [['general', 'General'], ['replay', 'Replay'], ['data', 'Data'], ['custom', 'Customization'], ['controls', 'Controls']];
   function render() {
     const box = $('ps'), P = RV.prefs, ds = S.ds;
+    if (!TABS.some(t => t[0] === S.setTab)) S.setTab = 'general';
     if (draft == null) draft = P.source.link;
     if (srcKind == null) srcKind = ds && ds.src.kind === 'local' ? 'local' : 'github';
     const noBasic = ds && !ds.hasSimple ? RV.NO_BASIC : '';
     const current = ds ? esc(ds.src.label()) : 'nothing is loaded';
-    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + [['prefs', 'Settings'], ['help', 'Help']].map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
-    if (S.setTab === 'help') {
+    const tabs = '<div class="seg subtabs" id="sTabs" role="tablist">' + TABS.map(t => '<button role="tab" data-v="' + t[0] + '" class="' + (t[0] === S.setTab ? 'on' : '') + '" aria-selected="' + (t[0] === S.setTab) + '">' + t[1] + '</button>').join('') + '</div>';
+    if (S.setTab !== 'controls') capturing = null;
+    if (S.setTab !== 'custom') RV.theme.closePick();
+    if (S.setTab === 'custom') {
       const keep0 = box.scrollTop;
-      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Help</h1><p class="lead">What the run viewer shows and how to use it.</p></div>' + tabs + helpHtml() + '</div>';
+      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Customization</h1><p class="lead">The colour of everything on the site, saved as themes of your own.</p></div>' + tabs + '<div id="custBody"></div></div>';
       box.scrollTop = keep0;
       box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
-      $('hTour').onclick = () => RV.tutorial.start(true);
-      $('hFormat').onclick = () => { S.setTab = 'prefs'; render(); const g = box.querySelector('.guidecard'); if (g) g.scrollIntoView({ block: 'start' }); };
+      RV.theme.ui($('custBody'));
       return;
     }
-    let h = '<div class="setwrap"><div class="pagehead"><h1>Settings</h1><p class="lead">Saved in this browser only.</p></div>' + tabs +
-
-      '<div class="setgrid"><div class="col">' +
-      '<div class="card"><div class="cardhead"><h3>Appearance</h3></div>' +
-      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], P.theme, 'Theme') + '</div>' +
+    if (S.setTab === 'controls') {
+      const keep0 = box.scrollTop;
+      box.innerHTML = '<div class="setwrap"><div class="pagehead"><h1>Controls</h1><p class="lead">The keys that drive the replay. Saved in this browser only.</p></div>' + tabs + controlsHtml() + '</div>';
+      box.scrollTop = keep0;
+      box.querySelectorAll('#sTabs button').forEach(b => { b.onclick = () => { S.setTab = b.dataset.v; render(); box.scrollTop = 0; }; });
+      box.querySelectorAll('[data-key]').forEach(b => { b.onclick = () => { capturing = capturing === b.dataset.key ? null : b.dataset.key; render(); const again = box.querySelector('[data-key="' + (capturing || b.dataset.key) + '"]'); if (again) again.focus(); }; });
+      if ($('kReset')) $('kReset').onclick = () => { RV.prefs.keys = {}; RV.savePrefs(); capturing = null; render(); RV.map.buildSide(); RV.toast('The replay keys are back to their defaults.'); };
+      return;
+    }
+    const tab = S.setTab, head = { general: ['Settings', 'Saved in this browser only.'], replay: ['Replay', 'How a replay starts and what it looks like. Saved in this browser only.'], data: ['Data', 'Where the versions and recordings come from, and your own keys for outside services.'] }[tab];
+    const appearance = '<div class="card"><div class="cardhead"><h3>Appearance</h3></div>' +
+      '<div class="field"><div><b>Theme</b><p class="note">System follows the setting of your operating system. Custom lists the themes of your own; they are made on the <button class="link" id="sCustom">Customization</button> tab.</p></div>' + seg('sTheme', [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']], RV.customTheme() ? '' : P.theme, 'Theme').replace(/<\/div>$/, RV.theme.customSelect('sThemeCustom') + '</div>') + '</div>' +
       '<div class="field"><div><b>View</b><p class="note">' + (noBasic ? '<span class="warn">' + noBasic + '</span>' : 'Basic view: plain-language descriptions and the main controls. Detailed view: technical titles, every channel and every control.') + '</p></div>' +
-      seg('sView', [['basic', 'Basic view', noBasic], ['detailed', 'Detailed view']], RV.simple() || (!ds && P.view === 'basic') ? 'basic' : 'detailed', 'View') + '</div></div>' +
-
-      '<div class="card"><div class="cardhead"><h3>Replay</h3></div>' +
+      seg('sView', [['basic', 'Basic view', noBasic], ['detailed', 'Detailed view']], RV.simple() || (!ds && P.view === 'basic') ? 'basic' : 'detailed', 'View') + '</div></div>';
+    const replay = '<div class="card"><div class="cardhead"><h3>When a run opens</h3></div>' +
       '<div class="field"><div><b>Speed</b><p class="note">The speed a replay starts at. The bar under the replay changes it at any time.</p></div>' + seg('sSpeed', [['0.25', '0.25×'], ['0.5', '0.5×'], ['1', '1×'], ['2', '2×'], ['4', '4×']], String(P.speed), 'Replay speed') + '</div>' +
       '<div class="field"><div><b>Start playing when a run opens</b><p class="note">Off: the replay waits at the start line.</p></div><label class="tg"><input type="checkbox" id="sAuto" ' + (P.autoplay ? 'checked' : '') + ' aria-label="Start playing when a run opens"><span></span></label></div>' +
-      '<div class="field"><div><b>Compared cars</b><p class="note">Same lap time shows who is ahead on the track. Same distance puts the cars side by side to compare their lines.</p></div>' + seg('sSync', [['t', 'Same lap time'], ['d', 'Same distance']], P.sync, 'Where compared cars are placed') + '</div></div>' +
-
-      '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>' +
-      '</div><div class="col">' +
-
-      '<div class="card"><div class="cardhead"><h3>Data source</h3><span class="note">Now showing: ' + current + '</span></div>' +
+      '<div class="field"><div><b>Compared cars</b><p class="note">Same lap time shows who is ahead on the track. Same distance puts the cars side by side to compare their lines.</p></div>' + seg('sSync', [['t', 'Same lap time'], ['d', 'Same distance']], P.sync, 'Where compared cars are placed') + '</div>' +
+      '<div class="field"><div><b>Camera when a run opens</b><p class="note">A comparison always opens on the whole track.</p></div>' + seg('sCam', [['fit', 'Whole track'], ['follow', 'Follow the car'], ['up', 'Follow, car points up']], P.camera, 'Camera when a run opens') + '</div></div>';
+    const look = '<div class="card"><div class="cardhead"><h3>On the map</h3></div>' +
+      '<div class="field"><div><b>Smooth motion</b><p class="note">At 1× and slower the cars and the camera glide between the recorded steps. Off: they jump from step to step.</p></div><label class="tg"><input type="checkbox" id="sSmooth" ' + (P.smooth ? 'checked' : '') + ' aria-label="Smooth motion at 1× and slower"><span></span></label></div>' +
+      '<div class="field"><div><b>Car size</b><p class="note">For every car without a size of its own (Track, Camera). 1 is true scale.</p></div><div class="setsl"><input type="range" id="sCar" min="0.3" max="4" step="0.1" value="' + P.carSize + '" aria-label="Car size"><span class="num" id="sCarV">' + P.carSize.toFixed(1) + '×</span></div></div>' +
+      '<div class="field"><div><b>Dimming outside a loop</b><p class="note">How dark the rest of the map is while a section is played on a loop.</p></div><div class="setsl"><input type="range" id="sDim" min="0" max="0.9" step="0.05" value="' + P.loopDim + '" aria-label="Dimming outside a loop"><span class="num" id="sDimV">' + Math.round(P.loopDim * 100) + ' %</span></div></div></div>';
+    const reset = '<div class="card"><div class="cardhead"><h3>Reset</h3></div><div class="field"><div><b>Reset to defaults</b><p class="note">System theme, basic view, the default repository, 1× speed and the other replay values, the default keys, layers, panels, lists and car sizes. The viewer ID, your API keys and your own themes stay.</p></div><button class="btn" id="sReset">Reset to defaults</button></div></div>';
+    const source = '<div class="card"><div class="cardhead"><h3>Data source</h3><span class="note">Now showing: ' + current + '</span></div>' +
       seg('sKind', [['github', 'GitHub repository'], ['local', 'Local folder']], srcKind, 'Kind of data source') +
       (srcKind === 'github'
         ? '<label class="lbl" for="sLink">Repository link</label><div class="inrow"><input type="text" id="sLink" spellcheck="false" autocomplete="off" value="' + esc(draft) + '"><button class="btn prim" id="sApply"' + (working ? ' disabled' : '') + '>Load</button></div>' +
+          '<p class="note"><button class="keygate' + (RV.apiKeys.blocked('private') ? ' blocked' : '') + '" id="sPrivate"' + (RV.apiKeys.blocked('private') ? ' aria-disabled="true" title="Needs your own GitHub token. Click to enter one."' : ' title="Your GitHub token is used for repositories that are not public."') + '>Private repositories: ' + (RV.apiKeys.blocked('private') ? 'need your GitHub token' : 'on, with your GitHub token') + '</button></p>' +
           '<p class="note">A public repository: <code>https://github.com/owner/repo</code>, the same with <code>/tree/&lt;branch&gt;</code>, or <code>owner/repo</code>. ' + (draft.trim() !== RV.DEFAULT_LINK ? '<button class="link" id="sDefault">Use the default repository</button>' : 'This is the default repository.') + '</p>'
         : '<div class="inrow"><button class="btn prim" id="sFolder"' + (working ? ' disabled' : '') + '>Choose a folder …</button></div>' +
           '<p class="note">A web page cannot open a folder from a typed path, so the browser asks you to pick it. <b>The folder is read in this browser and nothing is uploaded.</b> Pick the folder that contains docs/CHANGELOG.md, or drop it on this page. Browsers do not keep folder access: after a reload the page returns to the GitHub repository.</p>') +
       '<div id="srcResult" class="result"></div>' +
       '<p class="note"><b>The map:</b> to see your own track, the source must include its ' + RV.TORCS + ' track file as <code>track.xml</code>. ' +
-      (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p></div>' +
-
-      '<div class="card guidecard"><div class="cardhead"><h3>Data format</h3><span class="note">What a repository or folder must contain</span></div>' +
-      '<div class="seg wrap subtabs" id="sGuide" role="tablist">' + Object.keys(GUIDE).map(k => '<button role="tab" data-v="' + k + '" class="' + (k === S.guideTab ? 'on' : '') + '" aria-selected="' + (k === S.guideTab) + '">' + GUIDE[k][0] + '</button>').join('') + '</div>' +
-      '<div class="guidebody">' + GUIDE[S.guideTab][1] + '</div></div>' +
-      '</div></div></div>';
+      (ds ? (ds.trkOwn ? 'This source has one (' + esc(RV.track.title(ds.trk)) + ').' : 'This source has none, so the bundled Corkscrew map is used.') : '') + '</p>' +
+      '<p class="note">What a source must contain is described under <button class="link" id="sFormat">Help, Data format</button>.</p></div>';
+    const browser = '<div class="card"><div class="cardhead"><h3>This browser</h3></div><div class="field"><div><b>Viewer ID</b><p class="note">A random id made on your first visit. Your settings, keys and layout are saved under it in this browser. It is sent nowhere.</p></div><code class="uid">' + esc(P.uid) + '</code></div></div>';
+    const nLocal = ds ? ds.local.size + ds.localStale.length : 0;
+    const localCard = '<div class="card"><div class="cardhead"><h3>Versions entered by hand</h3><span class="note">' + (ds ? nLocal + ' kept in this browser for this source' : 'nothing is loaded') + '</span></div>' +
+      '<p class="note">The site only reads its source and cannot write to it. A version you enter or import is therefore stored in this browser\u2019s own database for this site (IndexedDB), on this device: nothing is uploaded, other devices and other visitors do not see it, and clearing the browser\u2019s site data deletes it. Export it to put it into the repository.</p>' +
+      '<div class="acts"><button class="btn" id="sAddVer"' + (ds ? '' : ' disabled') + '>Add versions \u2026</button><button class="btn" id="sMineVer"' + (nLocal ? '' : ' disabled') + '>Export or delete them \u2026</button></div></div>';
+    const cols = tab === 'replay' ? [replay, look] : tab === 'data' ? [source + localCard, keysHtml()] : [appearance + browser, reset];
+    const h = '<div class="setwrap"><div class="pagehead"><h1>' + head[0] + '</h1><p class="lead">' + head[1] + '</p></div>' + tabs +
+      '<div class="setgrid even"><div class="col">' + cols[0] + '</div><div class="col">' + cols[1] + '</div></div></div>';
     const keep = box.scrollTop, focusLink = document.activeElement && document.activeElement.id === 'sLink';
     box.innerHTML = h;
     box.scrollTop = keep;
@@ -225,17 +196,33 @@
     const on = (id, fn) => box.querySelectorAll('#' + id + ' button').forEach(b => { b.onclick = () => fn(b.dataset.v, b); });
     on('sTabs', v => { S.setTab = v; render(); box.scrollTop = 0; });
     on('sTheme', v => { P.theme = v; RV.savePrefs(); RV.applyTheme(); render(); });
+    if ($('sThemeCustom')) $('sThemeCustom').onchange = e => { RV.theme.select(e.target.value); render(); };
     on('sView', v => { RV.setView(v); });
     on('sSpeed', v => { P.speed = +v; RV.savePrefs(); $('spd').value = v; render(); });
     on('sSync', v => { P.sync = v; RV.savePrefs(); RV.map.buildSide(); render(); });
-    on('sKind', v => { srcKind = v; result = null; render(); });
-    on('sGuide', v => { S.guideTab = v; render(); });
+    on('sCam', v => { P.camera = v; RV.savePrefs(); render(); });
+    if (tab === 'replay') {
+    $('sSmooth').onchange = e => { P.smooth = e.target.checked; RV.savePrefs(); };
+    $('sCar').oninput = e => { P.carSize = +e.target.value; $('sCarV').textContent = P.carSize.toFixed(1) + '\u00d7'; RV.savePrefs(); };
+    $('sDim').oninput = e => { P.loopDim = +e.target.value; $('sDimV').textContent = Math.round(P.loopDim * 100) + ' %'; RV.savePrefs(); };
     $('sAuto').onchange = e => { P.autoplay = e.target.checked; RV.savePrefs(); };
-    $('sReset').onclick = () => {
+    }
+    box.querySelectorAll('[data-keyset]').forEach(b => { b.onclick = () => RV.apiKeys.prompt(b.dataset.keyset, b.dataset.feature); });
+    box.querySelectorAll('[data-keyclear]').forEach(b => { b.onclick = () => { RV.apiKeys.clear(b.dataset.keyclear); shown = null; RV.toast('The key was deleted from this browser.'); render(); }; });
+    box.querySelectorAll('[data-keyshow]').forEach(b => { b.onclick = () => { shown = shown === b.dataset.keyshow ? null : b.dataset.keyshow; render(); }; });
+    on('sKind', v => { srcKind = v; result = null; render(); });
+    if ($('sCustom')) $('sCustom').onclick = () => { S.setTab = 'custom'; render(); box.scrollTop = 0; };
+    if ($('sFormat')) $('sFormat').onclick = () => RV.help.open('format');
+    if ($('sAddVer')) $('sAddVer').onclick = () => RV.entry.open('one');
+    if ($('sMineVer')) $('sMineVer').onclick = () => RV.entry.open('mine');
+    if ($('sReset')) $('sReset').onclick = () => {
       const was = P.source.link, local = ds && ds.src.kind === 'local';
       RV.resetPrefs(); RV.applyTheme(); $('spd').value = '1'; draft = RV.DEFAULT_LINK; srcKind = 'github'; result = null;
+      S.carScale = {};
+      Object.assign(S, { listMode: 'all', keptOnly: true, keptAll: false, sideTab: 'layers', layerGroup: 'Sensors', teleTab: 'charts', verTab: 'overview', helpTab: 'start' });
+      $('pm').classList.remove('side-closed'); RV.map.defaults();
       RV.refreshAll();
-      if (was !== RV.DEFAULT_LINK || local || !ds) apply(async () => RV.data.githubSource(RV.DEFAULT_LINK), RV.DEFAULT_LINK); else render();
+      if (was !== RV.DEFAULT_LINK || local || !ds) { S.setTab = 'data'; apply(async () => RV.data.githubSource(RV.DEFAULT_LINK), RV.DEFAULT_LINK); } else render();
       RV.toast('Settings are back to their defaults.');
     };
     if ($('sLink')) {
@@ -246,7 +233,8 @@
       if ($('sDefault')) $('sDefault').onclick = () => { draft = RV.DEFAULT_LINK; render(); };
     }
     if ($('sFolder')) $('sFolder').onclick = () => apply(pickFolder);
+    if ($('sPrivate')) $('sPrivate').onclick = () => { if (RV.apiKeys.blocked('private')) RV.apiKeys.prompt('github', 'private'); else RV.toast('Your GitHub token is stored: a private repository it may read can be loaded like any other.'); };
   }
 
-  RV.settings = { render: render, useSource(src) { srcKind = src.kind; return apply(async () => src); } };
+  RV.settings = { render: render, useSource(src) { srcKind = src.kind; S.setTab = 'data'; return src._pick ? apply(pickFolder) : apply(async () => src); } };
 })();

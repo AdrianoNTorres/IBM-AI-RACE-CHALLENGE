@@ -1,1 +1,3 @@
 legacy/data/
+# written when the site is published (tools/viewer-summary/build.js)
+summary.json
