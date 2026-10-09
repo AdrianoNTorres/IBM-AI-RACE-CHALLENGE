@@ -583,6 +583,33 @@ sections=True)`.
 
 ---
 
+## sitedata.py — the presentation website's data file
+
+**What it does.** Writes `site/data.json`, the one data file `site/index.html` reads:
+a summary (best lap, first lap, counts of kept / enabling / rejected versions, the
+judged lap's top speed and largest `|trackPos|`), one row per version for the chart
+(all 133: lap, decision, batch, plain-language title), one row per batch (versions,
+best lap before and after, theme), the six rule questions with their fallback
+versions, and the number and dates of the IBM Bob sessions. `--check` writes nothing
+and exits 1 if the file on disk differs from what would be written.
+
+**Where it is used.** By whoever changes the presentation website or its sources:
+`python tools/sitedata.py`, then commit `site/data.json`. It needs the local,
+untracked sources (`project-stats.csv`, `docs/presentation/`), so it runs on the
+project machine, not in a GitHub workflow.
+
+**Why it exists.** The website is published from Git, and its sources are not in Git.
+One generated, committed file keeps every number on the page taken from the tools'
+output instead of typed.
+
+**Implementation.** Reads `project-stats.csv` for the version rows and
+`docs/presentation/vX.Y.json` for `title_plain`; `batch-NN.json` for the batches;
+`manual/rules.json` for the rule questions (a status starting with "confirmed" is
+shown as confirmed by the officials, anything else as our reading; the fallback's lap
+comes from the version rows); `index/bob-tasks.jsonl` for the Bob sessions. Laps are
+shown as `m:ss.cc`. The summary's judged-lap values come from the best version's
+`result`.
+
 ## For agents and automation
 
 See [`tools/AGENTS.md`](AGENTS.md) for the full parallel-harness reference: slot

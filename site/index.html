@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Qubit Racing: the Corkscrew in 1:05.56</title>
+<meta name="description" content="A rule-based TORCS driver, 133 recorded versions, one lap of the Corkscrew in 1:05.56 with no damage. Entry for IBM Granite Racers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eceef0;        /* pit-wall concrete */
+  --panel: #f8f9fa;
+  --ink: #18202b;       /* asphalt */
+  --muted: #56616f;
+  --rule: #c6ccd4;
+  --best: #6b2fd0;      /* timing-screen purple: a new best lap */
+  --kept: #8a94a1;
+  --rej: #cf2a32;       /* kerb red */
+  --mark: #9a6a00;
+  --mark-fill: #f4c430;
+  --band: rgba(244, 196, 48, .16);
+  --display: "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: Barlow, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1f26; --panel: #222932; --ink: #eceff2; --muted: #a3adb9; --rule: #3a434f;
+    --best: #b891ff; --kept: #77818e; --rej: #ff6b6f; --mark: #f4c430; --band: rgba(244, 196, 48, .10);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--body); font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration-color: var(--best); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px solid var(--best); outline-offset: 3px; }
+.wrap { max-width: 68rem; margin: 0 auto; padding-inline: 1.25rem; }
+.text { max-width: 44rem; }
+
+header.top { padding-block: 1.1rem; font: 600 1rem var(--display); letter-spacing: .01em; }
+header.top .wrap { display: flex; flex-wrap: wrap; gap: .4rem 1.6rem; justify-content: space-between; }
+header.top nav { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; font-weight: 500; }
+header.top nav a { text-decoration: none; color: var(--muted); }
+header.top nav a:hover { color: var(--ink); }
+
+.hero { padding-block: 2.5rem 2.2rem; }
+h1 { font: 700 clamp(2.4rem, 6.4vw, 4.9rem)/1.0 var(--display); letter-spacing: -.012em; margin: 0 0 1.2rem; max-width: 15ch; }
+.lede { font-size: 1.2rem; line-height: 1.5; max-width: 40rem; margin: 0 0 2rem; }
+.kerb { height: 10px; background: repeating-linear-gradient(90deg, var(--rej) 0 28px, #fff 28px 56px); }
+
+h2 { font: 700 clamp(1.7rem, 3.4vw, 2.5rem)/1.1 var(--display); margin: 0 0 1rem; }
+h3 { font: 600 1.25rem/1.25 var(--display); margin: 0 0 .4rem; }
+section { padding-block: 3.2rem 0; }
+p { margin: 0 0 1rem; }
+.muted { color: var(--muted); }
+.small { font-size: .94rem; }
+
+/* charts */
+.chart { display: block; overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.chart text { font: 500 13px var(--body); fill: var(--muted); }
+.chart .note { fill: var(--ink); font: 600 14px var(--display); }
+.chart .grid { stroke: var(--rule); stroke-width: 1; }
+.chart .step { fill: none; stroke: var(--ink); stroke-width: 1.6; }
+.chart .lead { stroke: var(--mark); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.chart .band { fill: var(--band); }
+.chart .d-best { fill: var(--best); }
+.chart .d-kept { fill: var(--kept); }
+.chart .d-rej { fill: var(--bg); stroke: var(--rej); stroke-width: 1.6; }
+.chart .cursor { fill: none; stroke: var(--ink); stroke-width: 2; }
+.readout { min-height: 3.4em; margin: .5rem 0 0; padding: .6rem .8rem; background: var(--panel); border-left: 4px solid var(--best); }
+.readout b { font: 700 1.1rem var(--display); margin-right: .7rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; margin: .7rem 0 0; padding: 0; list-style: none; color: var(--muted); font-size: .94rem; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .45rem; }
+.legend .b { background: var(--best); } .legend .k { background: var(--kept); } .legend .r { border: 2px solid var(--rej); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1.2rem 2rem; margin: 2rem 0 0; padding: 0; }
+.facts div { border-top: 2px solid var(--ink); padding-top: .5rem; }
+.facts dt { color: var(--muted); font-size: .94rem; }
+.facts dd { margin: 0; font: 700 1.9rem/1.15 var(--display); }
+
+/* how it works */
+.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 1.5rem 0; border: 2px solid var(--ink); }
+.flow > div { padding: 1.1rem 1.2rem; background: var(--panel); }
+.flow > div + div { border-left: 2px solid var(--ink); }
+.flow ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+.flow li { margin-bottom: .35rem; }
+.flow .when { color: var(--muted); font-size: .94rem; margin: 0 0 .5rem; }
+@media (max-width: 760px) { .flow { grid-template-columns: 1fr; } .flow > div + div { border-left: 0; border-top: 2px solid var(--ink); } }
+
+/* tables */
+.scroll { overflow-x: auto; margin-top: 1.2rem; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; }
+th, td { text-align: left; vertical-align: top; padding: .6rem .9rem .6rem 0; border-bottom: 1px solid var(--rule); }
+th { font: 600 .98rem var(--display); color: var(--muted); border-bottom: 2px solid var(--ink); }
+td.n, th.n { white-space: nowrap; }
+td.lap { font: 600 1.08rem var(--display); white-space: nowrap; }
+td q { color: var(--muted); font-style: italic; }
+.status-official { color: var(--best); font-weight: 600; }
+.status-own { color: var(--mark); font-weight: 600; }
+
+/* slots for the videos and the certificate */
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.2rem; margin-top: 1.2rem; }
+.slot { aspect-ratio: 16 / 9; display: grid; place-content: center; text-align: center; padding: 1rem; border: 2px dashed var(--rule); color: var(--muted); background: var(--panel); }
+.slot strong { display: block; color: var(--ink); font: 600 1.2rem var(--display); }
+.slot.wide { grid-column: 1 / -1; max-width: 52rem; }
+.slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
+.button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
+.button:hover { background: var(--best); color: #fff; }
+.check { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: 44rem; }
+.check li { display: flex; gap: 1rem; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--rule); }
+.check .done { color: var(--best); font-weight: 600; white-space: nowrap; }
+.check .todo { color: var(--muted); white-space: nowrap; }
+footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--muted); font-size: .94rem; }
+#error { display: none; margin: 1rem 0; padding: .8rem 1rem; border: 2px solid var(--rej); background: var(--panel); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span>One Qubit Racing</span>
+    <nav aria-label="Sections">
+      <a href="#how">How it drives</a>
+      <a href="#journey">Journey</a>
+      <a href="#bob">IBM Bob</a>
+      <a href="#rules">Rules</a>
+      <a href="#viewer">Run viewer</a>
+      <a href="#deliverables">Deliverables</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="hero wrap">
+  <h1>One lap of the Corkscrew, from 2:43.38 down to 1:05.56</h1>
+  <p class="lede">A rule-based driver for the TORCS simulator, improved one measured change at a time over 133 recorded versions. No damage, never off the track. Entry for IBM Granite Racers by One Qubit Racing, a team of one: Adriano Torres.</p>
+  <p id="error" role="alert">The numbers on this page are read from <code>data.json</code>, which could not be loaded. Open the page through a web server: run <code>python -m http.server</code> in the <code>site</code> folder and visit <code>http://localhost:8000</code>.</p>
+
+  <div class="chart" id="chart-all" tabindex="0" role="img" aria-label="Lap time of every version, from 2:43.38 at v0.2 to 1:05.56 at v1.33. Use the left and right arrow keys to step through the versions."></div>
+  <p class="readout" id="read-all" aria-live="polite">Point at the chart, or focus it and use the arrow keys, to read any version.</p>
+  <ul class="legend">
+    <li><i class="b"></i>a new best lap</li>
+    <li><i class="k"></i>kept, no new best</li>
+    <li><i class="r"></i>rejected</li>
+    <li>the line is the best lap so far</li>
+  </ul>
+
+  <dl class="facts">
+    <div><dt>Best lap, version v1.33</dt><dd data-s="best_lap">1:05.56</dd></div>
+    <div><dt>First full lap, version v0.2</dt><dd data-s="first_lap">2:43.38</dd></div>
+    <div><dt>Versions recorded</dt><dd data-s="versions">133</dd></div>
+    <div><dt>Damage on the judged lap</dt><dd>0</dd></div>
+    <div><dt>Top speed</dt><dd><span data-s="top_kmh">296</span> km/h</dd></div>
+  </dl>
+</div>
+<div class="kerb" aria-hidden="true"></div>
+
+<section class="wrap" id="lap">
+  <h2>The lap</h2>
+  <div class="slots">
+    <!-- Lap video: replace the two lines inside this div with the <iframe> or <video> of the recording. -->
+    <div class="slot wide" id="slot-lap">
+      <strong>Lap video</strong>
+      Not uploaded yet. It will show the 1:05.56 lap on the Corkscrew with the lap time on screen.
+    </div>
+  </div>
+  <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
+</section>
+
+<section class="wrap" id="how">
+  <h2>How the driver works</h2>
+  <div class="text">
+    <p>The driver is one Python file of explicit rules. It contains no neural network and no trained model. The example driver supplied with the challenge aims for 300 km/h, never brakes and crashes on its first lap; everything below was built on top of it.</p>
+    <p>It works like a racing driver who has walked the track beforehand. The plan for the lap is worked out before the race. On the lap, the sensors decide every pedal and steering movement.</p>
+  </div>
+  <div class="flow">
+    <div>
+      <h3>Track memory</h3>
+      <p class="when">Computed before the race, stored by distance from the start line</p>
+      <ul>
+        <li>A racing line, computed from the track's geometry: where to be on the road every 10 m.</li>
+        <li>The speed that line allows at each point.</li>
+        <li>The road's rises and dips, read from the track file.</li>
+        <li>A few stretches where the gear-change or steering settings differ.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Live sensors</h3>
+      <p class="when">Read every step, about 21 ms</p>
+      <ul>
+        <li>Position, angle and slide against the line: the steering correction.</li>
+        <li>Actual speed against the stored speed: throttle or brake, and how hard.</li>
+        <li>Wheel speeds: anti-lock brakes and traction control.</li>
+        <li>Engine speed: gears and clutch.</li>
+        <li>19 range beams: the braking plan wherever the stored speed is only a cap, and the steering at the start and finish.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Controls</h3>
+      <p class="when">Sent every step</p>
+      <ul>
+        <li>Steering, throttle, brake, gear, clutch.</li>
+        <li>No pedal or steering value is ever replayed from memory.</li>
+        <li>Every step is written to a telemetry file, which is what the run viewer replays.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="text">
+    <h3>How a change earns its place</h3>
+    <p>One mechanism per version, so its effect can be measured. In the final versions each candidate drove 730 laps with its settings and its plan deliberately nudged: 70 for the lap time, compared run by run against the version before, and 660 around the new values to look for a way off the road. Any damage, or any lap with the car's centre past the edge, rejected the version. Of 133 versions, 100 were kept, 11 were kept as groundwork for a later gain and 22 were rejected. The record of every one, with what was learned, is in the <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/blob/main/docs/CHANGELOG.md">changelog</a>.</p>
+  </div>
+</section>
+
+<section class="wrap" id="journey">
+  <h2>The journey</h2>
+  <div class="text">
+    <p>For the first 105 versions the car drove on its sensors alone, because we held back track memory until the officials answered. That approach ran out at about 1:13.6: in batch 12 four of five versions were rejected, since a car cannot set up wide for a corner it does not yet know is coming. On 4 October the officials allowed a pre-mapped track, and the question that turned the project came three days later:</p>
+    <p><q>since we can memorize the track can't we precompute the most optimal racing line and adjust that?</q></p>
+    <p>The last eight seconds came from that line, the speed it allows and the rulings that let the car use the whole road.</p>
+  </div>
+  <div class="chart" id="chart-end" tabindex="0" role="img" aria-label="Lap time from v1.05 to v1.33, 1:13.56 down to 1:05.56, with the four rulings that opened new gains. Use the left and right arrow keys to step through the versions."></div>
+  <p class="readout" id="read-end" aria-live="polite">The last 29 versions, with the decision that opened each run of gains.</p>
+
+  <div class="scroll">
+    <table id="batches">
+      <thead><tr><th class="n">Batch</th><th class="n">Versions</th><th class="n">Best lap</th><th>What it worked on</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:2.4rem">Ten versions that tell the story</h3>
+  <div class="scroll">
+    <table id="key">
+      <thead><tr><th class="n">Version</th><th class="n">Lap</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr data-v="v0.2"><td class="n"></td><td class="lap"></td><td>The first completed lap. The supplied driver crashed, so the target speed was dropped to 80 km/h: finish first, go fast later.</td></tr>
+        <tr data-v="v0.7"><td class="n"></td><td class="lap"></td><td>Steering toward where the road is going: the first real steering logic.</td></tr>
+        <tr data-v="v0.27"><td class="n"></td><td class="lap"></td><td>Corner speed that depends on how sharp the corner is, judged from all the range beams.</td></tr>
+        <tr data-v="v0.42"><td class="n"></td><td class="lap"></td><td>The first target, 1:24, beaten the evening it was set.</td></tr>
+        <tr data-v="v0.81"><td class="n"></td><td class="lap"></td><td>The second target, 1:14.72, beaten on sensors alone, close to what sensors alone could do.</td></tr>
+        <tr data-v="v1.06"><td class="n"></td><td class="lap"></td><td>The first use of track memory after the officials allowed it: a speed allowance per corner.</td></tr>
+        <tr data-v="v1.11"><td class="n"></td><td class="lap"></td><td>The turning point: a racing line computed in advance, followed with live corrections.</td></tr>
+        <tr data-v="v1.17"><td class="n"></td><td class="lap"></td><td>The whole lap on the planned line, with its stored speed deciding where braking starts.</td></tr>
+        <tr data-v="v1.31"><td class="n"></td><td class="lap"></td><td>Declared finished: gears, the road's elevation, gentler steering corrections.</td></tr>
+        <tr data-v="v1.33"><td class="n"></td><td class="lap"></td><td>Reopened after watching the lap and seeing unused road. Every corner checked, four widened.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap" id="bob">
+  <h2>How IBM Bob and Granite were used</h2>
+  <div class="text">
+    <p>IBM Bob, the coding assistant built on IBM Granite, was this project's analyst, planner and reviewer. Its log holds <span data-b="tasks">13</span> sessions between 1 and 6 October, and it drafted the outline of this page.</p>
+    <ul>
+      <li><strong>It opened the project.</strong> Bob found the driving function in the supplied driver, listed every sensor it reads and every action it sets, and wrote the first tuning card and the changelog format that all 133 versions use.</li>
+      <li><strong>It gave a second opinion.</strong> After 72 versions Bob was asked for an analysis independent of the one in progress, and ran three specialists (a race engineer, a racing driver, a data analyst) over the code and the telemetry. Batch 7 put its plan to the test. The two suggestions that were measured, v0.73 and v0.74, were rejected, and that is recorded like every other result.</li>
+      <li><strong>It planned how the work was run.</strong> Bob wrote the hand-off plan for the coding agent and the brief for running agents in parallel. Batch 9 tried it: gains that passed alone failed together, so the project went back to one agent per version.</li>
+      <li><strong>It organised and reviewed.</strong> Bob restructured the repository, wrote its READMEs, reviewed the run viewer from four points of view (race engineer, driver, data analyst, first-time visitor) and built the viewer's first hosted phases.</li>
+    </ul>
+    <h3>What did not work</h3>
+    <p>Bob's corrections to the driver's code, in my experience, <q>made things worse half the time</q>. That is an impression from working with it, not a measured figure. So the division of work changed early: Bob kept the analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
+    <p>The driver itself contains no model. Granite helped build it; it does not drive it.</p>
+  </div>
+</section>
+
+<section class="wrap" id="rules">
+  <h2>Rules, and what we would submit instead</h2>
+  <div class="text">
+    <p>Six times the driver began to rely on something whose legality was not obvious. Four were put to the officials and confirmed. Two are our own reading of those answers and were not asked separately. Each one names the version we would submit if it were turned down.</p>
+  </div>
+  <div class="scroll">
+    <table id="rules-table">
+      <thead><tr><th>What the driver does</th><th class="n">Since</th><th>Status</th><th class="n">Fallback</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
+</section>
+
+<section class="wrap" id="summary">
+  <h2>Technical summary</h2>
+  <div class="text">
+    <p>The driver is a rule-based controller in one Python file. It contains no machine-learning model. Steering, braking, throttle and gear changes come from explicit logic reading the simulator's live sensors: 19 range beams, wheel speeds, engine speed, speed, track position and angle.</p>
+    <p>The project produced 133 tagged versions on the Corkscrew circuit (3,608 m) between 1 and 8 October 2026. The first completed lap was 2:43.38 (v0.2). The submitted version, v1.33, laps in 1:05.56, which is 97.82 seconds faster, with zero damage and the car's centre inside the track edge for the whole lap (largest <code>|trackPos|</code> 0.862).</p>
+    <p><strong>Design.</strong> Track memory, computed offline from the track's geometry and stored by distance, holds a racing line, the speed it allows and the road's elevation. These are parameters, not replayed actions. Every step the live sensors correct the steering against the line, set the pedals from the car's actual speed against the stored speed, and run anti-lock braking, traction control and the gearbox.</p>
+    <p><strong>Tooling.</strong> A harness runs up to four simulators at once and judges each candidate on hundreds of deliberately perturbed laps. An optimiser tunes single settings, and a pattern check catches steering wobble and on/off pedals. Every version is a Git tag with its telemetry.</p>
+    <p><strong>Use of IBM Granite.</strong> IBM Bob did the analysis, the planning and the reviews described above. The driver's code was written with Claude Code.</p>
+    <p><strong>Key challenge.</strong> On sensors alone the car cannot prepare for a corner it has not seen. The lap time stalled at 1:13.6 until the officials allowed a pre-mapped track.</p>
+    <p><strong>Rules.</strong> Six questions of legality are recorded, each with a fallback version: four confirmed by the officials, two our own reading.</p>
+  </div>
+</section>
+
+<section class="wrap" id="viewer">
+  <h2>The run viewer</h2>
+  <div class="text">
+    <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
+    <p><a class="button" href="viewer/">Open the run viewer</a></p>
+  </div>
+</section>
+
+<section class="wrap" id="deliverables">
+  <h2>Deliverables</h2>
+  <div class="slots">
+    <!-- Replace the inside of each slot with the <iframe> of the video, or an <img> of the certificate. -->
+    <div class="slot" id="slot-team"><strong>Team video, 3 minutes</strong>Not uploaded yet.</div>
+    <div class="slot" id="slot-tech"><strong>Technical video, 5 minutes</strong>Not uploaded yet.</div>
+    <div class="slot" id="slot-cert"><strong>IBM SkillsBuild Granite certificate</strong>Not added yet.</div>
+  </div>
+  <ul class="check">
+    <li><span>Team video (3 minutes)</span><span class="todo">not uploaded yet</span></li>
+    <li><span>Race lap video with lap time and track name</span><span class="todo">not uploaded yet</span></li>
+    <li><span><a href="#summary">Technical summary</a></span><span class="done">on this page</span></li>
+    <li><span>IBM SkillsBuild Granite certificate</span><span class="todo">not added yet</span></li>
+    <li><span>Technical video (5 minutes)</span><span class="todo">not uploaded yet</span></li>
+    <li><span><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></span><span class="done">public</span></li>
+  </ul>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    One Qubit Racing, Adriano Torres. IBM Granite Racers: The AI Race Bot Showdown, submitted 11 October 2026.
+    Code, telemetry and the record of every version: <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE</a>.
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function td(row, text, cls) {
+    var c = document.createElement('td');
+    if (cls) c.className = cls;
+    c.textContent = text == null ? '' : text;
+    row.appendChild(c);
+    return c;
+  }
+  function mss(s) { var m = Math.floor(s / 60); return m + ':' + ('0' + Math.round(s - m * 60)).slice(-2); }
+  var WORD = { kept: 'kept', enabling: 'kept as groundwork', rejected: 'rejected' };
+
+  /* One chart: a dot per version, the best lap so far as a step line, notes on chosen versions. */
+  function chart(box, readout, vs, o) {
+    var W = 960, H = 380, L = 54, R = 20, T = 18, B = 34;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
+    var x = function (i) { return L + (W - L - R) * (vs.length < 2 ? .5 : i / (vs.length - 1)); };
+    var y = function (s) { return T + (H - T - B) * (o.max - Math.min(s, o.max)) / (o.max - o.min); };
+    var at = {};
+    vs.forEach(function (v, i) { at[v.v] = i; });
+
+    if (o.band && at[o.band.from] != null) {
+      var bx = x(at[o.band.from]) - 4;
+      svg.appendChild(el('rect', { class: 'band', x: bx, y: T, width: W - R - bx + 6, height: H - T - B }));
+      svg.appendChild(el('text', { x: bx + 6, y: T + 15 }, o.band.label));
+    }
+    o.ticks.forEach(function (s) {
+      svg.appendChild(el('line', { class: 'grid', x1: L, x2: W - R, y1: y(s), y2: y(s) }));
+      svg.appendChild(el('text', { x: L - 8, y: y(s) + 4, 'text-anchor': 'end' }, mss(s)));
+    });
+    o.xlabels.forEach(function (name) {
+      if (at[name] != null) svg.appendChild(el('text', { x: x(at[name]), y: H - 10, 'text-anchor': 'middle' }, name));
+    });
+
+    var best = o.start, path = '', isBest = [];
+    vs.forEach(function (v, i) {
+      var better = v.decision !== 'rejected' && v.lap_s != null && v.lap_s < best;
+      if (better) best = v.lap_s;
+      isBest.push(better);
+      if (best < Infinity) path += (path ? ' H' + x(i) + ' V' : 'M' + x(i) + ' ') + y(best);
+    });
+    svg.appendChild(el('path', { class: 'step', d: path }));
+
+    (o.notes || []).forEach(function (n) {
+      var i = at[n.v];
+      if (i == null) return;
+      var py = y(vs[i].lap_s), ty = T + n.y;
+      if (!n.dx) svg.appendChild(el('line', { class: 'lead', x1: x(i), x2: x(i), y1: py + (ty < py ? -6 : 6), y2: ty + (ty < py ? 5 : -14) }));
+      svg.appendChild(el('text', { class: 'note', x: x(i) + (n.dx || (n.end ? 4 : -4)), y: ty, 'text-anchor': n.end ? 'end' : 'start' }, n.text));
+    });
+
+    vs.forEach(function (v, i) {
+      if (v.lap_s == null) return;
+      var kind = v.decision === 'rejected' ? 'd-rej' : isBest[i] ? 'd-best' : 'd-kept';
+      svg.appendChild(el('circle', { class: kind, cx: x(i), cy: y(v.lap_s), r: kind === 'd-kept' ? o.r - .8 : o.r }));
+    });
+    var cursor = el('circle', { class: 'cursor', r: o.r + 4, cx: -20, cy: -20 });
+    svg.appendChild(cursor);
+    box.appendChild(svg);
+
+    var cur = -1;
+    function show(i) {
+      cur = Math.max(0, Math.min(vs.length - 1, i));
+      var v = vs[cur];
+      cursor.setAttribute('cx', x(cur));
+      cursor.setAttribute('cy', v.lap_s == null ? H - B : y(v.lap_s));
+      readout.textContent = '';
+      var b = document.createElement('b');
+      b.textContent = v.v + '  ' + (v.lap || 'no lap');
+      readout.appendChild(b);
+      readout.appendChild(document.createTextNode(WORD[v.decision] + '. ' + v.title));
+    }
+    svg.addEventListener('pointermove', function (e) {
+      var r = svg.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width * W;
+      show(Math.round((px - L) / (W - L - R) * (vs.length - 1)));
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') show(cur + 1);
+      else if (e.key === 'ArrowLeft') show(cur < 0 ? vs.length - 1 : cur - 1);
+      else if (e.key === 'Home') show(0);
+      else if (e.key === 'End') show(vs.length - 1);
+      else return;
+      e.preventDefault();
+    });
+  }
+
+  function build(d) {
+    var vs = d.versions, s = d.summary, byV = {};
+    vs.forEach(function (v) { byV[v.v] = v; });
+
+    document.querySelectorAll('[data-s]').forEach(function (n) {
+      var val = s[n.getAttribute('data-s')];
+      n.textContent = typeof val === 'number' && val >= 1000 ? val.toLocaleString('en-US') : val;
+    });
+    document.querySelectorAll('[data-b]').forEach(function (n) { n.textContent = d.bob[n.getAttribute('data-b')]; });
+
+    chart(document.getElementById('chart-all'), document.getElementById('read-all'), vs, {
+      min: 60, max: 170, ticks: [60, 90, 120, 150], start: Infinity, r: 3,
+      xlabels: ['v0.2', 'v0.25', 'v0.50', 'v0.75', 'v1.00', 'v1.33'],
+      band: { from: 'v1.06', label: 'track memory allowed' },
+      notes: [
+        { v: 'v0.2', y: 12, dx: 16, text: 'First full lap, ' + byV['v0.2'].lap },
+        { v: 'v0.42', y: 150, text: 'First target, 1:24, beaten' },
+        { v: 'v0.81', y: 196, text: 'Second target, 1:14.72, beaten' },
+        { v: 'v1.33', y: 240, end: true, text: 'v1.33, ' + s.best_lap }
+      ]
+    });
+
+    var from = vs.findIndex(function (v) { return v.v === 'v1.05'; });
+    chart(document.getElementById('chart-end'), document.getElementById('read-end'), vs.slice(from), {
+      min: 65, max: 74, ticks: [66, 68, 70, 72, 74], start: Infinity, r: 4.5,
+      xlabels: ['v1.05', 'v1.10', 'v1.15', 'v1.20', 'v1.25', 'v1.30', 'v1.33'],
+      notes: [
+        { v: 'v1.06', y: 170, text: 'Track memory allowed' },
+        { v: 'v1.11', y: 275, text: 'Racing line computed in advance' },
+        { v: 'v1.16', y: 96, text: 'Stored speed decides where braking starts' },
+        { v: 'v1.28', y: 150, end: true, text: 'Whole road allowed, kerbs included' },
+        { v: 'v1.33', y: 205, end: true, text: 'v1.33, ' + s.best_lap }
+      ]
+    });
+
+    /* batches: the versions before batch 1 first, then one row per batch */
+    var tb = document.querySelector('#batches tbody');
+    var pre = vs.filter(function (v) { return v.batch == null; });
+    var preLaps = pre.filter(function (v) { return v.lap_s != null && v.decision !== 'rejected'; });
+    var rows = [{ batch: 'Start', first: pre[0].v, last: pre[pre.length - 1].v, before: preLaps[0].lap,
+      after: preLaps.reduce(function (a, v) { return v.lap_s < a.lap_s ? v : a; }).lap,
+      theme: 'A first lap, then braking, a first racing line and corner speed by sharpness, one small step per version.' }]
+      .concat(d.batches);
+    rows.forEach(function (b) {
+      var tr = document.createElement('tr');
+      td(tr, b.batch, 'n');
+      td(tr, b.first === b.last ? b.first : b.first + ' to ' + b.last, 'n');
+      td(tr, b.before + ' to ' + b.after, 'lap');
+      var c = td(tr, b.theme || byV[b.first].title);
+      if (b.rejected) c.appendChild(document.createTextNode(' ' + b.rejected + ' of ' + (b.kept + b.rejected) + ' rejected.'));
+      tb.appendChild(tr);
+    });
+
+    document.querySelectorAll('#key tbody tr').forEach(function (tr) {
+      var v = byV[tr.getAttribute('data-v')];
+      tr.children[0].textContent = v.v;
+      tr.children[1].textContent = v.lap;
+    });
+
+    var rt = document.querySelector('#rules-table tbody');
+    d.rules.forEach(function (q) {
+      var tr = document.createElement('tr');
+      var c = td(tr, q.what_we_do);
+      if (q.caveat) {
+        var p = document.createElement('p');
+        p.className = 'small muted';
+        p.style.margin = '.4rem 0 0';
+        p.textContent = q.caveat;
+        c.appendChild(p);
+      }
+      td(tr, q.since.split(' ')[0], 'n');
+      td(tr, q.status, q.official ? 'status-official' : 'status-own');
+      td(tr, q.fallback + ', ' + q.fallback_lap, 'lap');
+      rt.appendChild(tr);
+    });
+  }
+
+  fetch('data.json').then(function (r) { return r.json(); }).then(build).catch(function (e) {
+    document.getElementById('error').style.display = 'block';
+    if (window.console) console.error(e);
+  });
+})();
+</script>
+</body>
+</html>
