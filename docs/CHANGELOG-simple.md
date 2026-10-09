@@ -2353,6 +2353,22 @@ All lap times are written as minutes:seconds:hundredths, so 1:13:59 means 1 minu
 | **Decision** | ✅ Kept, narrowly. This is the last version: the car is frozen here for the submission. |
 | **Learned** | The same change at the hairpin and at one other corner was slower or made no difference. The last two versions gained 0.03 s and 0.05 s: the car is close to what this design can do, so the work stops here. Since v1.22 the lap has gone from 1:07:18 to 1:06:05. |
 
+## v1.32 — Using the whole road at two corners
+
+| Field | Detail |
+|---|---|
+| **Version** | v1.32 |
+| **What changed** | The planned line through the corners at 770 m and 1,042 m was redrawn to use much more of the road's width: the car now starts each corner from close to the outside edge and lets itself run out close to the edge again afterwards. The speed planned for these wider curves was set a little below what the curves alone would allow. |
+| **Why** | The person running the project watched a lap and saw that the car left a lot of road unused at these corners. The line had been drawn when the car had to stay off the kerbs; since then the kerbs have been allowed, but the line had never been redrawn. A wider curve is a gentler curve, and a gentler curve can be taken faster. |
+| **Prediction** | About 0.20 s gained, at those two corners, with the lap under 1:06 for the first time. |
+| **Lap time** | 1:05:84 |
+| **Damage** | 0 |
+| **Top speed** | 293 km/h |
+| **Min speed** | 72 km/h |
+| **Observed** | Lap 1:05:84 (0.21 s faster than v1.31), damage 0. All 70 test laps were faster, by 0.20 s on average, and none left the road; none left the road in the four checks either (660 laps). The lap is also a little smoother: the steering changes direction 6 times instead of 9. The car now comes within 0.86 of the way to the edge on the lap itself. |
+| **Decision** | ✅ Kept — the first lap under 1:06. The car is frozen here for the submission. |
+| **Learned** | Just before this, the work had been declared finished: every idea on the list was worth a few hundredths of a second. That list only held ideas already written down, and nobody had gone back to the oldest assumption, how much of the road the line may use. It took a person watching the lap to see it. The widest version of the idea was twice as fast on the test laps but put the car off the road in a check, so the version kept uses the wide line with a little less speed. |
+
 ---
 
-*Simplified from CHANGELOG.md as it stood after the v1.31 run (the last version).*
+*Simplified from CHANGELOG.md as it stood after the v1.32 run (the last version).*
