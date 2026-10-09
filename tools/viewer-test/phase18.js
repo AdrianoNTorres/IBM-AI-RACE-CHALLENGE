@@ -30,6 +30,7 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   console.log('  beside the road:', vg.kinds, '| at 10 m', JSON.stringify(vg.start), '| at 2,490 m', JSON.stringify(vg.cork));
   ok('the track file gives kerbs, walls, fences and sand as well as the plain sides', /curb/.test(vg.kinds) && /wall/.test(vg.kinds) && /bar:fence/.test(vg.kinds) && /sand/.test(vg.kinds) && vg.start.L.bs === 'wall' && vg.start.L.bh === 1, vg.kinds);
   ok('and they are drawn: far more faces than the bare road', s.triangles > 20000, s.triangles);
+  ok('the kerbs are red and white by turns', s.kerbs[0] > 100 && s.kerbs[1] > 100 && Math.abs(s.kerbs[0] - s.kerbs[1]) < s.kerbs[0] * 0.5, s.kerbs);
   /* the mouse turns and zooms the orbit camera */
   const e0 = s.eye;
   /* dragging up lifts the camera (user, 2026-10-08) */
@@ -79,6 +80,8 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   d = Math.hypot(s.eye[0] - s.car[0], s.eye[1] - s.car[1], s.eye[2] - s.car[2]);
   ok('advanced: opens in the cockpit, with sky and haze', s.adv && s.cam === 'rel' && d < 1.6 && s.fog, { cam: s.cam, d: d });
   ok('advanced: the sensors that read something are drawn, and the planned speed lies on the road ahead', s.beams >= 10 && s.beams <= 19 && s.plan > 20, { beams: s.beams, plan: s.plan });
+  ok('each sensor is a tube, with a disc where it met the edge', s.tubes === s.beams && s.discs >= 8 && s.discs <= s.tubes, { tubes: s.tubes, discs: s.discs });
+  ok('the planned speed covers the next 300 m', s.plan >= 140 && s.plan <= 160, s.plan);
   const want = await p.ev('RV.S.R.st[RV.S.i] * 21 * Math.PI / 180');
   ok('the front wheels are turned as the recording says', Math.abs(s.steer - want) < 0.02 && Math.abs(want) > 0.01, [s.steer, want]);
   await p.ev("document.getElementById('v3sens').click(); document.getElementById('v3plan').click()"); await p.sleep(300);

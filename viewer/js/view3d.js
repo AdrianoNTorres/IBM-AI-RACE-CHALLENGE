@@ -25,7 +25,7 @@
   let trackG = null, lineM = null, carsG = null, built = { trk: null, k: 0, theme: -1 }, lineOf = null, carKey = '';
   const orbit = { az: -1.9, el: 0.62, dist: 900, t: [0, 0, 0], set: false };
   let chaseDist = 1, eye = null, lastCam = '', focus = null;
-  let beamL = null, beamP = null, planM = null, skyOf = '', beamsNow = 0, planNow = 0, steerNow = 0;
+  let beamL = null, beamG = null, tubes = [], discs = [], planCol = null, roadM = null, roadN = 0, roadBase = null, tinted = null, skyOf = '', beamsNow = 0, planNow = 0, steerNow = 0, kerbs = [0, 0];
 
   const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan });
   const trkNow = () => (S.ds && S.ds.trk) || null;
@@ -82,6 +82,7 @@
     const C = { grass: col('grass', '#5f8f4e'), sand: col('sand', '#cdb98a'), road: road, wall: col('wall', '#8a8f99'), kerbA: col('kerb', '#c8372d'), kerbB: col('kerb-2', '#f2f0ea'),
       plan: road.clone().lerp(col('road-edge', '#ffffff'), 0.22) };
     const solid = faces(), fence = faces(), L = [], R = [], Le = [], Re = [];
+    kerbs = [0, 0];
     /* one station: the road's two edges and, on each side, the points where the border, the side and the slope end */
     const rows = [];
     for (let i = 0; i <= n; i++) {
@@ -102,7 +103,8 @@
         /* the border */
         if (q.bw > 0) {
           if (q.bs === 'curb') {                           /* a kerb: red and white by turns, rising a little away from the road */
-            const kc = Math.floor(a.s / 3) % 2 ? C.kerbA : C.kerbB;
+            const red = Math.floor(i / 2) % 2 === 1, kc = red ? C.kerbA : C.kerbB;   /* two stations, about 4 m, of each colour */
+            kerbs[red ? 0 : 1]++;
             solid.quad(a.e, c.e, up(c.b, 0.07), up(a.b, 0.07), kc);
           } else if (q.bs === 'wall' && q.bh > 0) {         /* a low wall right at the edge: its face to the road, its top, its back */
             solid.quad(a.e, c.e, up(c.e, q.bh), up(a.e, q.bh), C.wall); solid.quad(up(a.e, q.bh), up(c.e, q.bh), up(c.b, q.bh), up(a.b, q.bh), C.wall); solid.quad(a.b, c.b, up(c.b, q.bh), up(a.b, q.bh), C.wall);
@@ -115,7 +117,11 @@
         solid.quad(a.o, c.o, c.g, a.g, slope);
       }
     }
-    trackG.add(band(L, R, road));
+    roadM = band(L, R, 0xffffff, { vertexColors: true }); roadN = n; roadBase = road; tinted = null;
+    const rc = new Float32Array((n + 1) * 6);
+    for (let i = 0; i < rc.length; i += 3) { rc[i] = road.r; rc[i + 1] = road.g; rc[i + 2] = road.b; }
+    roadM.geometry.setAttribute('color', new T.BufferAttribute(rc, 3));
+    trackG.add(roadM);
     trackG.add(solid.mesh()); trackG.add(fence.mesh({ transparent: true, opacity: 0.35, depthWrite: false }));
     trackG.add(polyline(Le, col('road-edge', '#ffffff'))); trackG.add(polyline(Re, col('road-edge', '#ffffff')));
     const b = trk.box, w = b[1] - b[0], h = b[3] - b[2];
@@ -218,77 +224,95 @@
     return surf(trk, s, RV.clamp(off, -trk.hw, trk.hw))[2];
   }
   const rgb = css => { const m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(css); return m ? [m[1] / 255, m[2] / 255, m[3] / 255] : [1, 1, 1]; };
-  /* the 19 distance sensors of the car in focus: a line from the car to the point of the track edge each one
-     measured, coloured as on the 2D map (close to far), and a dot where it ends; a beam that found nothing
-     within 200 m is faint */
+  /* The 19 distance sensors of the car in focus. Each is a tapered tube from the car to the point of the track edge
+     it measured (9 cm across at the car, 3 cm at the far end), so it narrows with distance as a real thing would
+     and hides behind a crest; a one-pixel line runs inside it, because far away the tube is thinner than a pixel
+     and would shimmer or vanish; a disc lies on the ground where it ends. Colours as on the 2D map (close to far).
+     A beam that found nothing within 200 m is faint and has no disc. */
   function buildBeams() {
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(new Float32Array(19 * 6), 3)); g.setAttribute('color', new T.BufferAttribute(new Float32Array(19 * 6), 3));
-    beamL = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95 }));
-    const d = new T.BufferGeometry();
-    d.setAttribute('position', new T.BufferAttribute(new Float32Array(19 * 3), 3)); d.setAttribute('color', new T.BufferAttribute(new Float32Array(19 * 3), 3));
-    beamP = new T.Points(d, new T.PointsMaterial({ vertexColors: true, size: 7, sizeAttenuation: false }));
-    beamL.frustumCulled = beamP.frustumCulled = false; beamL.renderOrder = beamP.renderOrder = 3;
-    scene.add(beamL); scene.add(beamP);
+    beamL = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 }));
+    beamL.frustumCulled = false; beamL.renderOrder = 4;
+    beamG = new T.Group(); tubes = []; discs = [];
+    const tg = new T.CylinderGeometry(0.015, 0.045, 1, 10, 1, true); tg.translate(0, 0.5, 0);      /* along y, from 0 (at the car) to 1 */
+    const dg = new T.CircleGeometry(0.26, 20);                                                    /* flat on the ground: its normal is z */
+    for (let k = 0; k < 19; k++) {
+      const tube = new T.Mesh(tg, new T.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false }));
+      const disc = new T.Mesh(dg, new T.MeshBasicMaterial({ transparent: true, opacity: 0.92, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -24 }));
+      tube.frustumCulled = disc.frustumCulled = false; tube.renderOrder = 3; disc.renderOrder = 2;
+      beamG.add(tube); beamG.add(disc); tubes.push(tube); discs.push(disc);
+    }
+    scene.add(beamL); scene.add(beamG);
   }
   function placeBeams(trk, c, F) {
     const r = c.r, show = st.adv && st.sens && !!r.b;
-    beamL.visible = beamP.visible = show; beamsNow = 0;
+    beamL.visible = beamG.visible = show; beamsNow = 0;
     if (!show) return;
     const A = RV.TRACK_ANGLES, o = c.k * 19, lp = beamL.geometry.attributes.position.array, lc = beamL.geometry.attributes.color.array;
-    const pp = beamP.geometry.attributes.position.array, pc = beamP.geometry.attributes.color.array;
-    const from = F.pos.clone().addScaledVector(F.up, 0.45), fog = scene.background;
+    const from = F.pos.clone().addScaledVector(F.up, 0.45), fog = scene.background, Y = new T.Vector3(0, 1, 0), dir = new T.Vector3();
     for (let k = 0; k < 19; k++) {
-      const d = r.b[o + k], q = k * 6;
+      const d = r.b[o + k], q = k * 6, tube = tubes[k], disc = discs[k];
       let ex = from.x, ey = from.y, ez = from.z, cr = [0, 0, 0], hit = false;
+      tube.visible = d >= 0; disc.visible = false;
       if (d >= 0) {
-        const a = c.p[2] - A[k] * Math.PI / 180; hit = d < 199.5;
-        ex = c.p[0] + d * Math.cos(a); ey = c.p[1] + d * Math.sin(a); ez = groundAt(trk, ex, ey, r.s[c.k]) + 0.3;
+        const a = c.p[2] - A[k] * Math.PI / 180, gz = groundAt(trk, c.p[0] + d * Math.cos(a), c.p[1] + d * Math.sin(a), r.s[c.k]);
+        hit = d < 199.5; ex = c.p[0] + d * Math.cos(a); ey = c.p[1] + d * Math.sin(a); ez = gz + 0.3;
         cr = rgb(RV.beamCol(d, 1));
-        if (!hit) cr = [cr[0] * 0.3 + fog.r * 0.7, cr[1] * 0.3 + fog.g * 0.7, cr[2] * 0.3 + fog.b * 0.7];
+        dir.set(ex - from.x, ey - from.y, ez - from.z);
+        const len = dir.length();
+        /* the tube begins 2 m out, past the car's nose: from the driver's seat its near end would fill the view (the line inside it starts at the car) */
+        const skip = Math.min(2, len * 0.4);
+        dir.normalize();
+        tube.position.copy(from).addScaledVector(dir, skip); tube.scale.set(1, Math.max(len - skip, 0.01), 1); tube.quaternion.setFromUnitVectors(Y, dir);
+        tube.material.color.setRGB(cr[0], cr[1], cr[2]); tube.material.opacity = hit ? 0.5 : 0.14;
+        if (hit) { disc.visible = true; disc.position.set(ex, ey, gz + 0.04); disc.material.color.setRGB(cr[0], cr[1], cr[2]); }
+        else cr = [cr[0] * 0.3 + fog.r * 0.7, cr[1] * 0.3 + fog.g * 0.7, cr[2] * 0.3 + fog.b * 0.7];
         beamsNow++;
       }
       lp[q] = from.x; lp[q + 1] = from.y; lp[q + 2] = from.z; lp[q + 3] = ex; lp[q + 4] = ey; lp[q + 5] = ez;
       lc[q] = lc[q + 3] = cr[0]; lc[q + 1] = lc[q + 4] = cr[1]; lc[q + 2] = lc[q + 5] = cr[2];
-      const e = hit ? [ex, ey, ez] : [from.x, from.y, from.z];             /* no dot where nothing was found */
-      pp[k * 3] = e[0]; pp[k * 3 + 1] = e[1]; pp[k * 3 + 2] = e[2]; pc[k * 3] = cr[0]; pc[k * 3 + 1] = cr[1]; pc[k * 3 + 2] = cr[2];
     }
-    for (const m of [beamL, beamP]) { m.geometry.attributes.position.needsUpdate = true; m.geometry.attributes.color.needsUpdate = true; }
+    beamL.geometry.attributes.position.needsUpdate = true; beamL.geometry.attributes.color.needsUpdate = true;
   }
-  /* The speed the driver's plan allowed, as a carpet on the road for the next 300 m: the colours of the driven line
-     (red slow, green fast), so the road turns red ahead of a corner where the plan will make the car brake. One
-     strip for the whole lap; each frame only the stretch ahead of the car is drawn. */
-  const PLAN_AHEAD = 300;
+  /* The speed the driver's plan allowed, shown on the road for the next 300 m in the colours of the driven line
+     (red slow, green fast), so the road turns red ahead of a corner where the plan will make the car brake.
+     It is not a second surface laid on the road: two surfaces that almost touch flicker, because the graphics card
+     cannot tell which is nearer. The road itself is tinted: each frame the colours of its own points over the
+     stretch ahead of the car are mixed with the plan's colour, fading out over the last 50 m, and the stretch
+     tinted the frame before is put back. */
+  const PLAN_AHEAD = 300, PLAN_FADE = 50, PLAN_MIX = 0.6;
   function buildPlan(trk, r) {
-    clear(planM); planM = null;
+    planCol = null;
     if (!r || !r.x || !r.al) return;
+    const n = trk.centre.length - 1, total = trk.total, al = new Float32Array(n).fill(-1);
     let lo = 1e9, hi = -1e9, any = false;
-    for (let i = 0; i < r.n; i++) { if (r.v[i] < lo) lo = r.v[i]; if (r.v[i] > hi) hi = r.v[i]; if (r.al[i] > 0) any = true; }
-    if (!any) return;
-    const hw = trk.hw * 0.94, pos = [], cols = [], c = new T.Color(), row = i => [surf(trk, r.s[i], hw, 0.05), surf(trk, r.s[i], -hw, 0.05)];
-    for (let i = 0; i + 2 < r.n; i += 2) {
-      let a = row(i), b = row(i + 2);
-      if (Math.abs(r.s[i + 2] - r.s[i]) > 60) b = a;                       /* nothing across the start line */
-      pos.push(a[0][0], a[0][1], a[0][2], a[1][0], a[1][1], a[1][2], b[0][0], b[0][1], b[0][2], a[1][0], a[1][1], a[1][2], b[1][0], b[1][1], b[1][2], b[0][0], b[0][1], b[0][2]);
-      c.set(RV.speedCol(RV.clamp(hi > lo ? (r.al[i] - lo) / (hi - lo) : 1, 0, 1)));
-      for (let k = 0; k < 6; k++) cols.push(c.r, c.g, c.b);
+    for (let i = 0; i < r.n; i++) {
+      if (r.v[i] < lo) lo = r.v[i]; if (r.v[i] > hi) hi = r.v[i];
+      if (r.al[i] > 0) { any = true; al[Math.min(n - 1, Math.floor(((r.s[i] % total) + total) % total / total * n))] = r.al[i]; }
     }
-    const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T.Float32BufferAttribute(cols, 3));
-    planM = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false, side: T.DoubleSide }));
-    planM.frustumCulled = false; planM.renderOrder = 1;
-    scene.add(planM);
+    if (!any) return;
+    let carry = -1;                                           /* a station the car passed between two steps takes the one before */
+    for (let pass = 0; pass < 2; pass++) for (let i = 0; i < n; i++) { if (al[i] >= 0) carry = al[i]; else if (carry >= 0) al[i] = carry; }
+    const c = new T.Color();
+    planCol = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { c.set(RV.speedCol(RV.clamp(hi > lo ? (al[i] - lo) / (hi - lo) : 1, 0, 1))); planCol[i * 3] = c.r; planCol[i * 3 + 1] = c.g; planCol[i * 3 + 2] = c.b; }
+  }
+  /* the road's colour at station i: its own, or mixed with (r, g, b) by share a; the last row of points is the first again */
+  function paintRoad(i, a, r, g, b) {
+    const ca = roadM.geometry.attributes.color.array, n = roadN, B = roadBase;
+    for (const row of (i === 0 ? [0, n] : [i])) for (const o of [row * 6, row * 6 + 3]) { ca[o] = B.r + (r - B.r) * a; ca[o + 1] = B.g + (g - B.g) * a; ca[o + 2] = B.b + (b - B.b) * a; }
   }
   function placePlan(trk, c) {
     planNow = 0;
-    if (!planM) return;
-    planM.visible = st.adv && st.plan;
-    if (!planM.visible) return;
-    const r = c.r, q0 = Math.floor(c.k / 2), total = trk.total;
-    let q = q0;
-    while (q * 2 + 2 < r.n && q - q0 < 900 && ((r.s[q * 2] - r.s[c.k]) % total + total) % total <= PLAN_AHEAD) q++;
-    planNow = q - q0;
-    planM.geometry.setDrawRange(q0 * 6, planNow * 6);
+    if (!roadM) return;
+    const n = roadN, step = trk.total / n, on = st.adv && st.plan && !!planCol && planCol.length === n * 3;
+    if (tinted) { for (let k = 0; k <= tinted[1]; k++) paintRoad((tinted[0] + k) % n, 0, 0, 0, 0); tinted = null; roadM.geometry.attributes.color.needsUpdate = true; }
+    if (!on) return;
+    const s = c.r.s[c.k], i0 = Math.floor(((s % trk.total) + trk.total) % trk.total / step) % n, W = Math.min(n - 1, Math.round(PLAN_AHEAD / step)), F = Math.max(1, Math.round(PLAN_FADE / step));
+    for (let k = 0; k <= W; k++) { const i = (i0 + k) % n; paintRoad(i, PLAN_MIX * Math.min(1, (W - k) / F), planCol[i * 3], planCol[i * 3 + 1], planCol[i * 3 + 2]); }
+    tinted = [i0, W]; planNow = W;
+    roadM.geometry.attributes.color.needsUpdate = true;
   }
 
   /* ---------- the cameras ---------- */
@@ -404,7 +428,7 @@
     ren = new T.WebGLRenderer({ canvas: cv, antialias: true });
     ren.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     scene = new T.Scene();
-    cam = new T.PerspectiveCamera(52, 1, 0.3, 9000); cam.up.set(0, 0, 1);
+    cam = new T.PerspectiveCamera(52, 1, 0.3, 6500); cam.up.set(0, 0, 1);
     scene.add(new T.HemisphereLight(0xffffff, 0x777777, 1.9));
     const sun = new T.DirectionalLight(0xffffff, 1.6); sun.position.set(-0.5, -0.7, 1); scene.add(sun);
     pointers();
@@ -457,7 +481,7 @@
     state() {
       if (!ready) return { on: st.on, ready: false };
       const i = ren.info.render, p = cam.position;
-      return { on: st.on, ready: true, adv: st.adv, beams: beamL && beamL.visible ? beamsNow : 0, plan: planM && planM.visible ? planNow : 0, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
+      return { on: st.on, ready: true, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
         car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
     },
     camera(id) { st.cam = id; paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
