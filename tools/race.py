@@ -140,6 +140,7 @@ def harness(src, port, csv_path):
             ("log_path= os.path.join(run_dir, time.strftime('run_%Y%m%d_%H%M%S.csv'))", "log_path= %r" % csv_path),
             ("if n_fail < 0:", "if False:  # harness: never 'relaunch torcs'")]
     for old, new in subs:
+        if old.startswith('if n_fail') and old not in src: continue   # drivers after v1.33 have no relaunch
         if src.count(old) != 1: raise ValueError('driver harness line not found once: %r' % old)
         src = src.replace(old, new)
     return src

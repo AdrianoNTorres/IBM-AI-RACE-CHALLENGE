@@ -29,6 +29,7 @@ def torcs_running():
     return 'wtorcs.exe' in out
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'): sys.exit(print(__doc__))
     if torcs_running():
         sys.exit('TORCS is already running. Close it first (it holds the driver\'s port 3001).')
     before = set(glob.glob(os.path.join(REPO, 'runs', '*.csv')))

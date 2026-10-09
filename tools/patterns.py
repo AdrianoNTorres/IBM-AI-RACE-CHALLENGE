@@ -93,5 +93,6 @@ def report(path, show_episodes=False):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'): sys.exit(print(__doc__))
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     report(args[0] if args else sorted(glob.glob('runs/*.csv'))[-1], '--episodes' in sys.argv)

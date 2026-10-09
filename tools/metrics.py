@@ -68,6 +68,7 @@ def line(m):
                m['hp_vmin'], m['hp_tp'], m['hp_vy'], m['other_vy'], m['other_vy_at']))
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'): sys.exit(print(__doc__))
     m = metrics(sys.argv[1])
     print(line(m))
     print('top %d km/h, slowest corner %.0f km/h @ %.0f m' % (m['top'], m['min_corner'], m['min_corner_at']))

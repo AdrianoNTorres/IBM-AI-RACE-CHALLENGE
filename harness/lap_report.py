@@ -47,5 +47,6 @@ def report(path):
           'OFF TRACK (> 1)' if abs(worst['trackPos']) > 1 else 'on track'))
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'): sys.exit(print(__doc__))
     path = sys.argv[1] if len(sys.argv) > 1 else sorted(glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'runs', '*.csv')))[-1]
     report(path)

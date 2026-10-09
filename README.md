@@ -1,8 +1,8 @@
 # TORCS Racing Driver
 
-A rule-based AI racing driver for the [TORCS](http://torcs.org) simulator, hand-tuned over 106+ versions on the Corkscrew circuit. No neural nets — all control logic is explicit physics, braking plans, and track memory.
+A rule-based AI racing driver for the [TORCS](http://torcs.org) simulator, hand-tuned over 133 recorded versions on the Corkscrew circuit. No neural nets — all control logic is explicit physics, braking plans, and track memory (a racing line and its speed computed offline from the track's geometry, followed with live sensor feedback).
 
-**Best lap:** v1.06 · **1:13.14** · zero damage · 0 of 30 safety runs off-track
+**Best lap:** v1.33 · **1:05.56** · zero damage · 0 of 30 safety runs off-track · run `runs/run_20261008_223916.csv`
 
 ---
 
@@ -16,7 +16,9 @@ Run one lap and print the result:
 python harness/run_race.py
 ```
 
-TORCS must not already be running. The script starts it headlessly, drives one lap, and prints the lap time, top speed, slowest corner, damage, and max track position.
+TORCS must not already be running. The script starts it headlessly (Windows: `wtorcs.exe -r config/raceman/practice.xml`, set up for the Corkscrew, 1 lap, `scr_server` slot 0), drives one lap, and prints the lap time, top speed, slowest corner, damage, and max track position. The lap is deterministic: the same driver file gives the same telemetry CSV byte for byte (`python tools/finalize.py --verify runs/run_20261008_223916.csv`).
+
+To drive it yourself, start a TORCS race with an `scr_server` car on port 3001, then run `python driver/snakeoil3_v1.py`. The driver waits for the server and never starts TORCS itself.
 
 ---
 
@@ -79,4 +81,7 @@ Version highlights:
 | v0.7 | 2:19.31 | Steer toward the open road |
 | v0.96 | 1:13.59 | Softer traction-control cut |
 | v1.04 | 1:13.61 | S-bend look with focus sensors |
-| v1.06 | **1:13.14** | Corner speed table (track memory) |
+| v1.06 | 1:13.14 | Corner speed table (track memory) |
+| v1.17 | 1:07.40 | Planned line over the whole lap, its stored speed as the braking plan |
+| v1.31 | 1:06.05 | Gears, elevation, softer line-follower gains |
+| v1.33 | **1:05.56** | The stored line drawn wider (kerbs allowed) |

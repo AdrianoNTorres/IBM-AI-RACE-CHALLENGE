@@ -74,6 +74,8 @@ the harness changes what a race writes.
 
 ---
 
+**Other options.** `--repeat N`: run the same config N times in parallel (a determinism check).
+
 ## accept.py — the whole acceptance bar in one call
 
 **What it does.** Runs everything a version is judged on and prints one table: the 70
@@ -118,6 +120,8 @@ v1.17 against v1.16 reproduces the recorded numbers (all-30 67.460 vs 67.634, pa
 for 420 races, and in 18 s with 0 races when repeated.
 
 ---
+
+**Other options.** `--no-checks`: the full 70 runs and the pairing, but skip the checks of `checks.json`.
 
 ## record.py — record a version once
 
@@ -310,6 +314,8 @@ anything the batch touched. New rows and changed values are written by hand.
 
 ---
 
+**Other options.** `--card FILE`: another card than `docs/tuning-card.md`.
+
 ## suite.py — the 3×10 perturbation safety suites
 
 **What it does.** Runs three suites of 10 races each (30 total) in parallel. Each run
@@ -434,6 +440,8 @@ difference before aggregating.
 
 ---
 
+**Other options.** `--no-sections`: skip the section table.
+
 ## raceline.py — offline racing line from the track's geometry
 
 **What it does.** Computes a whole-lap racing line for the Corkscrew offline and prints the table the
@@ -476,6 +484,8 @@ real limits, so the driver uses the table only inside its `plan_zones`.
 
 ---
 
+**Other options.** `--ds M`: station spacing for the optimiser (default 3 m); `--spacing M`: spacing of the printed table (default 10 m); `--grip` / `--grip-aero`: sideways grip at low speed and its rise per (m/s)^2 (defaults 15.5 m/s^2 and 5e-4, fitted to our laps); `--brake`: most braking deceleration (default 34 m/s^2).
+
 ## elevation.py — the track's elevation profile from the track file
 
 **What it does.** Rebuilds the height of the Corkscrew's centre line by `distFromStart` offline and prints,
@@ -516,6 +526,8 @@ banking column.
 
 ---
 
+**Other options.** `--step M`: row spacing in metres (default 10).
+
 ## opt.py — Optuna knob search
 
 **What it does.** Uses the [Optuna](https://optuna.org) framework to search a range of
@@ -542,6 +554,8 @@ soft_pen * sum(max(0, |tp| - soft_tp))`. Studies persist across runs in
 Requires `pip install -r tools/requirements.txt`.
 
 ---
+
+**Other options.** `--batch N`: trials raced at once (default about 30 races per batch); `--seed N`: the sampler's seed (default 0).
 
 ## finalize.py — record the chosen version
 

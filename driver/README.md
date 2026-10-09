@@ -1,10 +1,18 @@
 # driver/
 
-The active racing driver for TORCS, hand-tuned over 106+ versions on the Corkscrew
-circuit. No neural networks — all control logic is explicit physics, braking plans,
-and track memory.
+The active racing driver for TORCS, hand-tuned over 133 recorded versions on the
+Corkscrew circuit. No neural networks — all control logic is explicit physics, braking
+plans, and track memory.
 
-**Current version:** v1.06 · **1:13.14** · zero damage · 0 of 30 safety runs off-track
+**Current version:** v1.33 · **1:05.56** · zero damage · 0 of 30 safety runs off-track
+
+**This page describes the sensor-driven driver as it stood at v1.06.** That logic is
+still in the file and still drives the start and the finish straight, and it still
+plans the speed outside `plan_mem`. Since v1.11–v1.19 most of the lap is steered by a
+planned line stored in the file (`plan_pos`, `plan_curv`, `plan_v`, one row per 10 m,
+computed offline by `tools/raceline.py`) and followed with live feedback; inside
+`plan_mem` the line's stored speed is the braking plan. The comments in the knob block
+of `drive_example()` and `docs/tuning-card.md` are the current reference.
 
 ---
 
@@ -209,25 +217,25 @@ To try a knob value without editing this file, use `tools/race.py --set knob=val
 
 ## How to read this file
 
-1. **`TRACK_ANGLES`** (line 64) — the 19 beam angles; this is the geometry every
+1. **`TRACK_ANGLES`** (line 22) — the 19 beam angles; this is the geometry every
    distance calculation is built on.
 
-2. **`drive_example()` knob block** (lines ~536–650) — all tuning parameters in one
-   place, each with a comment that explains the unit, the tuning history, and why the
-   current value was chosen.
+2. **`drive_example()` knob block** (lines ~470–683) — all tuning parameters in one
+   place, each with a comment that gives the unit, what the setting does and why it
+   has its value. The planned line's tables (`plan_pos`, `plan_curv`, `plan_v`) end it.
 
-3. **Steering** (lines ~654–798) — lookahead, racing line, corner set-up, and rate
-   limiting; each section has a comment block explaining the design decision.
+3. **Steering** (lines ~687–815) — the sensor steering (lookahead, racing line, corner
+   set-up), then the planned-line follower that replaces it inside `plan_zones`, the
+   steering cap and the rate limit.
 
-4. **Speed planning** (lines ~800–950) — brake planning math, sharpness plan, S-bend
-   look, corner table; the comments trace every version change that touched these.
+4. **Speed planning** (lines ~817–919) — brake planning math, sharpness plan, S-bend
+   look, the planned line's speed, the braking plan from track memory, corner table.
 
-5. **Throttle / Brake / ABS** (lines ~952–1030) — the control laws that act on
+5. **Throttle / Brake / ABS** (lines ~921–991) — the control laws that act on
    `allowed_speed`.
 
-6. **Gear / traction control / clutch** (lines ~1032–1150+) — gear state machine and
-   wheel-slip logic.
+6. **Gear / traction control / clutch** (lines ~993–1085) — wheel-slip logic, clutch
+   slip and the gear state machine.
 
-The comments throughout are unusually detailed — they record the reasoning behind every
-design choice and the version numbers at which changes were made. Reading a section's
-comment block is equivalent to reading the relevant changelog entries.
+The comments say what each part does and why. The history of every value (each trial
+and its numbers) is in `docs/CHANGELOG.md` and `docs/tuning-card.md`.

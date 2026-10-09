@@ -1,6 +1,7 @@
 # Track-width use per corner: position at -80 m / slowest point / +80 m (+ = outside of the bend, 1 = edge).
 # Usage: python tools/width.py [runs/...csv]  (default: newest run)
 import csv, sys, glob
+if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'): sys.exit('Usage: python tools/width.py [runs/<file>.csv]  (default: newest run)')
 r=[{k:float(v) for k,v in x.items()} for x in csv.DictReader(open(sys.argv[1] if len(sys.argv) > 1 else sorted(glob.glob('runs/*.csv'))[-1]))]
 r=[x for x in r if x['curLapTime']>=0 and 50<x['distFromStart']<3590]
 # corners = local speed minima (over +-120 m) below 200 km/h
