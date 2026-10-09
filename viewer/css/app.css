@@ -374,7 +374,7 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
   padding: 6px 8px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); max-width: min(720px, calc(100% - 560px)); font-size: 13px; }
 #v3bar:not(.on3) { padding: 4px; }
 #v3bar .seg button { padding: 5px 12px; } #v3bar .note { margin: 0; }
-.v3s { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; } .v3s input { width: 92px; } .v3s .num { min-width: 46px; color: var(--ink); }
+.v3s { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; } .v3s select { font: inherit; padding: 3px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); } .v3s input { width: 92px; } .v3s .num { min-width: 46px; color: var(--ink); }
 .v3rel { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center; flex-basis: 100%; padding-top: 6px; border-top: 1px solid var(--line); }
 @media (max-width: 1280px) { #v3bar { max-width: calc(100% - 24px); } }
 /* ends a looped section: on the map itself, so a touch screen without an Esc key has it in reach */

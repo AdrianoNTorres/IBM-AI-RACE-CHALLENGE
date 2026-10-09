@@ -4,10 +4,11 @@ const PORT = 9333, BASE = 'http://127.0.0.1:8765/';
 const INIT = function (prefs, base) {
   if (prefs) try { localStorage.setItem('rv_prefs', prefs); } catch (e) {}
   const f = window.fetch; window.__fetched = [];
-  window.fetch = function (u, o) {
-    u = String(u); window.__fetched.push(u);
+  window.fetch = function (req, o) {
+    let u = req && req.url ? req.url : String(req); window.__fetched.push(u);   /* a Request object (the 3D model loader passes one) or an address */
     const m = 'https://raw.githubusercontent.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/';
-    if (u.indexOf(m) === 0) { const rest = u.slice(m.length); u = base + rest.slice(rest.indexOf('/') + 1); }
+    if (u.indexOf(m) !== 0) return f.call(this, req, o);
+    const rest = u.slice(m.length); u = base + rest.slice(rest.indexOf('/') + 1);
     return f.call(this, u, o);
   };
 };

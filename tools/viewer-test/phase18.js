@@ -25,6 +25,21 @@ const roadZ = k => `(() => { const R = RV.S.R, i = RV.S.i, t = RV.S.ds.trk; retu
   ok('the car leans with the road (its "up" is close to vertical, not exactly)', s.up[2] > 0.9 && s.up[2] < 0.99999, s.up);
   ok('the 2D canvas is hidden and the panels are still there', (await p.ev("getComputedStyle(document.getElementById('c')).visibility")) === 'hidden' && (await p.ev("document.getElementById('win-hud').getClientRects().length")) > 0);
 
+  /* 18.3.2: the car is a model from Kenney's kit, in the run's colour, with four wheels; the reader can pick another */
+  await p.until('RV.view3d.state().modelOn', 20000); await p.sleep(300);
+  s = await p.ev(st);
+  const runCol = await p.ev("(() => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = RV.col(RV.S.sel[0]); c.fillRect(0, 0, 1, 1); const d = c.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]]; })()");
+  ok('the car is the Formula model, with four wheels, and its paint was changed', s.model === 'race' && s.modelOn && s.wheels === 4 && !!s.paint, { model: s.model, wheels: s.wheels, paint: s.paint, run: runCol });
+  ok('six cars to pick from', (await p.ev("document.querySelectorAll('#v3car option').length")) === 6);
+  await p.ev("(() => { const e = document.getElementById('v3car'); e.value = 'sedan-sports'; e.onchange({ target: e }); })()"); await p.until("RV.view3d.state().model === 'sedan-sports' && RV.view3d.state().modelOn", 20000); await p.sleep(500);
+  await p.ev("document.querySelector('#v3cam button[data-v=\"chase\"]').click()"); await p.sleep(700);
+  await p.shot('phase18-car-sedan');
+  await p.ev("(() => { const e = document.getElementById('v3car'); e.value = 'blocks'; e.onchange({ target: e }); })()"); await p.sleep(500);
+  ok('"Blocks" is the simple car again', !(await p.ev(st)).modelOn);
+  await p.ev("(() => { const e = document.getElementById('v3car'); e.value = 'race'; e.onchange({ target: e }); })()"); await p.until('RV.view3d.state().modelOn', 20000); await p.sleep(500);
+  await p.shot('phase18-car-formula');
+  await p.ev("document.querySelector('#v3cam button[data-v=\"orbit\"]').click()"); await p.sleep(400);
+  s = await p.ev(st);
   /* 18.2.1: what lies beside the road comes from the track file: kerbs, grass or sand, walls and fences */
   const vg = await p.ev("(() => { const t = RV.S.ds.trk, at = s => RV.track.verge(t, s), k = {}; for (let s = 0; s < t.total; s += 5) for (const q of [at(s).L, at(s).R]) { k[q.bs] = 1; k[q.surf] = 1; k['bar:' + q.ks] = 1; } return { kinds: Object.keys(k).sort().join(' '), start: at(10), cork: at(2490) }; })()");
   console.log('  beside the road:', vg.kinds, '| at 10 m', JSON.stringify(vg.start), '| at 2,490 m', JSON.stringify(vg.cork));

@@ -11,10 +11,13 @@
 (function () {
   'use strict';
   const RV = globalThis.RV, S = RV.S, $ = RV.$;
-  const DEF = { on: false, adv: false, cam: 'orbit', k: 1, rel: [-9, 0, 3.5], look: true, centre: false, sens: true, plan: true };
-  const COCKPIT = [-0.35, 0, 1.0];                         /* the driver's eye: just above the tub */
+  const DEF = { on: false, adv: false, cam: 'orbit', k: 1, rel: [-9, 0, 3.5], look: true, centre: false, sens: true, plan: true, model: 'race' };
+  /* the driver's eye: just above the tub of the simple car, a little higher in a model */
+  const cockpit = () => (st.model === 'blocks' ? [-0.35, 0, 1.0] : [-0.15, 0, 1.3]);
+  const CARS = [['race', 'Formula'], ['race-future', 'Future racer'], ['sedan-sports', 'Sports sedan'], ['hatchback-sports', 'Hot hatch'], ['kart-oobi', 'Kart'], ['blocks', 'Blocks']];
   const st = Object.assign({}, DEF, RV.uiGet('v3', {}));
   st.rel = (st.rel || DEF.rel).slice(0, 3);
+  if (!CARS.some(c => c[0] === st.model)) st.model = DEF.model;
   st.on = false; st.adv = false;                           /* a page always opens in 2D: 3D is asked for */
   const CAMS = [['orbit', 'Orbit', 'The whole track. Drag to turn it, wheel to zoom, Shift-drag to move, double-click to start again.'],
     ['chase', 'Chase', 'Behind and above the car, following it. The wheel moves the camera closer or further.'],
@@ -27,7 +30,7 @@
   let chaseDist = 1, eye = null, lastCam = '', focus = null;
   let beamL = null, beamG = null, tubes = [], discs = [], planCol = null, roadM = null, roadN = 0, roadBase = null, tinted = null, skyOf = '', beamsNow = 0, planNow = 0, steerNow = 0, kerbs = [0, 0];
 
-  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan });
+  const save = () => RV.uiSet('v3', { cam: st.cam, k: st.k, rel: st.rel, look: st.look, centre: st.centre, sens: st.sens, plan: st.plan, model: st.model });
   const trkNow = () => (S.ds && S.ds.trk) || null;
   const col = (name, dflt) => new T.Color(RV.pal[name] || dflt);
 
@@ -162,8 +165,96 @@
     scene.add(lineM);
   }
 
-  /* car1-ow1 in a few blocks: tub, nose, side pods, wings and four wheels; x forward, 4.6 m long, 2 m wide */
+  /* ---------- the car models ---------- */
+  /* The cars are Kenney's Car Kit (kenney.nl, public domain, CC0; viewer/models/kenney/ with its licence). The reader
+     picks one; "Blocks" is the car built here from a few boxes, which is also what is shown until a model has
+     arrived or if it cannot be loaded. Each model is a body and four wheels as separate parts, y up and z forward,
+     about 2.6 m long: it is turned into the car's own axes (x forward, y left, z up) and scaled to 4.6 m.
+     Its paint is changed to the run's colour, so compared cars are told apart as on the 2D map. */
+  const MODEL_SCALE = 1.8, MODELS = {};                      /* id -> { scene, paint: [h, s, v] } or { failed: true } or a promise */
+  let gltfLoader = null;
+  function loadModel(id) {
+    if (MODELS[id]) return;
+    const base = new URL('models/kenney/', document.baseURI).href;
+    MODELS[id] = (gltfLoader ? Promise.resolve(gltfLoader) : import(new URL('vendor/loaders/GLTFLoader.js', document.baseURI).href).then(m => (gltfLoader = new m.GLTFLoader())))
+      .then(l => l.loadAsync(base + id + '.glb'))
+      .then(g => { MODELS[id] = { scene: g.scene, paint: paintOf(g.scene) }; carKey = ''; })
+      .catch(e => { MODELS[id] = { failed: true }; carKey = ''; RV.toast('The car model could not be loaded (' + (e && e.message ? e.message : id) + '). The simple car is shown.', 'err'); });
+  }
+  function hsv(r, g, b) {
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d > 0) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, mx ? d / mx : 0, mx];
+  }
+  function unhsv(h, s, v) {
+    const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5), f(3), f(1)];
+  }
+  const pixels = img => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0); return [c, x, x.getImageData(0, 0, c.width, c.height)]; };
+  /* the paint of a model: the colour its body uses most, among the colours that are not grey, black or white.
+     The kit colours every model from one small picture of swatches; the body's points say which swatches it uses. */
+  function paintOf(scene) {
+    let body = null;
+    scene.traverse(o => { if (o.isMesh && /body/i.test(o.name) && !body) body = o; });
+    const map = body && body.material && body.material.map;
+    if (!map || !map.image || !body.geometry.attributes.uv) return null;
+    const px = pixels(map.image)[2], uv = body.geometry.attributes.uv, bins = new Float32Array(36), sum = [];
+    for (let i = 0; i < uv.count; i++) {
+      const x = Math.min(px.width - 1, Math.max(0, Math.floor(uv.getX(i) * px.width))), y = Math.min(px.height - 1, Math.max(0, Math.floor(uv.getY(i) * px.height))), o = (y * px.width + x) * 4;
+      const c = hsv(px.data[o] / 255, px.data[o + 1] / 255, px.data[o + 2] / 255);
+      if (c[1] < 0.35 || c[2] < 0.25) continue;
+      const b = Math.floor(c[0] / 10) % 36; bins[b]++; (sum[b] = sum[b] || [0, 0, 0, 0]); sum[b][0] += c[0]; sum[b][1] += c[1]; sum[b][2] += c[2]; sum[b][3]++;
+    }
+    let best = -1;
+    for (let b = 0; b < 36; b++) if (bins[b] > 0 && (best < 0 || bins[b] > bins[best])) best = b;
+    return best < 0 ? null : [sum[best][0] / sum[best][3], sum[best][1] / sum[best][3], sum[best][2] / sum[best][3]];
+  }
+  /* the kit's picture of swatches with the model's paint, and its lighter and darker shades, turned into `colour` */
+  function repaint(map, paint, colour) {
+    const [cv, x, px] = pixels(map.image), want = hsv(colour.r, colour.g, colour.b), d = px.data;
+    const lin = new T.Color(colour.r, colour.g, colour.b).convertLinearToSRGB(), to = hsv(lin.r, lin.g, lin.b);
+    for (let o = 0; o < d.length; o += 4) {
+      const c = hsv(d[o] / 255, d[o + 1] / 255, d[o + 2] / 255), dh = Math.abs(((c[0] - paint[0] + 540) % 360) - 180);
+      if (dh > 22 || c[1] < 0.3) continue;
+      const n = unhsv(to[0], RV.clamp(to[1] * c[1] / paint[1], 0, 1), RV.clamp(to[2] * c[2] / paint[2], 0, 1));
+      d[o] = n[0] * 255; d[o + 1] = n[1] * 255; d[o + 2] = n[2] * 255;
+    }
+    x.putImageData(px, 0, 0);
+    const t = map.clone(); t.image = cv; t.needsUpdate = true;
+    return want && t;
+  }
+  function modelCar(M, colour, ghost) {
+    const g = new T.Group(), inner = M.scene.clone(true);
+    /* the model's left, up and forward become the car's y, z and x */
+    inner.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0, 1, 0), new T.Vector3(0, 0, 1), new T.Vector3(1, 0, 0)));
+    inner.scale.setScalar(MODEL_SCALE);
+    const mats = new Map(), front = [], wheels = [];
+    inner.traverse(o => {
+      if (/^wheel/i.test(o.name)) { o.rotation.order = 'YXZ'; wheels.push(o); if (/front/i.test(o.name)) front.push(o); }   /* steer about its upright, then turn about its axle */
+      if (!o.isMesh) return;
+      if (!mats.has(o.material)) {
+        const m = o.material.clone();
+        if (m.map && M.paint) { m.map = repaint(m.map, M.paint, colour); g.userData.paint = [colour.r, colour.g, colour.b]; }
+        if (ghost) { m.transparent = true; m.opacity = 0.82; }
+        mats.set(o.material, m);
+      }
+      o.material = mats.get(o.material);
+    });
+    g.add(inner);
+    g.userData.model = true; g.userData.wheelCount = wheels.length;
+    g.userData.turn = (steer, roll) => { front.forEach(w => { w.rotation.y = steer; }); wheels.forEach(w => { w.rotation.x += roll * 0.33 / (0.3 * MODEL_SCALE); }); };
+    return g;
+  }
+  /* the car to draw for a run: the chosen model if it has arrived, the simple car otherwise */
   function buildCar(colour, ghost) {
+    const M = st.model !== 'blocks' && MODELS[st.model];
+    if (st.model !== 'blocks' && !M) loadModel(st.model);
+    return M && M.scene ? modelCar(M, colour, ghost) : blockCar(colour, ghost);
+  }
+
+  /* car1-ow1 in a few blocks: tub, nose, side pods, wings and four wheels; x forward, 4.6 m long, 2 m wide */
+  function blockCar(colour, ghost) {
     const g = new T.Group(), body = new T.MeshLambertMaterial({ color: colour, transparent: ghost, opacity: ghost ? 0.82 : 1 });
     const dark = new T.MeshLambertMaterial({ color: 0x15171c, transparent: ghost, opacity: ghost ? 0.82 : 1 });
     const box = (lx, ly, lz, x, y, z, mat) => { const m = new T.Mesh(new T.BoxGeometry(lx, ly, lz), mat); m.position.set(x, y, z); g.add(m); };
@@ -183,6 +274,8 @@
       const bar = new T.Mesh(new T.BoxGeometry(0.5, 0.36, 0.09), rim); w.add(bar);
       piv.add(w); g.add(piv); g.userData.wheels.push(w); if (x > 0) g.userData.front.push(piv);
     }
+    g.userData.wheelCount = 4;
+    g.userData.turn = (steer, roll) => { g.userData.front.forEach(pv => { pv.rotation.z = steer; }); g.userData.wheels.forEach(w => { w.rotation.y += roll; }); };
     return g;
   }
   function buildCars(cars) {
@@ -374,7 +467,7 @@
     if (skyOf !== (st.adv ? 'a' : 'm') + RV.themeRev) sky();
     if (lineOf !== S.R) { buildLine(trk, S.R); buildPlan(trk, S.R); }
     if (!beamL) buildBeams();
-    const cars = RV.map.cars3(), key = cars.map(c => c.id + RV.col(c.id)).join('|');
+    const cars = RV.map.cars3(), key = st.model + '|' + cars.map(c => c.id + RV.col(c.id)).join('|');
     if (key !== carKey) { buildCars(cars); carKey = key; }
     focus = null;
     cars.forEach((c, k) => {
@@ -384,7 +477,7 @@
       g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(F.fwd, F.left, F.up));
       /* the front wheels turn with the recorded steering (full lock is 21 degrees), all four with the speed */
       const steer = RV.clamp(c.p[3] || 0, -1, 1) * 21 * Math.PI / 180, roll = (S.playing ? c.r.v[c.k] / 3.6 * dt / 0.33 : 0);
-      g.userData.front.forEach(pv => { pv.rotation.z = steer; }); g.userData.wheels.forEach(w => { w.rotation.y += roll; });
+      g.userData.turn(steer, roll);
       if (k === 0) { focus = F; steerNow = steer; placeBeams(trk, c, F); placePlan(trk, c); }
     });
     aim(dt, focus);
@@ -399,7 +492,8 @@
     let h = seg([['2d', '2D', 'The flat map'], ['3d', '3D', 'The track with its hills and banking'], ['adv', 'Advanced 3D', 'From the driver\u2019s seat, with what the driver program saw and planned drawn on the road']], !st.on ? '2d' : st.adv ? 'adv' : '3d', 'The map in 2D, in 3D, or the advanced 3D view');
     if (st.on && loading) h += '<span class="note">Loading the 3D view …</span>';
     if (st.on && ready) {
-      h += '<span id="v3cam">' + seg(CAMS, st.cam, 'Camera') + '</span>' + slide('v3k', 'Height', 1, 5, 0.5, st.k, '×');
+      h += '<span id="v3cam">' + seg(CAMS, st.cam, 'Camera') + '</span>' + slide('v3k', 'Height', 1, 5, 0.5, st.k, '×') +
+        '<label class="v3s">Car<select id="v3car" title="The car that is drawn. Its paint is the colour of its version.">' + CARS.map(c => '<option value="' + c[0] + '"' + (c[0] === st.model ? ' selected' : '') + '>' + c[1] + '</option>').join('') + '</select></label>';
       if (st.adv) h += '<label class="check" title="The 19 distance sensors, each drawn to the point of the track edge it measured"><input type="checkbox" id="v3sens"' + (st.sens ? ' checked' : '') + '> Sensors</label>' +
         '<label class="check" title="The speed the driver\u2019s plan allowed over the next 300 m, in the colours of the driven line"><input type="checkbox" id="v3plan"' + (st.plan ? ' checked' : '') + '> Planned speed</label>';
       if (st.cam === 'orbit') h += '<label class="check"><input type="checkbox" id="v3centre"' + (st.centre ? ' checked' : '') + '> Turn about the car</label>';
@@ -416,9 +510,10 @@
     live('v3r0', v => { st.rel[0] = v; }, ' m'); live('v3r1', v => { st.rel[1] = v; }, ' m'); live('v3r2', v => { st.rel[2] = v; }, ' m');
     on('v3centre', 'onchange', e => { st.centre = e.target.checked; if (st.centre) orbit.dist = Math.min(orbit.dist, 220); save(); });
     on('v3look', 'onchange', e => { st.look = e.target.checked; save(); });
+    on('v3car', 'onchange', e => { st.model = e.target.value; save(); });
     on('v3sens', 'onchange', e => { st.sens = e.target.checked; save(); });
     on('v3plan', 'onchange', e => { st.plan = e.target.checked; save(); });
-    on('v3cock', 'onclick', () => { st.rel = COCKPIT.slice(); st.look = false; save(); paintBar(); });
+    on('v3cock', 'onclick', () => { st.rel = cockpit(); st.look = false; save(); paintBar(); });
     on('v3back', 'onclick', () => { st.rel = DEF.rel.slice(); st.look = true; save(); paintBar(); });
   }
 
@@ -446,7 +541,7 @@
      their own for it since. */
   function mode(m) {
     const adv = m === 'adv';
-    if (adv && !st.adv && st.cam === 'orbit') { st.cam = 'rel'; st.rel = COCKPIT.slice(); st.look = false; }
+    if (adv && !st.adv && st.cam === 'orbit') { st.cam = 'rel'; st.rel = cockpit(); st.look = false; }
     st.adv = adv;
     return set(m !== '2d');
   }
@@ -481,9 +576,10 @@
     state() {
       if (!ready) return { on: st.on, ready: false };
       const i = ren.info.render, p = cam.position;
-      return { on: st.on, ready: true, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
+      const c0 = carsG && carsG.children[0];
+      return { on: st.on, ready: true, model: st.model, modelOn: !!(c0 && c0.userData.model), wheels: c0 ? c0.userData.wheelCount : 0, paint: c0 && c0.userData.paint, adv: st.adv, kerbs: kerbs, tubes: beamG && beamG.visible ? tubes.filter(x => x.visible).length : 0, discs: beamG && beamG.visible ? discs.filter(x => x.visible).length : 0, beams: beamL && beamL.visible ? beamsNow : 0, plan: planNow, steer: steerNow, fog: !!scene.fog, cam: st.cam, k: st.k, triangles: i.triangles, calls: i.calls, cars: carsG ? carsG.children.length : 0,
         car: focus ? [focus.pos.x, focus.pos.y, focus.pos.z] : null, up: focus ? [focus.up.x, focus.up.y, focus.up.z] : null, eye: [p.x, p.y, p.z] };
     },
-    camera(id) { st.cam = id; paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
+    camera(id) { st.cam = id; paintBar(); }, car(id) { st.model = id; paintBar(); }, height(k) { st.k = k; paintBar(); }, offset(a, b, c, look) { st.rel = [a, b, c]; st.look = look !== false; paintBar(); },
   };
 })();
