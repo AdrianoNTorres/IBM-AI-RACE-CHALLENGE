@@ -90,7 +90,7 @@
         '<tr><td>Replay</td><td>' + RV.kbd('play') + '</td><td>play or pause</td></tr>' +
         '<tr><td>Replay</td><td>' + RV.kbd('back') + ' ' + RV.kbd('fwd') + '</td><td>move one step; hold for slow motion (0.1\u00d7, then 0.25\u00d7, then 0.5\u00d7)</td></tr>' +
         '<tr><td>Replay</td><td>' + RV.kbd('home') + ', ' + RV.kbd('endloop') + '</td><td>back to the start of the lap; end the loop over a section</td></tr>' +
-        '<tr><td>Map</td><td>drag, wheel, double-click</td><td>move the map, zoom, return to the car</td></tr>' +
+        '<tr><td>Map</td><td>drag, wheel (or pinch with two fingers on a touch screen), double-click</td><td>move the map, zoom, return to the car</td></tr>' +
         '<tr><td>Map</td><td>' + RV.kbd('zoomin') + ' ' + RV.kbd('zoomout') + ', ' + RV.kbd('follow') + '</td><td>zoom; follow the car or stop following</td></tr>' +
         '<tr><td>Charts</td><td>wheel, drag, click, double-click</td><td>zoom the distance axis, pan, move the car there, show the whole lap</td></tr>' +
         '<tr><td>Versions table</td><td>' + k('\u2191') + ' ' + k('\u2193') + ', ' + k('Enter') + ', ' + k('Space') + '</td><td>move between rows, select the row, add it to or remove it from the comparison</td></tr>' +

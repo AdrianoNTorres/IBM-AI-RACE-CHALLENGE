@@ -581,14 +581,17 @@
     grip.addEventListener('dblclick', e => { e.stopPropagation(); T.w = TW.w; T.h = TW.h; placeT(T); saveUi(); });
     /* its map: drag moves it, the wheel zooms, a double-click follows the car, a click on another car puts that car in focus */
     let d = null, mvd = 0;
-    cv.addEventListener('pointerdown', e => { if (e.button !== 0) return; d = [e.clientX, e.clientY]; mvd = 0; cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); });
+    const pz = pincher((x, y, k) => { if (!onMap()) return; inWin(T, () => { if (autoZoom()) return; if (view.follow) { const b = base(); zoomAt(b[0] + view.ox, b[1] + view.oy, k); } else { const r = cv.getBoundingClientRect(); zoomAt(x - r.left, y - r.top, k); } }); });
+    cv.addEventListener('pointerdown', e => { if (pz.down(e)) { d = null; cv.classList.remove('drag'); return; } if (e.button !== 0) return; d = [e.clientX, e.clientY]; mvd = 0; cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); });
     cv.addEventListener('pointermove', e => {
+      if (pz.move(e)) return;
       if (!d) return;
       const dx = e.clientX - d[0], dy = e.clientY - d[1];
       mvd += Math.abs(dx) + Math.abs(dy); d = [e.clientX, e.clientY];
       inWin(T, () => { if (mvd >= 5) { detach(); view.fit = false; } view.ox += dx; view.oy += dy; keepInSight(); });
     });
     const up = e => {
+      if (pz.up(e)) { d = null; cv.classList.remove('drag'); saveUi(); return; }
       if (!d) return;
       d = null; cv.classList.remove('drag');
       if (mvd < 5 && !T.one && e.type === 'pointerup') { const h = inWin(T, () => carAt(e)); if (h && h !== S.sel[0]) RV.sel.makeRef(h); }
@@ -967,6 +970,23 @@
     return [[view.scx, view.scy], view.sz];
   }
   const autoZoom = () => view.follow && view.all && others().length > 0;   /* zoom is set by the keep-all camera: manual zoom is off */
+  /* Two fingers on a map: pinch to zoom. down, move and up are given every pointer event of the map and answer true
+     while the gesture is a pinch, so that the one-finger handlers (move the map, pick a stretch, click a car) stand
+     back; zoom(x, y, k) is called with the point between the fingers and the factor since the last move. */
+  function pincher(zoom) {
+    const P = new Map(); let d0 = 0, on = false;
+    const two = () => { const a = [...P.values()]; return [a[0], a[1], Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1])]; };
+    return {
+      down(e) { if (e.pointerType !== 'touch') return false; P.set(e.pointerId, [e.clientX, e.clientY]); if (P.size === 2) { on = true; d0 = two()[2]; } return on; },
+      move(e) {
+        if (!P.has(e.pointerId)) return on;
+        P.set(e.pointerId, [e.clientX, e.clientY]);
+        if (on && P.size >= 2) { const t = two(); if (d0 > 0 && t[2] > 0) zoom((t[0][0] + t[1][0]) / 2, (t[0][1] + t[1][1]) / 2, t[2] / d0); d0 = t[2]; }
+        return on;
+      },
+      up(e) { const was = on; P.delete(e.pointerId); if (!P.size) on = false; return was; },
+    };
+  }
   function zoomAt(mx, my, k) {
     const z2 = RV.clamp(view.z * k, 0.08, 55), kk = z2 / view.z, b = base();
     view.ox = (mx - b[0]) * (1 - kk) + view.ox * kk; view.oy = (my - b[1]) * (1 - kk) + view.oy * kk; view.z = z2; view.fit = false;
@@ -1305,14 +1325,22 @@
     view.ox += bx; view.oy += by;                          /* bring the nearest piece of road back to the edge */
   }
   let sel = null;                       /* a stretch of road being selected by dragging along it: the lap distance where it began */
+  /* pinch: no zoom while all cars are kept in view; around the car while following; between the fingers otherwise */
+  const pinch = pincher((x, y, k) => {
+    if (autoZoom() || !onMap()) return;
+    if (view.follow) { const b = base(); zoomAt(b[0] + view.ox, b[1] + view.oy, k); } else { const r = c.getBoundingClientRect(); zoomAt(x - r.left, y - r.top, k); }
+  });
+  const letGo = () => { drag = null; sel = null; S.loopDraft = null; c.classList.remove('drag'); c.classList.remove('pick'); };
   c.addEventListener('pointerdown', e => {
     pick(MAIN);
+    if (pinch.down(e)) { letGo(); return; }               /* the second finger: what the first one began is dropped */
     drag = [e.clientX, e.clientY]; moved = 0; c.setPointerCapture(e.pointerId);
     const hit = e.shiftKey ? null : trackAt(e);            /* Shift always moves the map */
     sel = onRoad(hit) && !carAt(e) && !hitAt(e) ? hit[0] : null;
     c.classList.add(sel == null ? 'drag' : 'pick');
   });
   c.addEventListener('pointermove', e => {
+    if (pinch.move(e)) return;
     if (!drag) { const h = carAt(e); c.style.cursor = ((h && h !== S.sel[0]) || hitAt(e)) ? 'pointer' : (!e.shiftKey && onRoad(trackAt(e))) ? 'crosshair' : ''; return; }
     moved += Math.abs(e.clientX - drag[0]) + Math.abs(e.clientY - drag[1]);
     if (sel != null) {                                    /* along the road: the stretch between where the drag began and where it is now */
@@ -1325,7 +1353,9 @@
     view.ox += e.clientX - drag[0]; view.oy += e.clientY - drag[1]; drag = [e.clientX, e.clientY];
     keepInSight();
   });
+  c.addEventListener('pointercancel', e => { pinch.up(e); letGo(); });
   c.addEventListener('pointerup', e => {
+    if (pinch.up(e)) { letGo(); return; }
     const picked = sel != null ? S.loopDraft : null;
     drag = null; sel = null; c.classList.remove('drag'); c.classList.remove('pick');
     if (picked && moved >= 5) {                           /* a stretch was selected: play it on a loop, the rest of the map dimmed */
