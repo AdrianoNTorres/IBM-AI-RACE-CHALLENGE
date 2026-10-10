@@ -17,12 +17,12 @@
   root.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=p199">
+<link rel="stylesheet" href="css/app.css?v=p200">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
 
-<!-- the team's logo, drawn once and used in the top bar and the footer. It was drawn for asphalt, so it carries its own dark disc in either theme -->
+<!-- the team's logo, used in the footer. It was drawn for asphalt, so it carries its own dark disc in either theme -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="oqr" viewBox="0 0 200 200">
     <circle cx="100" cy="100" r="100" fill="#18202b"/>
@@ -40,10 +40,10 @@
 </svg>
 
 <header id="top">
-  <a id="brand" href="../" title="One Qubit Racing: the project's presentation">
-    <svg viewBox="0 0 200 200" aria-hidden="true"><use href="#oqr"/></svg>
-    <div><b>One Qubit Racing</b><span id="brandSub">Run viewer</span></div>
-  </a>
+  <div id="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><path d="M8 22c0-9 4-12 9-12s7 3 7 6-3 5-6 5-4 2-4 4"/></svg>
+    <div><b>Run viewer</b><span id="brandSub"></span></div>
+  </div>
   <nav id="tabs" aria-label="Pages">
     <button class="tab" data-t="pv">Versions</button>
     <button class="tab" data-t="pm">Track</button>
@@ -113,26 +113,26 @@
 
 <!-- the 3D library and its model loader are modules that name the library "three": this says where that is -->
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script src="js/core.js?v=p199"></script>
-<script src="js/keys.js?v=p199"></script>
-<script src="js/theme.js?v=p199"></script>
-<script src="js/track.js?v=p199"></script>
-<script src="js/validate.js?v=p199"></script>
-<script src="js/local.js?v=p199"></script>
-<script src="js/data.js?v=p199"></script>
-<script src="js/app.js?v=p199"></script>
-<script src="js/sectors.js?v=p199"></script>
-<script src="js/versions.js?v=p199"></script>
-<script src="js/map.js?v=p199"></script>
-<script src="js/inputs.js?v=p199"></script>
-<script src="js/analysis.js?v=p199"></script>
-<script src="js/telemetry.js?v=p199"></script>
-<script src="js/settings.js?v=p199"></script>
-<script src="js/entry.js?v=p199"></script>
-<script src="js/help.js?v=p199"></script>
-<script src="js/tutorial.js?v=p199"></script>
-<script src="js/device.js?v=p199"></script>
-<script src="js/view3d.js?v=p199"></script>
+<script src="js/core.js?v=p200"></script>
+<script src="js/keys.js?v=p200"></script>
+<script src="js/theme.js?v=p200"></script>
+<script src="js/track.js?v=p200"></script>
+<script src="js/validate.js?v=p200"></script>
+<script src="js/local.js?v=p200"></script>
+<script src="js/data.js?v=p200"></script>
+<script src="js/app.js?v=p200"></script>
+<script src="js/sectors.js?v=p200"></script>
+<script src="js/versions.js?v=p200"></script>
+<script src="js/map.js?v=p200"></script>
+<script src="js/inputs.js?v=p200"></script>
+<script src="js/analysis.js?v=p200"></script>
+<script src="js/telemetry.js?v=p200"></script>
+<script src="js/settings.js?v=p200"></script>
+<script src="js/entry.js?v=p200"></script>
+<script src="js/help.js?v=p200"></script>
+<script src="js/tutorial.js?v=p200"></script>
+<script src="js/device.js?v=p200"></script>
+<script src="js/view3d.js?v=p200"></script>
 <script>RV.boot();</script>
 </body>
 </html>

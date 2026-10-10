@@ -333,7 +333,7 @@
     setLoop(null);
     S.ds = ds; S.sel = []; S.selCol = {}; S.applied = []; S.R = null; S.CM = []; S.i = 0; S.t = 0; S.loadTok++;
     if (S.listMode === 'extra' && !ds.extras.length) S.listMode = 'all';
-    $('brandSub').textContent = 'Run viewer' + (ds.trk ? ': ' + RV.track.title(ds.trk) : '');
+    $('brandSub').textContent = ds.trk ? RV.track.title(ds.trk) : '';
     $('brandSub').title = ds.src.label();
     RV.versions.prepare();
     RV.map.startCamera();
