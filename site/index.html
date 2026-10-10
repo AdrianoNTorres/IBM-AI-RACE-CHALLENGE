@@ -867,9 +867,9 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
         while (a < K - 2 && tr.m[a + 1] < mLine + first.v * u) a++;
         f = Math.max(0, (mLine + first.v * u - tr.m[a]) / ((tr.m[a + 1] - tr.m[a]) || 1));
         ease = u / Tm; ease = ease * ease * (3 - 2 * ease);
-      } else { kf = Math.min(K - 1.001, (u + shift) / tr.dt); a = Math.floor(kf); f = kf - a; }
-      var mix = function (arr) { return arr[a] + (arr[a + 1] - arr[a]) * f; };
-      fl.m.push(u < Tm ? mLine + first.v * u : mix(tr.m));
+      } else { kf = (u + shift) / tr.dt; a = Math.min(K - 2, Math.floor(kf)); f = kf - a; }   /* f > 1 past the last sample: the distance runs on at the final speed, up to the line */
+      var mix = function (arr) { return arr[a] + (arr[a + 1] - arr[a]) * Math.min(1, f); };
+      fl.m.push(u < Tm ? mLine + first.v * u : tr.m[a] + (tr.m[a + 1] - tr.m[a]) * f);
       fl.pos.push(tr.pos[K - 1] + (mix(tr.pos) - tr.pos[K - 1]) * ease);
       fl.ang.push(tr.ang[K - 1] + (mix(tr.ang) - tr.ang[K - 1]) * ease);
       fl.beams.push(tr.beams[a].map(function (r, b) { return r + (tr.beams[a + 1][b] - r) * f; }));
