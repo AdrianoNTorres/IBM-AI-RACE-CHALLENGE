@@ -81,6 +81,8 @@ section[id] { scroll-margin-top: 3.4rem; }
 /* --fade: the opening text fades out as it scrolls up towards the top bar */
 .hero .wrap { opacity: var(--fade, 1); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
 .hero .mark { width: clamp(11rem, 25vw, 20rem); height: auto; }
+/* beside the text the logo lies over the track: see-through, so the cars can be followed behind it */
+@media (min-width: 761px) { .hero .mark { opacity: .5; } }
 h1 { font: 600 clamp(1.5rem, 3.2vw, 2.4rem)/1.1 var(--display); margin: 0 0 1.4rem; }
 h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11rem); line-height: .92; letter-spacing: -.02em; margin-top: .1em; }
 .team { font-weight: 700; color: var(--best); }
@@ -365,7 +367,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   <p class="hud" id="hud" aria-hidden="true" hidden>
     <span><b id="hud-clock">0:00.0</b>the judged lap, replayed from its telemetry</span>
     <span><b id="hud-kmh">0</b>km/h</span>
-    <span><b id="hud-gap">0 m</b>ahead of <span class="old" id="hud-old"></span>, the earliest lap recorded with its beams, started at the same moment</span>
+    <span><b id="hud-gap">0 m</b>ahead of <span class="old" id="hud-old">
   </p>
   <svg class="cue" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
 </div>
