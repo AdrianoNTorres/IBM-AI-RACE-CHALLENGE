@@ -192,6 +192,19 @@ td q { color: var(--muted); font-style: italic; }
 .slot.video { aspect-ratio: 16 / 9; }
 .slot.video iframe { display: block; width: 100%; height: 100%; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
+/* the lap video with the lap's speed and sector times beside it */
+.lapgrid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1.6rem 2.2rem; align-items: start; }
+.lapgrid .slots { margin-top: 0; }
+@media (max-width: 900px) { .lapgrid { grid-template-columns: 1fr; } }
+.strip svg { min-width: 0; }
+.strip .area { fill: var(--brand); fill-opacity: .22; }
+.strip .speed { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.strip .cut { stroke: var(--mark); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.sectors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1rem; margin: .9rem 0 .8rem; }
+.sectors div { border-top: 2px solid var(--ink); padding-top: .4rem; }
+.sectors dt { color: var(--muted); font-size: .94rem; }
+.sectors dd { margin: 0; font: 700 1.55rem/1.15 var(--display); }
+.sectors dd small { display: block; color: var(--muted); font: 400 .86rem/1.3 var(--body); }
 .slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
 .button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
 .button:hover { background: var(--brand); color: #fff; }
@@ -343,10 +356,18 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 <section id="lap" class="band">
 <div class="wrap">
   <h2>The lap</h2>
+  <div class="lapgrid">
   <div class="slots">
     <div class="slot wide filled video" id="slot-lap">
       <iframe src="https://www.youtube-nocookie.com/embed/yuep0Uarx2Y" title="One Qubit Racing: one lap of the Corkscrew in 1:05.56 (TORCS)" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
+  </div>
+  <aside>
+    <h3>Speed round the lap</h3>
+    <div class="chart strip" id="chart-speed" role="img"></div>
+    <dl class="sectors" id="sectors"></dl>
+    <p class="small muted">The three sectors are the ones the run viewer times; a sector time is the lap clock at its end minus the lap clock at its start.</p>
+  </aside>
   </div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
 </div>
@@ -428,7 +449,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
     <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
-  <a class="shot" href="viewer/"><video id="clip" muted loop playsinline preload="none" poster="viewer.jpg" width="1500" height="900" aria-label="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."><source src="viewer.mp4" type="video/mp4"></video></a>
+  <a class="shot" href="viewer/"><video id="clip" autoplay muted loop playsinline preload="metadata" poster="viewer.jpg" width="1500" height="900" aria-label="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."><source src="viewer.webm" type="video/webm"><source src="viewer.mp4" type="video/mp4"></video></a>
 </div>
 </section>
 
@@ -829,7 +850,48 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }
   }
 
+  /* the run viewer's silent clip starts by itself and is paused while off screen; with reduced motion it stays on its still picture */
+  (function () {
+    var v = document.getElementById('clip');
+    if (!MOTION) { v.removeAttribute('autoplay'); v.pause(); v.load(); return; }
+    if (!('IntersectionObserver' in window)) return;
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();
+    }, { threshold: .25 }).observe(v);
+  })();
+
   window.addEventListener('beforeprint', function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
+
+  /* The judged lap's speed by distance, the three sectors marked, the fastest and slowest points named; the sector times under it. */
+  function strip(box, list, lap, lapM) {
+    var W = 420, H = 190, L = 34, R = 8, T = 18, B = 24, top = 300;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
+    var x = function (m) { return L + (W - L - R) * m / lapM; }, y = function (v) { return T + (H - T - B) * (1 - v / top); };
+    [100, 200, 300].forEach(function (v) {
+      svg.appendChild(el('line', { class: 'grid', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
+      svg.appendChild(el('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, v));
+    });
+    svg.appendChild(el('text', { x: L - 6, y: T - 8, 'text-anchor': 'end' }, 'km/h'));
+    [0, 1000, 2000, 3000].forEach(function (m) { svg.appendChild(el('text', { x: x(m), y: H - 7, 'text-anchor': m ? 'middle' : 'start' }, m ? m / 1000 + ' km' : 'start')); });
+    var line = lap.kmh.map(function (v, i) { return x(Math.min(lapM, i * lap.step)).toFixed(1) + ' ' + y(v).toFixed(1); }).join('L');
+    svg.appendChild(el('path', { class: 'area', d: 'M' + x(0) + ' ' + y(0) + 'L' + line + 'L' + x(lapM) + ' ' + y(0) + 'Z' }));
+    svg.appendChild(el('path', { class: 'speed', d: 'M' + line }));
+    lap.sectors.forEach(function (sc, k) {
+      if (k) svg.appendChild(el('line', { class: 'cut', x1: x(sc.from_m), x2: x(sc.from_m), y1: T - 4, y2: H - B }));
+      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + 4, y: T + 8 }, sc.name));
+      var div = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd'), sm = document.createElement('small');
+      dt.textContent = sc.name; dd.textContent = sc.s.toFixed(2) + ' s';
+      sm.textContent = (k ? sc.from_m.toLocaleString('en-US') + ' m' : 'the line') + ' to ' + (k < 2 ? sc.to_m.toLocaleString('en-US') + ' m' : 'the line');
+      dd.appendChild(sm); div.appendChild(dt); div.appendChild(dd); list.appendChild(div);
+    });
+    [[lap.top, -9, 'fastest'], [lap.slow, 16, 'slowest']].forEach(function (o) {
+      svg.appendChild(el('circle', { class: 'd-best', cx: x(o[0].m), cy: y(o[0].kmh), r: 3.5 }));
+      svg.appendChild(el('text', { class: 'note', x: x(o[0].m), y: y(o[0].kmh) + o[1], 'text-anchor': x(o[0].m) > W * .7 ? 'end' : 'middle' }, o[0].kmh + ' km/h'));
+    });
+    box.appendChild(svg);
+    box.setAttribute('aria-label', 'Speed along the judged lap, from the start line round to the line again. Fastest ' + lap.top.kmh + ' km/h at ' + lap.top.m +
+      ' m, slowest corner ' + lap.slow.kmh + ' km/h at ' + lap.slow.m + ' m. Sector times: ' + lap.sectors.map(function (c) { return c.name + ' ' + c.s.toFixed(2) + ' s'; }).join(', ') + '.');
+  }
 
   /* One chart: a dot per version, the best lap so far as a step line, notes on chosen versions. */
   function chart(box, readout, vs, o) {
@@ -993,6 +1055,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function extras(d) {
     try {
       countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
+      if (d.lap && d.track) strip(document.getElementById('chart-speed'), document.getElementById('sectors'), d.lap, d.track.lap_m);
       if (d.trace && d.track) scene(d.track, d.trace, d.summary.best_lap_torcs_s);
     } catch (e) { if (window.console) console.error(e); }
   }

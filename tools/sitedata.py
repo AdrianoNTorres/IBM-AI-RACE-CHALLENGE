@@ -142,6 +142,48 @@ def trace(run_csv, lap_m, dt=0.2):
             'beams': [[round(v) for v in r[3:]] for r in out]}
 
 
+def lapstats(run_csv, lap_m, lap_s, step=10):
+    """The judged lap by distance, from its run CSV: speed every `step` m from the start line, where it was fastest
+    and slowest (the slowest corner: 100 m to 3,500 m, as everywhere in the project), and the three sector times.
+    The sectors are the run viewer's: their lengths are read from viewer/js/track.js and placed at the same share
+    of this lap; a sector time is the lap clock at its end minus the lap clock at its start."""
+    ds, vs, ts, seen = [], [], [], False
+    with open(os.path.join(ROOT, run_csv), newline='') as f:
+        prev = None
+        for row in csv.DictReader(f):
+            t, d = float(row['curLapTime']), float(row['distFromStart'])
+            if t < 0:
+                continue
+            if prev is not None and d < prev - 1000:
+                if seen:
+                    break
+                seen = True
+            prev = d
+            if seen:
+                ds.append(d)
+                vs.append(float(row['speedX']))
+                ts.append(t)
+
+    def at(col, d):
+        i = next((k for k, x in enumerate(ds) if x >= d), len(ds) - 1)
+        if i == 0:
+            return col[0]
+        f = (d - ds[i - 1]) / ((ds[i] - ds[i - 1]) or 1)
+        return col[i - 1] + f * (col[i] - col[i - 1])
+
+    with open(os.path.join(ROOT, 'viewer', 'js', 'track.js'), encoding='utf-8') as f:
+        lens = json.loads(re.search(r'corkscrew:\s*\{.*?len:\s*(\[[^\]]*\])', f.read(), re.S).group(1))
+    cuts = [lens[0] / sum(lens) * lap_m, (lens[0] + lens[1]) / sum(lens) * lap_m]
+    clock = [0.0, at(ts, cuts[0]), at(ts, cuts[1]), lap_s]
+    top = max(range(len(vs)), key=lambda i: vs[i])
+    corner = [i for i in range(len(vs)) if 100 < ds[i] < 3500]
+    slow = min(corner, key=lambda i: vs[i])
+    return {'step': step, 'kmh': [round(at(vs, k * step)) for k in range(int(lap_m // step) + 1)],
+            'top': {'m': round(ds[top]), 'kmh': int(vs[top])}, 'slow': {'m': round(ds[slow]), 'kmh': int(vs[slow])},
+            'sectors': [{'name': 'S%d' % (k + 1), 'from_m': round(([0] + cuts)[k]), 'to_m': round((cuts + [lap_m])[k]),
+                         's': round(clock[k + 1] - clock[k], 2)} for k in range(3)]}
+
+
 def track(n=600):
     """The centre line as n evenly spaced stations round the lap: x, y (raceline.py) and height z (elevation.py),
     in metres, and the lap's length. Station i is i * lap_m / n metres from the start line."""
@@ -191,7 +233,8 @@ def build():
         'run_csv': res['run_csv'],
     }
     return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob(),
-            'trace': trace(res['run_csv'], tk['lap_m']), 'track': tk}
+            'trace': trace(res['run_csv'], tk['lap_m']), 'track': tk,
+            'lap': lapstats(res['run_csv'], tk['lap_m'], res['lap_s'])}
 
 
 def main():

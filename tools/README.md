@@ -594,7 +594,9 @@ versions, the number and dates of the IBM Bob sessions, and the judged lap every
 (distance driven, `trackPos`, the car's angle and its 19 beam readings, read from its run
 CSV, with the beam angles read from the driver: the car on the landing screen drives the
 track outline with them), and that outline: the centre line at 600 evenly spaced
-stations as x, y and height, from `raceline.py` and `elevation.py`. `--check` writes nothing
+stations as x, y and height, the judged lap's speed every 10 m with its fastest and
+slowest points and its three sector times (the run viewer's sectors, read from
+`viewer/js/track.js`); the outline is from `raceline.py` and `elevation.py`. `--check` writes nothing
 and exits 1 if the file on disk differs from what would be written.
 
 **Where it is used.** By whoever changes the presentation website or its sources:
