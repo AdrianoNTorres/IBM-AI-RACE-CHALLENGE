@@ -296,23 +296,27 @@
 
   /* ---------- on a telemetry chart: a band over each problem area, with a tag to click ---------- */
   const TAG = 16;                       /* height of the tag strip at the top of a band, in pixels */
+  /* where an area's tag starts: at the area, or at the start of its loop (the lead before it included) while that loop
+     plays, so the tag is as wide as what is marked on the chart */
+  const tagFrom = z => S.loop && S.loop[0] === z.from && S.loop[1] === z.d1 ? z.from : z.d0;
   function bands(x, X, T, ph) {
     const A = of(S.R);
     if (!A) return;
     for (const z of A.zones) {
       const xa = X(z.d0), xb = X(z.d1), col = RV.pal['health-' + z.sev];
       x.globalAlpha = 0.16; x.fillStyle = col; x.fillRect(xa, T, xb - xa, ph);
-      x.globalAlpha = 0.9; x.fillRect(xa, T, Math.max(xb - xa, 14), TAG);
+      const xt = X(tagFrom(z));
+      x.globalAlpha = 0.9; x.fillRect(xt, T, Math.max(xb - xt, 14), TAG);
       x.globalAlpha = 1; x.strokeStyle = col; x.lineWidth = 1; x.beginPath(); x.moveTo(xa, T); x.lineTo(xa, T + ph); x.moveTo(xb, T); x.lineTo(xb, T + ph); x.stroke();
       x.fillStyle = RV.pal['label-bg']; x.font = '700 11px ' + RV.pal.fontNum; x.textAlign = 'left'; x.textBaseline = 'middle';
-      x.fillText(xb - xa > 56 ? z.n + '  ' + lossTxt(z.loss) : String(z.n), xa + 4, T + TAG / 2 + 0.5);
+      x.fillText(xb - xt > 56 ? z.n + '  ' + lossTxt(z.loss) : String(z.n), xt + 4, T + TAG / 2 + 0.5);
     }
   }
   /* the problem area whose tag is at lap distance d and y pixels below the top of the plot, or null */
   function tagAt(d, y, pxPerM) {
     const A = of(S.R);
     if (!A || y < 0 || y > TAG) return null;
-    return A.zones.find(z => d >= z.d0 && d <= Math.max(z.d1, z.d0 + 14 / pxPerM)) || null;
+    return A.zones.find(z => d >= tagFrom(z) && d <= Math.max(z.d1, tagFrom(z) + 14 / pxPerM)) || null;
   }
 
   RV.analysis = { of: of, cmpGap: cmpGap, legend: legend, K: K, sideCard: sideCard, bands: bands, tagAt: tagAt, popup: popup, closePopup: closePopup, loop: loop, WORD: WORD };
