@@ -224,6 +224,7 @@ summary .muted { margin-left: .6rem; font-size: .94rem; }
   .mark .kerb-draw { animation: draw calc(var(--intro) * .31) calc(var(--intro) * .52) ease-out backwards; }
   .mark .ket { animation: appear calc(var(--intro) * .2) calc(var(--intro) * .8) ease-out both; }
   .chart.anim.in .d-rej { animation: blink .7s ease-in-out both; }
+  #chart-all.anim.in .d-rej { animation-iteration-count: 5; }   /* in the chart of every version the rejected ones blink five times */
   .chart.anim .step { stroke-dasharray: 1; stroke-dashoffset: 1; }
   .chart.anim circle, .chart.anim .note, .chart.anim .lead { opacity: 0; }
   .chart.anim.in .step { stroke-dashoffset: 0; transition: stroke-dashoffset 1.6s ease-out; }
