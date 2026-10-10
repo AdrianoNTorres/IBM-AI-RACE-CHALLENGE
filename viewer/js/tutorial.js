@@ -312,7 +312,7 @@
         '<p>This site replays the laps of a self-driving racing car and shows how its driver improved, version by version. Nothing here needs installing, and nothing you do changes the data.</p>' +
         '<p>This is the general tutorial: where things are on the site and how to use the basics. It takes about a minute.</p>' +
         '<div class="tour-acts"><button class="btn prim" id="tourNext">Take the tour</button><button class="btn" id="tourSkip">Skip for now</button></div>' +
-        '<div class="tour-offers">' + offer('Complete rookie? No idea where to start?', 'beginner', 'Check out the') + offer('Pro? Think you’re a master tech?', 'advanced', 'Check out the') + '</div>' +
+        '<div class="tour-offers">' + offer('Complete rookie?', 'beginner', 'Check out the') + offer('Think you’re a master tech?', 'advanced', 'Check out the') + '</div>' +
         '<p class="note">You can run any of them again: Help, Start here. While one runs you can try everything; it is all put back when it ends.</p>';
     } else if (which === 'beginner') {
       c.innerHTML = '<div class="tour-count">' + TOURS.beginner.name + ' tutorial</div><h2 id="tourTitle">Start from zero</h2>' +
