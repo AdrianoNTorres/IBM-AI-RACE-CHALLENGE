@@ -781,8 +781,6 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       var val = s[n.getAttribute('data-s')];
       n.textContent = typeof val === 'number' && val >= 1000 ? val.toLocaleString('en-US') : val;
     });
-    countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
-    drive(d.trace, s.best_lap_torcs_s);
     document.querySelectorAll('[data-b]').forEach(function (n) { n.textContent = d.bob[n.getAttribute('data-b')]; });
 
     chart(document.getElementById('chart-all'), document.getElementById('read-all'), vs, {
@@ -853,7 +851,15 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     });
   }
 
-  fetch('data.json').then(function (r) { return r.json(); }).then(build).catch(function (e) {
+  /* decoration last and on its own: if it fails, or an older data.json is still cached, the page's content is already in */
+  function extras(d) {
+    try {
+      countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
+      if (d.trace) drive(d.trace, d.summary.best_lap_torcs_s);
+    } catch (e) { if (window.console) console.error(e); }
+  }
+
+  fetch('data.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (d) { build(d); extras(d); }).catch(function (e) {
     document.getElementById('error').style.display = 'block';
     if (window.console) console.error(e);
   });
