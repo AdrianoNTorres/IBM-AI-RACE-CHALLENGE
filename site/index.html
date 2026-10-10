@@ -214,7 +214,7 @@ td q { color: var(--muted); font-style: italic; }
 .slot.video { aspect-ratio: 16 / 9; }
 .slot.video iframe { display: block; width: 100%; height: 100%; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
-/* the lap video across the section, the lap's speed and sector times under it */
+/* the lap video across the section, the lap's speed under it */
 .strip svg { min-width: 560px; }
 .strip .area { fill: url(#speed-ramp); fill-opacity: .6; }
 .strip .hair { stroke: var(--ink); stroke-width: 1; }
@@ -1003,7 +1003,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     return 'rgb(' + RAMP[i].map(function (c, j) { return Math.round(c + (RAMP[i + 1][j] - c) * t); }).join(',') + ')';
   }
 
-  /* The judged lap's speed by distance, with the three sectors and their times, the fastest and slowest points named.
+  /* The judged lap's speed by distance, with the three sectors marked, the fastest and slowest points named.
      While the lap video above it plays, a mark shows where on the lap the car in the video is. */
   function strip(box, lap, tk, tr, frame) {
     var W = 960, H = 230, L = 40, R = 12, T = 26, B = 26, top = 300, lapM = tk.lap_m, lo = lap.slow.kmh, hi = lap.top.kmh;
@@ -1023,7 +1023,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     svg.appendChild(el('path', { class: 'speed', d: 'M' + line }));
     lap.sectors.forEach(function (sc, k) {
       if (k) svg.appendChild(el('line', { class: 'cut', x1: x(sc.from_m), x2: x(sc.from_m), y1: T - 16, y2: H - B }));
-      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + (k ? 6 : 0), y: T - 8 }, sc.name + '  ' + sc.s.toFixed(2) + ' s'));
+      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + (k ? 6 : 0), y: T - 8 }, 'Sector ' + (k + 1)));
     });
     [[lap.top, -9], [lap.slow, 16]].forEach(function (o) {
       svg.appendChild(el('circle', { class: 'd-best', cx: x(o[0].m), cy: y(o[0].kmh), r: 3.5 }));
