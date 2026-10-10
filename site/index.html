@@ -772,7 +772,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function scene(tk, tr, lapS, gh, name) {
     var YAW = -.35, FLAT = .5, RISE = .87, HEIGHTS = 2.6, WIDE = 2, HALF = 6 * WIDE;
     var TAIL = 7, REACH = 110;     /* seconds of driven line kept behind the car; how far ahead the patch of light is drawn (m) */
-    var IN = 1.2, OUT = 1.6;       /* the handover at the line: the next car fades in on the grid, the finished one drives on and fades out */
+    var IN = 1.2, OUT = 1.2;       /* the handover at the line: the car fades out as it arrives while the next lap's car fades in on the grid, 10 m short of the line, so one car seems to carry on */
     var svg = document.getElementById('scene'), n = tk.x.length, K = tr.m.length, i;
     var p11 = Math.cos(YAW), p12 = -Math.sin(YAW), p21 = -Math.sin(YAW) * FLAT, p22 = -Math.cos(YAW) * FLAT;
     var z0 = Math.min.apply(null, tk.z);
@@ -876,14 +876,14 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }
     var hud = document.getElementById('hud'), hClock = document.getElementById('hud-clock'), hKmh = document.getElementById('hud-kmh'), hGap = document.getElementById('hud-gap'), hudAt = -1;
     if (gh) { document.getElementById('hud-old').textContent = gh.v + ' (' + gh.lap + ')'; hud.hidden = false; }
-    var place = function (tag, at, alpha) { tag.setAttribute('x', (at[0] + 16).toFixed(1)); tag.setAttribute('y', (at[1] - 14).toFixed(1)); tag.setAttribute('opacity', alpha.toFixed(2)); };
+    var place = function (tag, at, alpha, dy) { tag.setAttribute('x', (at[0] + 16).toFixed(1)); tag.setAttribute('y', (at[1] + (dy || -14)).toFixed(1)); tag.setAttribute('opacity', alpha.toFixed(2)); };
 
     function paint(sec) {
-      var st = state(sec), p = putCar(main, st, 1), c = p.c, co = Math.cos(c.yaw), si = Math.sin(c.yaw), j;
-      place(tagM, p.at, Math.min(1, sec / IN, (lapS - sec) / IN));
+      var live = Math.max(0, Math.min(1, (lapS - sec) / OUT)), st = state(sec), p = putCar(main, st, live), c = p.c, co = Math.cos(c.yaw), si = Math.sin(c.yaw), j;
+      place(tagM, p.at, Math.min(live, sec / IN));
       if (gh) {
         var gs = gstate(sec), ga = Math.max(0, Math.min(1, sec / IN, (lapS - sec) / IN));
-        place(tagG, putCar(ghost, gs, ga).at, ga);
+        place(tagG, putCar(ghost, gs, ga).at, ga, 32);   /* its name under the car, so the two names do not collide on the grid */
         if (sec < hudAt || sec - hudAt > .1) {
           hudAt = sec;
           hClock.textContent = Math.floor(sec / 60) + ':' + ('0' + (sec % 60).toFixed(1)).slice(-4);
@@ -891,9 +891,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
           hGap.textContent = Math.max(0, Math.round(st.m - gs.m)).toLocaleString('en-US') + ' m';
         }
       }
-      /* the handover: just after the line the finished car is still driving on, fading; just before it the next one waits on the grid */
-      if (sec < OUT && !firstLap) putCar(other, state(lapS + sec), 1 - sec / OUT);
-      else if (sec > lapS - IN) putCar(other, state(0), (sec - (lapS - IN)) / IN);
+      /* the handover: as the car fades out towards the line the next lap's car fades in on the grid, and takes over at the line */
+      if (sec > lapS - IN) putCar(other, state(0), (sec - (lapS - IN)) / IN);
       else other.g.setAttribute('opacity', 0);
       /* the driven line: each piece fades with its age; pieces from the end of the last lap are still fading after the line */
       lit.forEach(function (k) { trace[k].setAttribute('stroke-opacity', 0); });
@@ -907,7 +906,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       }
       head.setAttribute('x1', pts[st.a][0].toFixed(1)); head.setAttribute('y1', pts[st.a][1].toFixed(1));
       head.setAttribute('x2', p.at[0].toFixed(1)); head.setAttribute('y2', p.at[1].toFixed(1));
-      head.setAttribute('stroke-opacity', bright[st.b].toFixed(3));
+      head.setAttribute('stroke-opacity', (bright[st.b] * live).toFixed(3));
       /* the patch of road the beams reach: from the car round the end of each beam, left to right */
       var d = 'M' + fix([p.at[0], p.at[1] - 1]);
       tr.angles.forEach(function (deg, b) {
