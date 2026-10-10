@@ -180,11 +180,43 @@
   function setLoop(range) {
     S.loop = range; S.loopDraft = null;
     const chip = $('loopChip');
-    chip.hidden = !range; $('loopEnd').hidden = !range;      /* the same button twice: in the bar, and on the map where the loop was made */
-    if (range) chip.textContent = 'End loop (' + RV.fmtInt(range[0]) + '\u2013' + RV.fmtInt(range[1]) + ' m)';
+    chip.hidden = !range;
     S.chartsDirty = true;
   }
   RV.play = { go: go, set: setPlaying, setLoop: setLoop };
+  /* The window behind "Loop a section": the two ends of a loop typed in metres, for when dragging along the road or
+     across a chart is not exact enough. It opens on the loop that is running, else on the 200 m ahead of the car. */
+  let loopDlg = null;
+  function closeLoopDlg() { if (loopDlg) { loopDlg.remove(); loopDlg = null; removeEventListener('keydown', loopDlgKey, true); } }
+  function loopDlgKey(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLoopDlg(); } }
+  function pickLoop() {
+    const R = S.R;
+    if (!R) return;
+    closeLoopDlg();
+    const end = Math.floor(R.total - 8), at = RV.clamp(Math.round(R.d[S.i]), 0, Math.max(0, end - 200));
+    const cur = S.loop ? S.loop.map(Math.round) : [at, Math.min(end, at + 200)];
+    loopDlg = RV.el('div', 'keydlg', '<form class="keycard" role="dialog" aria-modal="true" aria-labelledby="lpTitle" novalidate><h2 id="lpTitle">Loop a section</h2>' +
+      '<p>The part of the lap between these two distances plays over and over. Distances are metres from the start line, 0 to ' + RV.fmtInt(end) + '.</p>' +
+      '<div class="looprow"><label class="fld"><span>From (m)</span><input id="lpFrom" type="number" inputmode="numeric" min="0" max="' + end + '" step="1" value="' + cur[0] + '"></label>' +
+      '<label class="fld"><span>To (m)</span><input id="lpTo" type="number" inputmode="numeric" min="0" max="' + end + '" step="1" value="' + cur[1] + '"></label></div>' +
+      '<p id="lpMsg" role="alert"></p>' +
+      '<p class="note">Or pick it by hand: drag along the road on the Track tab, or across a chart on the Telemetry tab.</p>' +
+      '<div class="tour-acts"><button class="btn prim" type="submit">Play it on a loop</button><button class="btn ghost" type="button" id="lpClose">Cancel</button></div></form>');
+    document.body.appendChild(loopDlg);
+    addEventListener('keydown', loopDlgKey, true);
+    loopDlg.addEventListener('pointerdown', e => { if (e.target === loopDlg) closeLoopDlg(); });
+    $('lpClose').onclick = closeLoopDlg;
+    loopDlg.firstChild.onsubmit = e => {
+      e.preventDefault();
+      const a = parseFloat($('lpFrom').value), b = parseFloat($('lpTo').value);
+      const bad = !isFinite(a) || !isFinite(b) ? 'Enter both distances.' : a < 0 || b > end ? 'Both distances must be between 0 and ' + RV.fmtInt(end) + ' m.' : b - a < 5 ? 'The end must be at least 5 m after the start.' : '';
+      if (bad) { $('lpMsg').textContent = bad; return; }
+      closeLoopDlg();
+      setLoop([a, b]); go(RV.idxAtD(R, a)); setPlaying(true);
+      RV.toast('Playing ' + RV.fmtInt(a) + '–' + RV.fmtInt(b) + ' m on a loop. ' + RV.loopHint());
+    };
+    $('lpFrom').focus(); $('lpFrom').select();
+  }
   /* how a loop is ended, for the message shown when one starts: the button, and on a PC the key as well */
   RV.loopHint = () => '\u201cEnd loop\u201d' + (RV.device && RV.device.kind() !== 'pc' ? '' : ' or ' + RV.keyLabel(RV.keyOf('endloop'))) + ' ends it.';
 
@@ -366,7 +398,8 @@
     document.querySelectorAll('.tab').forEach(b => { b.onclick = () => showTab(b.dataset.t); });
     document.querySelectorAll('#viewsw button').forEach(b => { b.onclick = () => setView(b.dataset.m); });
     $('clr').onclick = () => RV.sel.only(S.sel[0]);
-    $('loopChip').onclick = $('loopEnd').onclick = () => setLoop(null);
+    $('loopChip').onclick = () => setLoop(null);
+    $('loopPick').onclick = pickLoop;
     const paintAuto = () => { const b = $('autoLoop'); b.setAttribute('aria-pressed', !!RV.prefs.autoLoop); b.title = RV.prefs.autoLoop ? 'Auto loop is on: at the end of the lap the replay starts again, once every car has finished. Click to switch it off.' : 'Auto loop: at the end of the lap, start the replay again by itself'; };
     $('autoLoop').onclick = () => { RV.prefs.autoLoop = !RV.prefs.autoLoop; RV.savePrefs(); paintAuto(); if (RV.prefs.autoLoop && S.R && !S.playing && S.i >= S.R.n - 1) setPlaying(true); };
     paintAuto();

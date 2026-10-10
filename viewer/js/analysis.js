@@ -203,7 +203,7 @@
       if (!A) return;
       for (const z of A.zones) {
         const k = RV.idxAtD(R, (z.d0 + z.d1) / 2), p = w2s(R.x[k], R.y[k]), col = RV.pal['health-' + z.sev], y = p[1] - 22;
-        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] - 7, y + 6); ctx.arc(p[0], y, 11, Math.PI * 0.8, Math.PI * 0.2); ctx.closePath();   /* a drop standing on the spot */
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.arc(p[0], y, 11, Math.PI * 0.8, Math.PI * 0.2); ctx.closePath();   /* a drop standing on the spot */
         ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = RV.pal['label-ink']; ctx.stroke();
         ctx.fillStyle = RV.pal['label-bg']; ctx.font = '700 12px ' + RV.pal.fontNum; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(z.n), p[0], y + 0.5);
         const s = lossTxt(z.loss); ctx.font = '600 11px ' + RV.pal.fontNum;

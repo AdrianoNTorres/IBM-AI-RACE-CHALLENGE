@@ -379,8 +379,6 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; color: var(--ink); font-w
 @media (max-width: 1280px) { #v3bar:not(.on3) .seg button { padding: 5px 7px; font-size: 12px; } }
 @media (min-width: 821px) and (max-width: 1100px) { #v3bar:not(.on3) { left: 244px; transform: none; } }   /* beside the readout: centred it would cover the keys */
 /* ends a looped section: on the map itself, so a touch screen without an Esc key has it in reach */
-#loopEnd { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; box-shadow: var(--shadow); }
-#loopEnd[hidden] { display: none; }
 #mapmsg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; }
 #mapmsg .card { max-width: 520px; } #mapmsg h3 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin-bottom: 8px; }
 
@@ -534,6 +532,7 @@ ul.keyfeat small { display: block; color: var(--mute); font-size: 13px; }
 .keycard .warn { margin: 10px 0 0; } .keycard .warn ul { margin: 6px 0; padding-left: 20px; }
 
 /* ---------- adding versions by hand (js/entry.js): the window, its form, the import list ---------- */
+.looprow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 6px; } .looprow label.fld + label.fld { margin-top: 0; } #lpMsg { min-height: 1.5em; margin: 0 0 6px; color: var(--ink); font-weight: 600; }
 .keycard.addcard { width: min(900px, 100%); }
 .addcard .subtabs { margin: 4px 0 14px; max-width: 100%; } .addcard { overflow-x: hidden; }
 .badge.local { color: var(--accent); border-color: currentColor; background: var(--accent-soft); font: 600 11px var(--font-ui); padding: 1px 8px; letter-spacing: .04em; text-transform: uppercase; vertical-align: 2px; }

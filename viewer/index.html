@@ -17,7 +17,7 @@
   root.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=p192">
+<link rel="stylesheet" href="css/app.css?v=p193">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
@@ -73,7 +73,6 @@
       <div id="overlay"><div id="hud"></div><canvas id="mini" width="190" height="190"></canvas><div id="sectorLive" hidden></div><div id="lapDeltaBar" hidden></div></div>
       <div id="leg"></div>
       <div id="inputs" aria-label="Steering, brake and throttle of the cars shown"></div>
-      <button id="loopEnd" class="btn prim" hidden title="Stop looping this section">End loop</button>
       <div id="mapmsg"></div>
     </div>
     <button id="sideToggle" aria-label="Toggle side panel" title="Show/hide side panel">&#8250;</button>
@@ -93,7 +92,8 @@
   <label class="spd">Speed
     <select id="spd"><option value="0.1">0.1&times;</option><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option><option value="1">1&times;</option><option value="2">2&times;</option><option value="4">4&times;</option></select>
   </label>
-  <button id="loopChip" class="btn sm prim" hidden title="Stop looping this section"></button>
+  <button id="loopPick" class="btn" title="Choose a part of the lap to play over and over">Loop a section</button>
+  <button id="loopChip" class="btn sm prim" hidden title="Stop looping this section">End loop</button>
   <span id="rate" class="num"></span>
   <input id="scrub" type="range" min="0" value="0" aria-label="Position in the lap">
   <span id="pos" class="num"></span>
@@ -113,26 +113,26 @@
 
 <!-- the 3D library and its model loader are modules that name the library "three": this says where that is -->
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script src="js/core.js?v=p192"></script>
-<script src="js/keys.js?v=p192"></script>
-<script src="js/theme.js?v=p192"></script>
-<script src="js/track.js?v=p192"></script>
-<script src="js/validate.js?v=p192"></script>
-<script src="js/local.js?v=p192"></script>
-<script src="js/data.js?v=p192"></script>
-<script src="js/app.js?v=p192"></script>
-<script src="js/sectors.js?v=p192"></script>
-<script src="js/versions.js?v=p192"></script>
-<script src="js/map.js?v=p192"></script>
-<script src="js/inputs.js?v=p192"></script>
-<script src="js/analysis.js?v=p192"></script>
-<script src="js/telemetry.js?v=p192"></script>
-<script src="js/settings.js?v=p192"></script>
-<script src="js/entry.js?v=p192"></script>
-<script src="js/help.js?v=p192"></script>
-<script src="js/tutorial.js?v=p192"></script>
-<script src="js/device.js?v=p192"></script>
-<script src="js/view3d.js?v=p192"></script>
+<script src="js/core.js?v=p193"></script>
+<script src="js/keys.js?v=p193"></script>
+<script src="js/theme.js?v=p193"></script>
+<script src="js/track.js?v=p193"></script>
+<script src="js/validate.js?v=p193"></script>
+<script src="js/local.js?v=p193"></script>
+<script src="js/data.js?v=p193"></script>
+<script src="js/app.js?v=p193"></script>
+<script src="js/sectors.js?v=p193"></script>
+<script src="js/versions.js?v=p193"></script>
+<script src="js/map.js?v=p193"></script>
+<script src="js/inputs.js?v=p193"></script>
+<script src="js/analysis.js?v=p193"></script>
+<script src="js/telemetry.js?v=p193"></script>
+<script src="js/settings.js?v=p193"></script>
+<script src="js/entry.js?v=p193"></script>
+<script src="js/help.js?v=p193"></script>
+<script src="js/tutorial.js?v=p193"></script>
+<script src="js/device.js?v=p193"></script>
+<script src="js/view3d.js?v=p193"></script>
 <script>RV.boot();</script>
 </body>
 </html>
