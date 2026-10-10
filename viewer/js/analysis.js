@@ -140,14 +140,14 @@
       '<p class="lead"><b>' + lossTxt(z.loss) + '</b> lost to ' + esc(A.ref.name) + ' between ' + RV.fmtInt(z.d0) + ' and ' + RV.fmtInt(z.d1) + ' m.</p>' +
       '<h4>What ' + esc(S.R.name) + ' does differently</h4><ul class="helpul">' + z.why.map(w => '<li>' + w + '</li>').join('') + '</ul>' +
       '<p class="note">Compared with ' + esc(A.ref.name) + ', ' + A.what + ', over ' + RV.fmtInt(z.from) + '–' + RV.fmtInt(z.d1) + ' m (the area and the ' + K.lead + ' m before it). Select both versions to see their lines side by side.</p>' +
-      '<div class="tour-acts"><button class="btn prim" id="anLoop">Play it on a loop</button><button class="btn" id="anTrack">Show it on the track</button><button class="btn ghost" id="anClose">Close</button></div></div>');
+      '<div class="tour-acts"><button class="btn prim" id="anLoop">Play it on a loop</button>' + (S.tab === 'pm' ? '' : '<button class="btn" id="anTrack">Show it on the track</button>') + '<button class="btn ghost" id="anClose">Close</button></div></div>');
     document.body.appendChild(dlg);
     addEventListener('keydown', popKey, true);
     dlg.addEventListener('pointerdown', e => { if (e.target === dlg) closePopup(); });
     RV.$('anClose').onclick = closePopup;
     RV.$('anLoop').onclick = () => { closePopup(); loop(z); };
     /* not a second loop button: the car is put where the area starts and held there, on the Track tab */
-    RV.$('anTrack').onclick = () => { closePopup(); RV.play.setLoop(null); RV.play.set(false); RV.play.go(RV.idxAtD(S.R, z.d0)); RV.showTab('pm'); };
+    if (RV.$('anTrack')) RV.$('anTrack').onclick = () => { closePopup(); RV.play.setLoop(null); RV.play.set(false); RV.play.go(RV.idxAtD(S.R, z.d0)); RV.showTab('pm'); };
     RV.$('anLoop').focus();
   }
 
