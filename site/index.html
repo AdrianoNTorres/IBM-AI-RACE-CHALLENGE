@@ -82,7 +82,7 @@ section[id] { scroll-margin-top: 3.4rem; }
 .hero .wrap { opacity: var(--fade, 1); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
 .hero .mark { width: clamp(11rem, 25vw, 20rem); height: auto; }
 /* beside the text the logo lies over the track: see-through, so the cars can be followed behind it */
-@media (min-width: 761px) { .hero .mark { opacity: .5; } }
+@media (min-width: 761px) { .hero .mark { opacity: .75; } }
 h1 { font: 600 clamp(1.5rem, 3.2vw, 2.4rem)/1.1 var(--display); margin: 0 0 1.4rem; }
 h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11rem); line-height: .92; letter-spacing: -.02em; margin-top: .1em; }
 .team { font-weight: 700; color: var(--best); }
@@ -91,6 +91,8 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
 /* the Corkscrew behind the opening screen, drawn in three dimensions from its plan and heights, and a car driving it at the judged lap's pace */
 .backdrop { position: absolute; right: 1.5rem; top: 50%; width: min(64%, 58rem); transform: translateY(-50%); pointer-events: none; }
+/* moving parts are never what the browser holds the scroll position against: a readout that changes size would drag the page with it */
+.backdrop, .lapmap .here, .sense { overflow-anchor: none; }
 .backdrop svg { display: block; width: 100%; height: auto; overflow: visible; }
 .backdrop .floor { fill: none; stroke: url(#floor-fade); stroke-width: 1; }
 .backdrop .ghost { filter: saturate(.4); }
@@ -101,7 +103,7 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .backdrop .trace.old { stroke: #ff8a8e; stroke-width: 2.2; }
 .backdrop .sight.old { fill: #ff8a8e; stroke: #ff8a8e; }
 /* the replay's clock, speed and lead over the earliest recorded lap */
-.hud { position: absolute; right: 1.5rem; bottom: 2.4rem; z-index: 1; display: grid; grid-template-columns: auto auto minmax(0, 15rem); gap: 0 1.8rem; margin: 0; opacity: var(--fade, 1); color: var(--muted); font-size: .9rem; line-height: 1.3; }
+.hud { position: absolute; right: 1.5rem; bottom: 2.4rem; z-index: 1; display: grid; grid-template-columns: 6.2rem 3.6rem 15rem; gap: 0 1.8rem; overflow-anchor: none; margin: 0; opacity: var(--fade, 1); color: var(--muted); font-size: .9rem; line-height: 1.3; }
 .hud[hidden] { display: none; }
 .hud b { display: block; color: var(--ink); font: 700 1.7rem/1.1 var(--display); }
 .hud .old { color: #ff8a8e; }
