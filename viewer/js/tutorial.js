@@ -329,7 +329,7 @@
   function outro() {
     card().innerHTML = '<h2 id="tourTitle">That is the quick tour</h2>' +
       '<p>You have seen where everything is. The two longer tutorials go through every feature.</p>' +
-      '<div class="tour-offers">' + offer('Still lost or confused?', 'beginner', 'Take the') + offer('Too easy? Not enough info? See what else Run Viewer has to offer:', 'advanced', 'Take the') + '</div>' +
+      '<div class="tour-offers">' + offer('Still lost or confused?', 'beginner', 'Take the') + offer('See what else Run Viewer has to offer:', 'advanced', 'Take the') + '</div>' +
       '<div class="tour-acts"><button class="btn prim" id="tourNext">Finish</button><button class="btn" id="tourBack">Back</button></div>';
     acts();
   }
