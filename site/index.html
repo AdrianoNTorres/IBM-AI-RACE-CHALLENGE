@@ -1052,7 +1052,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     svg.appendChild(el('path', { class: 'speed', d: 'M' + line }));
     lap.sectors.forEach(function (sc, k) {
       if (k) svg.appendChild(el('line', { class: 'cut', x1: x(sc.from_m), x2: x(sc.from_m), y1: T - 16, y2: H - B }));
-      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + (k ? 6 : 0), y: T - 8 }, 'Sector ' + (k + 1)));
+      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + (k ? 6 : 0), y: T - 8 }, 'S' + (k + 1)));
     });
     [[lap.top, -9], [lap.slow, 16]].forEach(function (o) {
       svg.appendChild(el('circle', { class: 'd-best', cx: x(o[0].m), cy: y(o[0].kmh), r: 3.5 }));
