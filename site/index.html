@@ -132,7 +132,7 @@ section { padding-block: 3.6rem; }
 /* the three parts of the page: a kerb, then a title that sits on top of the part's first section */
 .act { position: relative; overflow: hidden; padding-bottom: 2.6rem; background-image: radial-gradient(42% 130% at 0% 100%, rgba(138, 77, 255, .3), transparent 70%), var(--grain); }
 /* which of the three parts this is, as a painted grid number */
-.act::after { content: attr(data-n); position: absolute; right: max(1.25rem, calc(50vw - 33rem)); bottom: -.13em; font: 700 clamp(9rem, 24vw, 18rem)/.8 var(--display); color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, .17); pointer-events: none; }
+.act::after { content: attr(data-n); position: absolute; right: max(1.25rem, calc(50vw - 33rem)); top: calc(50% + 5px); transform: translateY(-50%); font: 700 clamp(7rem, 17vw, 12rem)/1 var(--display); color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, .17); pointer-events: none; }
 .act .wrap { position: relative; z-index: 1; padding-top: 3.4rem; }
 .act h2 { font-size: clamp(2.5rem, 6.4vw, 4.4rem); line-height: 1; letter-spacing: -.012em; margin-bottom: .8rem; }
 .act .part { margin: 0 0 .5rem; color: var(--muted); font: 600 1.05rem var(--display); }
