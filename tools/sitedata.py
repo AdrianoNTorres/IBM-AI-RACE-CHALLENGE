@@ -143,13 +143,18 @@ def trace(run_csv, lap_m, dt=0.2):
 
 
 def ghost(vs, lap_m, until_s, dt=0.2):
-    """The earliest lap that has telemetry, for the second car on the opening screen: the same samples as trace()
-    without the beams, from the start to just after the moment the judged lap ends."""
+    """The earliest lap whose telemetry has the 19 beams, for the second car on the opening screen: the same samples
+    as trace(), from the start to just after the moment the judged lap ends."""
     for v in vs:
         run_csv = load(os.path.join(PRES, v['v'] + '.json'))['result'].get('run_csv')
-        if run_csv and v['lap_s'] is not None:
-            t, n = trace(run_csv, lap_m, dt), int(until_s / dt) + 12
-            return {'v': v['v'], 'lap': v['lap'], 'run_csv': run_csv, 'm': t['m'][:n], 'pos': t['pos'][:n], 'ang': t['ang'][:n]}
+        if not run_csv or v['lap_s'] is None:
+            continue
+        with open(os.path.join(ROOT, run_csv)) as f:
+            if 'track18' not in f.readline():
+                continue
+        t, n = trace(run_csv, lap_m, dt), int(until_s / dt) + 12
+        return {'v': v['v'], 'lap': v['lap'], 'run_csv': run_csv,
+                'm': t['m'][:n], 'pos': t['pos'][:n], 'ang': t['ang'][:n], 'beams': t['beams'][:n]}
 
 
 def lapstats(run_csv, lap_m, lap_s, step=10):

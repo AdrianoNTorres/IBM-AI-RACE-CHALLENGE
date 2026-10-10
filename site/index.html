@@ -96,6 +96,8 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .backdrop .ghost .c-deck { fill: #aab2bd; }
 .backdrop .tag { font: 600 21px var(--display); fill: #eceff2; }
 .backdrop .tag.old { fill: #ff8a8e; }
+.backdrop .trace.old { stroke: #ff8a8e; stroke-width: 2.2; }
+.backdrop .sight.old { fill: #ff8a8e; stroke: #ff8a8e; }
 /* the replay's clock, speed and lead over the earliest recorded lap */
 .hud { position: absolute; right: 1.5rem; bottom: 2.4rem; z-index: 1; display: grid; grid-template-columns: auto auto minmax(0, 15rem); gap: 0 1.8rem; margin: 0; opacity: var(--fade, 1); color: var(--muted); font-size: .9rem; line-height: 1.3; }
 .hud[hidden] { display: none; }
@@ -131,8 +133,6 @@ h3 { font: 600 1.25rem/1.25 var(--display); margin: 0 0 .4rem; }
 section { padding-block: 3.6rem; }
 /* the three parts of the page: a kerb, then a title that sits on top of the part's first section */
 .act { position: relative; overflow: hidden; padding-bottom: 2.6rem; background-image: radial-gradient(42% 130% at 0% 100%, rgba(138, 77, 255, .3), transparent 70%), var(--grain); }
-/* which of the three parts this is, as a painted grid number */
-.act::after { content: attr(data-n); position: absolute; right: max(1.25rem, calc(50vw - 33rem)); top: calc(50% + 5px); transform: translateY(-50%); font: 700 clamp(7rem, 17vw, 12rem)/1 var(--display); color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, .17); pointer-events: none; }
 .act .wrap { position: relative; z-index: 1; padding-top: 3.4rem; }
 .act h2 { font-size: clamp(2.5rem, 6.4vw, 4.4rem); line-height: 1; letter-spacing: -.012em; margin-bottom: .8rem; }
 .act .part { margin: 0 0 .5rem; color: var(--muted); font: 600 1.05rem var(--display); }
@@ -213,31 +213,33 @@ td q { color: var(--muted); font-style: italic; }
 /* the lap video with the lap's speed and sector times beside it */
 .lapgrid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1.6rem 2.2rem; align-items: start; }
 .lapgrid .slots { margin-top: 0; }
-.lapgrid .sectors { grid-column: 1 / -1; margin: .4rem 0 0; }
 @media (max-width: 900px) { .lapgrid { grid-template-columns: 1fr; } }
 .strip svg { min-width: 560px; }
 .strip .area { fill: url(#speed-ramp); fill-opacity: .6; }
 .strip .hair { stroke: var(--ink); stroke-width: 1; }
 /* the lap from above, coloured by speed */
-.lapmap { margin: 0 0 .5rem; padding: .7rem; border: 1px solid var(--rule); }
+.lapmap { position: relative; margin: 0 0 .5rem; padding: .7rem; border: 1px solid var(--rule); }
+.lapmap .here { position: absolute; left: .9rem; top: .7rem; margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.3; }
+.lapmap .here b { display: block; color: var(--ink); font: 700 1.7rem/1.1 var(--display); }
 .lapmap svg { display: block; width: 100%; height: auto; }
 .lapmap text { font: 600 44px var(--display); fill: #eceff2; }
 .lapmap .pin { fill: #fff; stroke: #141a22; stroke-width: 7; }
 .lapmap .line { stroke: #fff; stroke-width: 7; }
-.ramp { display: flex; align-items: center; gap: .6rem; margin: 0 0 1rem; }
+.ramp { display: flex; align-items: center; gap: .6rem; margin: 0; }
+.lapgrid + .strip { margin-top: 1.6rem; }
 .ramp i { flex: 1; height: .5rem; background: linear-gradient(90deg, #8a4dff, #e0343c, #f4c430); }
 /* what the car sees: the 19 range beams replayed beside the text that explains them */
 .split.even { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
 .sense { margin: 0; padding: 1rem 1.1rem; border: 1px solid var(--rule); }
 .sense svg { display: block; width: 100%; height: auto; }
-.sense text { font: 500 11px var(--body); fill: #a3adb9; }
-.sense .far { stroke: #3a434f; stroke-width: 1; }
-.sense .ray { stroke: #cdb8ff; stroke-opacity: .4; stroke-width: 1; }
-.sense .patch { fill: #8a4dff; fill-opacity: .3; stroke: #cdb8ff; stroke-width: 1.3; stroke-linejoin: round; }
-.sense .end { fill: #fff; }
-.sense .car { fill: #f1f3f5; }
-.sense .road { stroke: #56616f; stroke-width: 3; stroke-linecap: round; }
-.sense .pos { fill: var(--mark-fill); }
+.sense .ray { stroke: #cdb8ff; stroke-opacity: .45; stroke-width: 1.6; }
+.sense .patch { fill: #8a4dff; fill-opacity: .3; stroke: none; }
+/* where the beams met the road's edge: white as it is found, then settling into the map */
+.sense .edge { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; opacity: 0; }
+.sense .edge.on { opacity: 1; stroke: #9d6bff; transition: stroke 1.4s; }
+.sense .tyre { fill: #0b0e12; stroke: #8a94a1; stroke-width: .12; }
+.sense .hull { fill: #f1f3f5; }
+.sense .wing { fill: var(--brand); }
 .sense figcaption { margin-top: .6rem; }
 .strip .speed { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 .strip .cut { stroke: var(--mark); stroke-width: 1.2; stroke-dasharray: 3 3; }
@@ -363,11 +365,11 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   <p class="hud" id="hud" aria-hidden="true" hidden>
     <span><b id="hud-clock">0:00.0</b>the judged lap, replayed from its telemetry</span>
     <span><b id="hud-kmh">0</b>km/h</span>
-    <span><b id="hud-gap">0 m</b>ahead of <span class="old" id="hud-old"></span>, the earliest lap on record, started at the same moment</span>
+    <span><b id="hud-gap">0 m</b>ahead of <span class="old" id="hud-old"></span>, the earliest lap recorded with its beams, started at the same moment</span>
   </p>
   <svg class="cue" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
 </div>
-<div class="act dark" data-n="1">
+<div class="act dark">
   <div class="kerb" aria-hidden="true"></div>
   <div class="wrap">
     <p class="part">Part 1 of 3</p>
@@ -408,23 +410,20 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <div class="slot wide filled video" id="slot-lap">
       <iframe src="https://www.youtube-nocookie.com/embed/yuep0Uarx2Y" title="One Qubit Racing: one lap of the Corkscrew in 1:05.56 (TORCS)" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
-    <dl class="sectors" id="sectors"></dl>
   </div>
-  <aside>
-    <h3>Where the speed is</h3>
-    <div class="lapmap dark" id="lap-map" aria-hidden="true"></div>
-    <p class="ramp small muted" aria-hidden="true"><span id="ramp-lo"></span><i></i><span id="ramp-hi"></span></p>
+  <aside aria-hidden="true">
+    <div class="lapmap dark" id="lap-map">
+      <p class="here" id="lap-here"><b></b><span></span></p>
+    </div>
+    <p class="ramp small muted"><span id="ramp-lo"></span><i></i><span id="ramp-hi"></span></p>
   </aside>
   </div>
-  <h3 style="margin-top:1.8rem">Speed round the lap</h3>
-  <div class="chart strip" id="chart-speed" tabindex="0" role="img"></div>
-  <p class="readout" id="read-lap" aria-live="polite">Point at the speed trace or the map, or focus the trace and use the arrow keys, to find any place on the lap.</p>
-  <p class="text small muted" style="margin-top:.7rem">The three sectors are the ones the run viewer times; a sector time is the lap clock at its end minus the lap clock at its start.</p>
+  <div class="chart strip" id="chart-speed" role="img"></div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
 </div>
 </section>
 
-<div class="act dark" data-n="2">
+<div class="act dark">
   <div class="kerb" aria-hidden="true"></div>
   <div class="wrap">
     <p class="part">Part 2 of 3</p>
@@ -443,9 +442,9 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   </div>
   <figure class="sense dark">
     <h3>What the car sees</h3>
-    <div id="sense" role="img" aria-label="The judged lap replayed from the car: its 19 range beams reaching the edges of the road ahead, with its speed, its distance into the lap and its position across the road."></div>
+    <div id="sense" role="img" aria-label="The judged lap replayed on a map that starts empty: the car's 19 range beams reach the edges of the road ahead, and every point they touch stays on the map, so over one lap the beams draw the whole circuit."></div>
     <dl class="sectors" id="sense-read" aria-hidden="true"></dl>
-    <figcaption class="small muted">The judged lap, replayed. Each line is one of the 19 range beams, reaching to the edge of the road. Sideways distances are drawn seven times larger than distances ahead, or the road would be a hairline.</figcaption>
+    <figcaption class="small muted">The judged lap, replayed. The fan is the 19 range beams, and every dot is a place where a beam met the edge of the road: one lap of them draws the circuit. The car is drawn larger than life so it can be seen.</figcaption>
   </figure>
   </div>
   <div class="flow">
@@ -512,7 +511,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 </div>
 </section>
 
-<div class="act dark" data-n="3" id="judges">
+<div class="act dark" id="judges">
   <div class="kerb" aria-hidden="true"></div>
   <div class="wrap">
     <p class="part">Part 3 of 3</p>
@@ -764,7 +763,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   }
 
   /* The landing screen's track: the centre line (x, y, height in metres) seen from the south and above, the road as
-     a ribbon, heights stretched, a shadow on the ground under it. The car replays the judged lap from its telemetry:
+     a ribbon, heights stretched, a shadow on the ground under it. The car replays the judged lap from its telemetry
+     (the first time from the grid, as it was driven; after that it carries on over the line into a flying lap):
      its place across the road, its angle, and what its 19 range beams reach, drawn as one patch of light on the road
      ahead. Behind it the line it drove fades with age, brighter where the car was faster.
      The road is drawn WIDE times its real width so the car can be seen; the car and everything measured across the
@@ -772,7 +772,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function scene(tk, tr, lapS, gh, name) {
     var YAW = -.35, FLAT = .5, RISE = .87, HEIGHTS = 2.6, WIDE = 2, HALF = 6 * WIDE;
     var TAIL = 7, REACH = 110;     /* seconds of driven line kept behind the car; how far ahead the patch of light is drawn (m) */
-    var IN = 1.2, OUT = 1.2;       /* the handover at the line: the car fades out as it arrives while the next lap's car fades in on the grid, 10 m short of the line, so one car seems to carry on */
+    var IN = 1.2;                  /* the fade-in on the grid: the car on the first lap, the earliest lap's car on every lap */
     var svg = document.getElementById('scene'), n = tk.x.length, K = tr.m.length, i;
     var p11 = Math.cos(YAW), p12 = -Math.sin(YAW), p21 = -Math.sin(YAW) * FLAT, p22 = -Math.cos(YAW) * FLAT;
     var z0 = Math.min.apply(null, tk.z);
@@ -816,38 +816,71 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     svg.appendChild(el('path', { class: 'side', 'fill-rule': 'evenodd', d: loop(L, 5) + loop(Rt, 5) }));
     svg.appendChild(el('path', { class: 'road', 'fill-rule': 'evenodd', d: loop(L) + loop(Rt) }));
 
-    /* the lap: samples every tr.dt seconds, joined by a smooth curve so the car does not move in steps */
+    /* A lap as the car is drawn: samples every tr.dt seconds (distance, place across the road, angle, beams), joined
+       by a smooth curve so the car does not move in steps. Past the last sample it carries on at its final speed. */
     function curve(arr, a, t) {
-      var p0 = arr[Math.max(0, a - 1)], p1 = arr[a], p2 = arr[Math.min(K - 1, a + 1)], p3 = arr[Math.min(K - 1, a + 2)];
+      var last = arr.length - 1, p0 = arr[Math.max(0, a - 1)], p1 = arr[a], p2 = arr[Math.min(last, a + 1)], p3 = arr[Math.min(last, a + 2)];
       return p1 + .5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
     }
-    var mEnd = tr.m[K - 1], vEnd = (mEnd - tr.m[K - 2]) / tr.dt;
-    function state(sec) {
-      if (sec >= lapS) return { m: mEnd + vEnd * (sec - lapS), pos: tr.pos[K - 1], ang: tr.ang[K - 1], a: K - 1, b: K - 1, t: 0 };
-      var k = Math.max(0, sec) / tr.dt, a = Math.min(K - 2, Math.floor(k)), t = Math.min(1, k - a);
-      return { m: curve(tr.m, a, t), pos: curve(tr.pos, a, t), ang: curve(tr.ang, a, t), a: a, b: a + 1, t: t };
+    function state(set, sec) {
+      var last = set.m.length - 1, k = Math.max(0, sec) / tr.dt;
+      if (k >= last) return { m: set.m[last] + set.v * (sec - last * tr.dt), pos: set.pos[last], ang: set.ang[last], a: last, b: last, t: 0 };
+      var a = Math.floor(k), t = k - a;
+      return { m: curve(set.m, a, t), pos: curve(set.pos, a, t), ang: curve(set.ang, a, t), a: a, b: a + 1, t: t };
     }
     function carAt(st) {           /* the car in the world: on the road at its trackPos (+ = left), turned by its angle */
       var w = world(st.m);
       return { x: w.x - w.ty * st.pos * HALF, y: w.y + w.tx * st.pos * HALF, z: w.z, yaw: Math.atan2(w.ty, w.tx) - st.ang };
     }
-    var pts = [], bright = [], vmax = 0;
-    for (i = 0; i < K; i++) {
-      var c = carAt({ m: tr.m[i], pos: tr.pos[i], ang: tr.ang[i] });
-      pts.push(pr(c.x, c.y, lift(c.z)));
-      bright.push(i ? (tr.m[i] - tr.m[i - 1]) / tr.dt : 0);
-      vmax = Math.max(vmax, bright[i]);
+    var vmax = 0;
+    for (i = 1; i < K; i++) vmax = Math.max(vmax, (tr.m[i] - tr.m[i - 1]) / tr.dt);
+    function makeSet(set, cls) {   /* a lap's driven line as short pieces, lit by paint(): brighter where the car was faster */
+      var j, c;
+      set.v = (set.m[set.m.length - 1] - set.m[set.m.length - 2]) / tr.dt; set.pts = []; set.bright = []; set.trace = []; set.lit = [];
+      for (j = 0; j < set.m.length; j++) {
+        c = carAt({ m: set.m[j], pos: set.pos[j], ang: set.ang[j] });
+        set.pts.push(pr(c.x, c.y, lift(c.z)));
+        set.bright.push(.22 + .78 * Math.pow(Math.min(1, (j ? (set.m[j] - set.m[j - 1]) / tr.dt : 0) / vmax), 1.5));
+        if (j) set.trace.push(svg.appendChild(el('line', { class: 'trace' + (cls || ''), x1: set.pts[j - 1][0].toFixed(1), y1: set.pts[j - 1][1].toFixed(1), x2: set.pts[j][0].toFixed(1), y2: set.pts[j][1].toFixed(1), 'stroke-opacity': 0 })));
+      }
+      return set;
     }
-    bright = bright.map(function (v) { return .22 + .78 * Math.pow(v / vmax, 1.5); });
-    var trace = [];
-    for (i = 1; i < K; i++) trace.push(svg.appendChild(el('line', { class: 'trace', x1: pts[i - 1][0].toFixed(1), y1: pts[i - 1][1].toFixed(1), x2: pts[i][0].toFixed(1), y2: pts[i][1].toFixed(1), 'stroke-opacity': 0 })));
+    /* the first lap is the judged lap as it was driven, from the grid; clock() is the lap clock at a moment of the replay */
+    var first = makeSet({ m: tr.m, pos: tr.pos, ang: tr.ang, beams: tr.beams, dur: lapS, clock: function (u) { return u; } });
+    /* Every later lap is a flying one, so the car never stops: it crosses the line at the speed it finished with and
+       holds it along the road until the place where the judged lap had reached that same speed (Tm seconds in); from
+       there on it is the judged lap again, sample for sample. Across the road it eases from where it finished to
+       where the judged lap ran. The lap clock runs fast over that first stretch, so it still ends on the lap time. */
+    var mLine = state(first, lapS).m - tk.lap_m, jm = 1, vb = 0, vi;
+    for (i = 1; i * tr.dt < 12; i++) {
+      vi = (tr.m[i] - tr.m[i - 1]) / tr.dt;
+      if (vi > vb) { vb = vi; jm = i; }
+      if (vi >= first.v) break;
+    }
+    var tStar = jm * tr.dt, Tm = (tr.m[jm] - mLine) / first.v, shift = tStar - Tm;
+    var fl = { m: [], pos: [], ang: [], beams: [], dur: lapS - shift, clock: function (u) { return u < Tm ? u * tStar / Tm : u + shift; } };
+    for (i = 0; i * tr.dt <= fl.dur; i++) (function (u) {
+      var a = 0, f, ease = 1, kf;
+      if (u < Tm) {
+        while (a < K - 2 && tr.m[a + 1] < mLine + first.v * u) a++;
+        f = Math.max(0, (mLine + first.v * u - tr.m[a]) / ((tr.m[a + 1] - tr.m[a]) || 1));
+        ease = u / Tm; ease = ease * ease * (3 - 2 * ease);
+      } else { kf = Math.min(K - 1.001, (u + shift) / tr.dt); a = Math.floor(kf); f = kf - a; }
+      var mix = function (arr) { return arr[a] + (arr[a + 1] - arr[a]) * f; };
+      fl.m.push(u < Tm ? mLine + first.v * u : mix(tr.m));
+      fl.pos.push(tr.pos[K - 1] + (mix(tr.pos) - tr.pos[K - 1]) * ease);
+      fl.ang.push(tr.ang[K - 1] + (mix(tr.ang) - tr.ang[K - 1]) * ease);
+      fl.beams.push(tr.beams[a].map(function (r, b) { return r + (tr.beams[a + 1][b] - r) * f; }));
+    })(i * tr.dt);
+    makeSet(fl);
+    /* the earliest lap recorded with its beams sets off with every lap: its line is shorter because it is slower */
+    var old = gh ? makeSet({ m: gh.m, pos: gh.pos, ang: gh.ang, beams: gh.beams }, ' old') : null;
+    var headG = svg.appendChild(el('line', { class: 'trace old', 'stroke-opacity': 0 })), sightG = svg.appendChild(el('path', { class: 'sight old' }));
+    var join = svg.appendChild(el('line', { class: 'trace', 'stroke-opacity': 0 }));   /* from the end of one lap's line to the start of the next */
     var head = svg.appendChild(el('line', { class: 'trace' }));
     var sight = svg.appendChild(el('path', { class: 'sight' }));
 
-    /* a car: flat shapes in metres (nose towards +x), stacked at their heights */
-    var box = function (u0, u1, v0, v1) { return 'M' + u0 + ' ' + v0 + 'H' + u1 + 'V' + v1 + 'H' + u0 + 'Z'; };
-    var hull = 'M-2.3 -.45L-1.2 -.75L.3 -.7L1.2 -.3L2.4 -.15V.15L1.2 .3L.3 .7L-1.2 .75L-2.3 .45Z';
-    var tyres = box(-1.9, -1.2, -1.05, -.62) + box(-1.9, -1.2, .62, 1.05) + box(1.1, 1.7, -1, -.66) + box(1.1, 1.7, .66, 1);
+    /* a car: its flat shapes (box, hull, tyres, below) stacked at their heights */
     function makeCar(cls) {
       var g = svg.appendChild(el('g', { opacity: 0, class: cls || '' }));
       var layers = [['c-shadow', hull + tyres, 0], ['c-tyre', tyres, .1], ['c-tyre-top', tyres, .66], ['c-hull', hull, .25], ['c-wing', box(2.05, 2.45, -.95, .95), .3],
@@ -866,72 +899,79 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       car.layers.forEach(function (g) { g.setAttribute('transform', m); });
       return { c: c, at: at };
     }
-    /* the earliest lap on record sets off at the same moment, so the gap between the two cars is the project */
     var ghost = gh ? makeCar('ghost') : null, tagG = gh ? svg.appendChild(el('text', { class: 'tag old' }, gh.v)) : null;
-    var other = makeCar(), main = makeCar(), tagM = svg.appendChild(el('text', { class: 'tag' }, name)), lit = [], firstLap = true;
-    function gstate(sec) {
-      var k = Math.max(0, sec) / tr.dt, a = Math.min(gh.m.length - 2, Math.floor(k)), t = Math.min(1, k - a);
-      var mix = function (arr) { return arr[a] + (arr[a + 1] - arr[a]) * t; };
-      return { m: mix(gh.m), pos: mix(gh.pos), ang: mix(gh.ang) };
+    var main = makeCar(), tagM = svg.appendChild(el('text', { class: 'tag' }, name));
+    function patchOf(set, st, q) { /* the patch of road a car's beams reach: from the car round the end of each beam, left to right */
+      var c = q.c, co = Math.cos(c.yaw), si = Math.sin(c.yaw), d = 'M' + fix([q.at[0], q.at[1] - 1]);
+      tr.angles.forEach(function (deg, b) {
+        var r = Math.min(REACH, set.beams[st.a][b] + (set.beams[st.b][b] - set.beams[st.a][b]) * st.t), al = deg * Math.PI / 180;
+        var f = r * Math.cos(al), l = -r * Math.sin(al) * WIDE;
+        d += 'L' + fix(pr(c.x + f * co - l * si, c.y + f * si + l * co, lift(world(st.m + f).z)));
+      });
+      return d + 'Z';
+    }
+    function headTo(line, set, st, at, alpha) {
+      line.setAttribute('x1', set.pts[st.a][0].toFixed(1)); line.setAttribute('y1', set.pts[st.a][1].toFixed(1));
+      line.setAttribute('x2', at[0].toFixed(1)); line.setAttribute('y2', at[1].toFixed(1));
+      line.setAttribute('stroke-opacity', (set.bright[st.b] * alpha).toFixed(3));
     }
     var hud = document.getElementById('hud'), hClock = document.getElementById('hud-clock'), hKmh = document.getElementById('hud-kmh'), hGap = document.getElementById('hud-gap'), hudAt = -1;
     if (gh) { document.getElementById('hud-old').textContent = gh.v + ' (' + gh.lap + ')'; hud.hidden = false; }
     var place = function (tag, at, alpha, dy) { tag.setAttribute('x', (at[0] + 16).toFixed(1)); tag.setAttribute('y', (at[1] + (dy || -14)).toFixed(1)); tag.setAttribute('opacity', alpha.toFixed(2)); };
+    var cur = first, prev = null;  /* the lap being driven, and the one before it while its line is still fading */
+    var fadeOf = function (age) { return Math.pow(1 - age / TAIL, 1.4); };
+    function light(set, k, age, alpha) {
+      if (age < 0 || age >= TAIL) return;
+      set.trace[k].setAttribute('stroke-opacity', (set.bright[k + 1] * fadeOf(age) * (alpha == null ? 1 : alpha)).toFixed(3));
+      set.lit.push(k);
+    }
 
-    function paint(sec) {
-      var live = Math.max(0, Math.min(1, (lapS - sec) / OUT)), st = state(sec), p = putCar(main, st, live), c = p.c, co = Math.cos(c.yaw), si = Math.sin(c.yaw), j;
-      place(tagM, p.at, Math.min(live, sec / IN));
+    function paint(u) {
+      var fresh = prev ? 1 : Math.min(1, u / IN);      /* only the very first lap fades in, on the grid */
+      var st = state(cur, u), p = putCar(main, st, fresh), k, clock = cur.clock(u);
+      place(tagM, p.at, fresh);
+      [first, fl, old].forEach(function (set) { if (set) { set.lit.forEach(function (q) { set.trace[q].setAttribute('stroke-opacity', 0); }); set.lit = []; } });
       if (gh) {
-        var gs = gstate(sec), ga = Math.max(0, Math.min(1, sec / IN, (lapS - sec) / IN));
-        place(tagG, putCar(ghost, gs, ga).at, ga, 32);   /* its name under the car, so the two names do not collide on the grid */
-        if (sec < hudAt || sec - hudAt > .1) {
-          hudAt = sec;
-          hClock.textContent = Math.floor(sec / 60) + ':' + ('0' + (sec % 60).toFixed(1)).slice(-4);
-          hKmh.textContent = Math.round((tr.m[st.b] - tr.m[st.a]) / tr.dt * 3.6);
+        var gs = state(old, clock), ga = Math.max(0, Math.min(1, u / IN, (cur.dur - u) / IN)), gp = putCar(ghost, gs, ga);
+        place(tagG, gp.at, ga, 32);   /* its name under the car, so the two names do not collide on the grid */
+        for (k = gs.a - 1; k >= 0 && clock - (k + 1) * tr.dt < TAIL; k--) light(old, k, clock - (k + 1) * tr.dt, ga);
+        headTo(headG, old, gs, gp.at, ga);
+        sightG.setAttribute('d', patchOf(old, gs, gp));
+        sightG.setAttribute('opacity', Math.min(ga, clock / 1.5).toFixed(2));
+        if (u < hudAt || u - hudAt > .1) {
+          hudAt = u;
+          hClock.textContent = Math.floor(clock / 60) + ':' + ('0' + (clock % 60).toFixed(1)).slice(-4);
+          hKmh.textContent = Math.round((st.a === st.b ? cur.v : (cur.m[st.b] - cur.m[st.a]) / tr.dt) * 3.6);
           hGap.textContent = Math.max(0, Math.round(st.m - gs.m)).toLocaleString('en-US') + ' m';
         }
       }
-      /* the handover: as the car fades out towards the line the next lap's car fades in on the grid, and takes over at the line */
-      if (sec > lapS - IN) putCar(other, state(0), (sec - (lapS - IN)) / IN);
-      else other.g.setAttribute('opacity', 0);
-      /* the driven line: each piece fades with its age; pieces from the end of the last lap are still fading after the line */
-      lit.forEach(function (k) { trace[k].setAttribute('stroke-opacity', 0); });
-      lit = [];
-      for (j = 0; j * tr.dt < TAIL; j++) {
-        var k = st.a - 1 - j, age = sec - (k + 1) * tr.dt;
-        if (k < 0) { if (firstLap) break; k += K - 1; age = sec + lapS - (k + 1) * tr.dt; }
-        if (age >= TAIL || age < 0) continue;
-        trace[k].setAttribute('stroke-opacity', (bright[k + 1] * Math.pow(1 - age / TAIL, 1.4)).toFixed(3));
-        lit.push(k);
-      }
-      head.setAttribute('x1', pts[st.a][0].toFixed(1)); head.setAttribute('y1', pts[st.a][1].toFixed(1));
-      head.setAttribute('x2', p.at[0].toFixed(1)); head.setAttribute('y2', p.at[1].toFixed(1));
-      head.setAttribute('stroke-opacity', (bright[st.b] * live).toFixed(3));
-      /* the patch of road the beams reach: from the car round the end of each beam, left to right */
-      var d = 'M' + fix([p.at[0], p.at[1] - 1]);
-      tr.angles.forEach(function (deg, b) {
-        var r = Math.min(REACH, tr.beams[st.a][b] + (tr.beams[st.b][b] - tr.beams[st.a][b]) * st.t), al = deg * Math.PI / 180;
-        var f = r * Math.cos(al), l = -r * Math.sin(al) * WIDE;
-        d += 'L' + fix(pr(c.x + f * co - l * si, c.y + f * si + l * co, lift(world(st.m + f).z)));
-      });
-      sight.setAttribute('d', d + 'Z');
-      sight.setAttribute('opacity', Math.min(1, sec / 1.5, (lapS - sec) / 1.5).toFixed(2));
+      /* the driven line: each piece fades with its age; the end of the lap before is still fading after the line */
+      for (k = st.a - 1; k >= 0 && u - (k + 1) * tr.dt < TAIL; k--) light(cur, k, u - (k + 1) * tr.dt);
+      if (prev) for (k = prev.trace.length - 1; k >= 0 && u + prev.dur - (k + 1) * tr.dt < TAIL; k--) light(prev, k, u + prev.dur - (k + 1) * tr.dt);
+      if (prev && u < TAIL) {
+        var e = prev.pts[prev.pts.length - 1];
+        join.setAttribute('x1', e[0].toFixed(1)); join.setAttribute('y1', e[1].toFixed(1));
+        join.setAttribute('x2', cur.pts[0][0].toFixed(1)); join.setAttribute('y2', cur.pts[0][1].toFixed(1));
+        join.setAttribute('stroke-opacity', (cur.bright[1] * fadeOf(u)).toFixed(3));
+      } else join.setAttribute('stroke-opacity', 0);
+      headTo(head, cur, st, p.at, fresh);
+      sight.setAttribute('d', patchOf(cur, st, p));
+      sight.setAttribute('opacity', (prev ? 1 : Math.min(1, u / 1.5)).toFixed(2));
     }
     paint(MOTION ? 0 : 20);
     if (!MOTION) return;
-    var t0 = null, last = 0, onScreen = true;
-    var skip = +(/lap=([\d.]+)/.exec(location.hash) || [0, 0])[1];      /* index.html#lap=64 opens 64 s into the lap: to look at one corner, or at the handover */
+    var t0 = null, onScreen = true;
+    var skip = +(/lap=([\d.]+)/.exec(location.hash) || [0, 0])[1];      /* index.html#lap=64 opens 64 s into the first lap: to look at one corner, or at the line */
     if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
       onScreen = es[0].isIntersecting;
       if (onScreen) requestAnimationFrame(frame);
     }).observe(svg);
     function frame(t) {
       if (!onScreen) return;
-      if (t0 == null) { t0 = t - skip * 1000; firstLap = !skip; }
-      var sec = (t - t0) / 1000 % lapS;
-      if (sec < last) firstLap = false;
-      last = sec;
-      paint(sec);
+      if (t0 == null) t0 = t - skip * 1000;
+      var u = (t - t0) / 1000;
+      while (u >= cur.dur) { t0 += cur.dur * 1000; u -= cur.dur; prev = cur; cur = fl; hudAt = -1; }
+      paint(u);
       requestAnimationFrame(frame);
     }
   }
@@ -956,40 +996,36 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     return 'rgb(' + RAMP[i].map(function (c, j) { return Math.round(c + (RAMP[i + 1][j] - c) * t); }).join(',') + ')';
   }
 
-  /* The judged lap's speed by distance, the three sectors marked, the fastest and slowest points named; the same lap
-     from above, coloured by that speed; the sector times. Pointing at either one finds the same place on the other. */
-  function strip(box, list, lap, tk, mapBox, readout) {
-    var W = 960, H = 230, L = 40, R = 12, T = 20, B = 26, top = 300, lapM = tk.lap_m, lo = lap.slow.kmh, hi = lap.top.kmh;
+  /* The judged lap's speed by distance, with the three sectors and their times, the fastest and slowest points named;
+     and the same lap from above, coloured by that speed. One place on the lap is marked on both, and it moves round
+     the lap as the page is scrolled past the section. */
+  function strip(box, lap, tk, mapBox, here, section) {
+    var W = 960, H = 230, L = 40, R = 12, T = 26, B = 26, top = 300, lapM = tk.lap_m, lo = lap.slow.kmh, hi = lap.top.kmh;
     var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
     var x = function (m) { return L + (W - L - R) * m / lapM; }, y = function (v) { return T + (H - T - B) * (1 - v / top); };
-    var kmhAt = function (m) { return lap.kmh[Math.min(lap.kmh.length - 1, Math.round(m / lap.step))]; };
+    var kmhAt = function (m) { var k = Math.max(0, Math.min(lap.kmh.length - 1.001, m / lap.step)), a = Math.floor(k); return lap.kmh[a] + (lap.kmh[a + 1] - lap.kmh[a]) * (k - a); };
     var grad = svg.appendChild(el('linearGradient', { id: 'speed-ramp', gradientUnits: 'userSpaceOnUse', x1: 0, x2: 0, y1: y(lo), y2: y(hi) }));
     [0, .5, 1].forEach(function (k) { grad.appendChild(el('stop', { offset: k, 'stop-color': ramp(k) })); });
     [100, 200, 300].forEach(function (v) {
       svg.appendChild(el('line', { class: 'grid', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
       svg.appendChild(el('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, v));
     });
-    svg.appendChild(el('text', { x: L - 6, y: T - 8, 'text-anchor': 'end' }, 'km/h'));
     [0, 1000, 2000, 3000].forEach(function (m) { svg.appendChild(el('text', { x: x(m), y: H - 7, 'text-anchor': m ? 'middle' : 'start' }, m ? m / 1000 + ' km' : 'start')); });
     var line = lap.kmh.map(function (v, i) { return x(Math.min(lapM, i * lap.step)).toFixed(1) + ' ' + y(v).toFixed(1); }).join('L');
     svg.appendChild(el('path', { class: 'area', d: 'M' + x(0) + ' ' + y(0) + 'L' + line + 'L' + x(lapM) + ' ' + y(0) + 'Z' }));
     svg.appendChild(el('path', { class: 'speed', d: 'M' + line }));
     lap.sectors.forEach(function (sc, k) {
-      if (k) svg.appendChild(el('line', { class: 'cut', x1: x(sc.from_m), x2: x(sc.from_m), y1: T - 4, y2: H - B }));
-      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + 4, y: T + 8 }, sc.name));
-      var div = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd'), sm = document.createElement('small');
-      dt.textContent = sc.name; dd.textContent = sc.s.toFixed(2) + ' s';
-      sm.textContent = (k ? sc.from_m.toLocaleString('en-US') + ' m' : 'the line') + ' to ' + (k < 2 ? sc.to_m.toLocaleString('en-US') + ' m' : 'the line');
-      dd.appendChild(sm); div.appendChild(dt); div.appendChild(dd); list.appendChild(div);
+      if (k) svg.appendChild(el('line', { class: 'cut', x1: x(sc.from_m), x2: x(sc.from_m), y1: T - 16, y2: H - B }));
+      svg.appendChild(el('text', { class: 'note', x: x(sc.from_m) + (k ? 6 : 0), y: T - 8 }, sc.name + '  ' + sc.s.toFixed(2) + ' s'));
     });
     [[lap.top, -9], [lap.slow, 16]].forEach(function (o) {
       svg.appendChild(el('circle', { class: 'd-best', cx: x(o[0].m), cy: y(o[0].kmh), r: 3.5 }));
-      svg.appendChild(el('text', { class: 'note', x: x(o[0].m), y: y(o[0].kmh) + o[1], 'text-anchor': 'middle' }, o[0].kmh + ' km/h'));
+      svg.appendChild(el('text', { class: 'note', x: x(o[0].m) + 8, y: y(o[0].kmh) + o[1] }, o[0].kmh + ' km/h'));
     });
-    var hair = svg.appendChild(el('line', { class: 'hair', y1: T - 4, y2: H - B, x1: -9, x2: -9 })), dot = svg.appendChild(el('circle', { class: 'cursor', r: 6, cx: -9, cy: -9 }));
+    var hair = svg.appendChild(el('line', { class: 'hair', y1: T, y2: H - B })), dot = svg.appendChild(el('circle', { class: 'cursor', r: 6 }));
     box.appendChild(svg);
     box.setAttribute('aria-label', 'Speed along the judged lap, from the start line round to the line again. Fastest ' + lap.top.kmh + ' km/h at ' + lap.top.m +
-      ' m, slowest corner ' + lap.slow.kmh + ' km/h at ' + lap.slow.m + ' m. Sector times: ' + lap.sectors.map(function (c) { return c.name + ' ' + c.s.toFixed(2) + ' s'; }).join(', ') + '. Use the left and right arrow keys to move along the lap.');
+      ' m, slowest corner ' + lap.slow.kmh + ' km/h at ' + lap.slow.m + ' m. Sector times: ' + lap.sectors.map(function (c) { return c.name + ' ' + c.s.toFixed(2) + ' s'; }).join(', ') + '.');
 
     /* the map: north up, one short piece of road per station, coloured by the speed there */
     var n = tk.x.length, P = tk.x.map(function (v, i) { return [v, -tk.y[i]]; }), i;
@@ -1000,97 +1036,114 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       var q = P[(i + 1) % n];
       map.appendChild(el('line', { x1: P[i][0], y1: P[i][1], x2: q[0], y2: q[1], stroke: ramp((kmhAt(i / n * lapM) - lo) / (hi - lo)), 'stroke-width': 17, 'stroke-linecap': 'round' }));
     }
-    var station = function (m) { return Math.round(m / lapM * n) % n; };
     var ux = P[1][0] - P[n - 1][0], uy = P[1][1] - P[n - 1][1], ul = Math.sqrt(ux * ux + uy * uy);
     map.appendChild(el('line', { class: 'line', x1: P[0][0] - uy / ul * 26, y1: P[0][1] + ux / ul * 26, x2: P[0][0] + uy / ul * 26, y2: P[0][1] - ux / ul * 26 }));
     map.appendChild(el('text', { x: P[0][0], y: P[0][1] + 62, 'text-anchor': 'middle' }, 'start'));
-    [lap.top, lap.slow].forEach(function (o) {
-      var at = P[station(o.m)];
-      map.appendChild(el('text', { x: at[0] - 34, y: at[1] + 4, 'text-anchor': 'end' }, o.kmh + ' km/h'));
-    });
-    var pin = map.appendChild(el('circle', { class: 'pin', r: 19, cx: -9999, cy: 0 }));
+    var pin = map.appendChild(el('circle', { class: 'pin', r: 21 }));
     mapBox.appendChild(map);
     document.getElementById('ramp-lo').textContent = lo + ' km/h';
     document.getElementById('ramp-hi').textContent = hi + ' km/h';
 
-    var cur = -1;
+    var big = here.querySelector('b'), small = here.querySelector('span');
     function show(m) {
-      cur = Math.max(0, Math.min(Math.floor(lapM / lap.step) * lap.step, Math.round(m / lap.step) * lap.step));
-      var v = kmhAt(cur), at = P[station(cur)], sc = lap.sectors.filter(function (c) { return cur >= c.from_m; }).pop();
-      hair.setAttribute('x1', x(cur)); hair.setAttribute('x2', x(cur));
-      dot.setAttribute('cx', x(cur)); dot.setAttribute('cy', y(v));
-      pin.setAttribute('cx', at[0]); pin.setAttribute('cy', at[1]);
-      readout.textContent = '';
-      var b = document.createElement('b');
-      b.textContent = v + ' km/h';
-      readout.appendChild(b);
-      readout.appendChild(document.createTextNode(cur.toLocaleString('en-US') + ' m from the start line, in sector ' + sc.name + '.'));
+      var v = kmhAt(m), f = m / lapM * n, a = Math.floor(f) % n, e = P[(a + 1) % n], t = f - Math.floor(f);
+      hair.setAttribute('x1', x(m)); hair.setAttribute('x2', x(m));
+      dot.setAttribute('cx', x(m)); dot.setAttribute('cy', y(v));
+      pin.setAttribute('cx', P[a][0] + (e[0] - P[a][0]) * t); pin.setAttribute('cy', P[a][1] + (e[1] - P[a][1]) * t);
+      big.textContent = Math.round(v) + ' km/h';
+      small.textContent = (Math.round(m / 10) * 10).toLocaleString('en-US') + ' m into the lap';
     }
-    svg.addEventListener('pointermove', function (e) {
-      var r = svg.getBoundingClientRect();
-      show(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * lapM);
-    });
-    mapBox.style.pointerEvents = 'auto';
-    map.addEventListener('pointermove', function (e) {
-      var r = map.getBoundingClientRect(), px = bx + (e.clientX - r.left) / r.width * bw, py = by + (e.clientY - r.top) / r.height * bh, best = 0, d2 = Infinity;
-      P.forEach(function (q, k) { var d = (q[0] - px) * (q[0] - px) + (q[1] - py) * (q[1] - py); if (d < d2) { d2 = d; best = k; } });
-      show(best / n * lapM);
-    });
-    box.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight') show(cur + lap.step);
-      else if (e.key === 'ArrowLeft') show(cur < 0 ? lapM : cur - lap.step);
-      else if (e.key === 'Home') show(0);
-      else if (e.key === 'End') show(lapM);
-      else return;
-      e.preventDefault();
-    });
+    /* the start line as the section comes up the screen, the end of the lap as it leaves; the mark glides to its place */
+    var at = 0, want = 0, busy = false;
+    function target() {
+      var r = section.getBoundingClientRect(), vh = window.innerHeight;
+      return Math.max(0, Math.min(1, (vh * .85 - r.top) / (r.height + vh * .35))) * lapM * .999;
+    }
+    function glide() {
+      at += (want - at) * (MOTION ? .14 : 1);
+      if (Math.abs(want - at) < 1) at = want;
+      show(at);
+      busy = at !== want;
+      if (busy) requestAnimationFrame(glide);
+    }
+    function follow() { want = target(); if (!busy) { busy = true; requestAnimationFrame(glide); } }
+    window.addEventListener('scroll', follow, { passive: true });
+    window.addEventListener('resize', follow);
+    at = want = target();
+    show(at);
   }
 
-  /* What the car sees: the judged lap replayed from the car's seat. The 19 beams fan out from the car (nose up) to
-     the road's edges; sideways is drawn LAT times larger than ahead. Under it the car's place across the road. */
-  function sense(box, list, tr, lapS) {
-    var W = 360, H = 252, CX = 180, CY = 206, FWD = .9, LAT = 7, K = tr.m.length, mid = Math.floor(tr.angles.length / 2);
-    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
-    [50, 100, 150, 200].forEach(function (r) {
-      svg.appendChild(el('line', { class: 'far', x1: 34, x2: W - 6, y1: CY - r * FWD, y2: CY - r * FWD }));
-      svg.appendChild(el('text', { x: 30, y: CY - r * FWD + 4, 'text-anchor': 'end' }, r + ' m'));
-    });
+  /* the car from above, in metres, nose towards +x: the landing screen's car and the one in "What the car sees" */
+  var box = function (u0, u1, v0, v1) { return 'M' + u0 + ' ' + v0 + 'H' + u1 + 'V' + v1 + 'H' + u0 + 'Z'; };
+  var hull = 'M-2.3 -.45L-1.2 -.75L.3 -.7L1.2 -.3L2.4 -.15V.15L1.2 .3L.3 .7L-1.2 .75L-2.3 .45Z';
+  var tyres = box(-1.9, -1.2, -1.05, -.62) + box(-1.9, -1.2, .62, 1.05) + box(1.1, 1.7, -1, -.66) + box(1.1, 1.7, .66, 1);
+
+  /* What the car sees: the judged lap replayed on an empty map, north up, at true scale. The 19 beams reach from the
+     car to the road's edges, and every place a beam meets an edge stays behind as a dot, so one lap of beams draws
+     the circuit. The car itself is drawn BIG times its size, or it would be two pixels long. */
+  function sense(holder, list, tr, tk, lapS) {
+    var n = tk.x.length, K = tr.m.length, mid = Math.floor(tr.angles.length / 2), BIG = 9, i;
+    function pose(m, pos, ang) {   /* the car on the map: on the road at its trackPos (+ = left), turned by its angle */
+      var f = (m % tk.lap_m + tk.lap_m) % tk.lap_m / tk.lap_m * n, a = Math.floor(f) % n, b = (a + 1) % n, t = f - Math.floor(f), c = (a + 2) % n, z = (a + n - 1) % n;
+      var tx = (tk.x[b] - tk.x[z]) * (1 - t) + (tk.x[c] - tk.x[a]) * t, ty = (tk.y[b] - tk.y[z]) * (1 - t) + (tk.y[c] - tk.y[a]) * t, d = Math.sqrt(tx * tx + ty * ty);
+      return { x: tk.x[a] + (tk.x[b] - tk.x[a]) * t - ty / d * pos * 6, y: tk.y[a] + (tk.y[b] - tk.y[a]) * t + tx / d * pos * 6, yaw: Math.atan2(ty, tx) - ang };
+    }
+    function hit(c, deg, r) {      /* where a beam of r metres ends, as a point of the picture */
+      var al = deg * Math.PI / 180, f = r * Math.cos(al), l = -r * Math.sin(al), co = Math.cos(c.yaw), si = Math.sin(c.yaw);
+      return [c.x + f * co - l * si, -(c.y + f * si + l * co)];
+    }
+    var x0 = Math.min.apply(null, tk.x) - 70, y0 = -Math.max.apply(null, tk.y) - 70;
+    var svg = el('svg', { viewBox: [x0, y0, Math.max.apply(null, tk.x) + 70 - x0, -Math.min.apply(null, tk.y) + 70 - y0].map(Math.round).join(' '), 'aria-hidden': 'true' });
+    var edges = [];
+    for (i = 0; i < K; i++) {
+      var c0 = pose(tr.m[i], tr.pos[i], tr.ang[i]), d0 = '';
+      tr.angles.forEach(function (deg, b) {
+        var r = tr.beams[i][b];
+        if (r > 0 && r < 199) { var h = hit(c0, deg, r); d0 += 'M' + h[0].toFixed(1) + ' ' + h[1].toFixed(1) + 'h0'; }
+      });
+      edges.push(svg.appendChild(el('path', { class: 'edge', d: d0 || 'M0 0' })));
+    }
     var patch = svg.appendChild(el('path', { class: 'patch' }));
-    var rays = tr.angles.map(function () { return svg.appendChild(el('line', { class: 'ray', x1: CX, y1: CY })); });
-    var ends = tr.angles.map(function () { return svg.appendChild(el('circle', { class: 'end', r: 1.8 })); });
-    svg.appendChild(el('path', { class: 'car', d: 'M' + (CX - 5) + ' ' + (CY + 14) + 'h10v-12l-2 -8h-6l-2 8z' }));
-    svg.appendChild(el('line', { class: 'road', x1: CX - 110, x2: CX + 110, y1: H - 14, y2: H - 14 }));
-    svg.appendChild(el('text', { x: CX - 118, y: H - 10, 'text-anchor': 'end' }, 'left edge'));
-    svg.appendChild(el('text', { x: CX + 118, y: H - 10 }, 'right edge'));
-    var pos = svg.appendChild(el('circle', { class: 'pos', r: 5.5, cy: H - 14 }));
-    box.appendChild(svg);
+    var rays = tr.angles.map(function () { return svg.appendChild(el('line', { class: 'ray' })); });
+    var car = svg.appendChild(el('g', {}));
+    car.appendChild(el('path', { class: 'tyre', d: tyres }));
+    car.appendChild(el('path', { class: 'wing', d: box(2.05, 2.45, -.95, .95) + box(-2.45, -2, -.85, .85) }));
+    car.appendChild(el('path', { class: 'hull', d: hull }));
+    holder.appendChild(svg);
     var out = ['Speed', 'Into the lap', 'Clear road ahead'].map(function (name) {
       var div = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
       dt.textContent = name; div.appendChild(dt); div.appendChild(dd); list.appendChild(div);
       return dd;
     });
-    var textAt = -1;
+    var textAt = -1, shown = 0, before = 0;
     function paint(sec) {
+      if (sec < before) { edges.forEach(function (e) { e.classList.remove('on'); }); shown = 0; }   /* a new lap: the map is drawn again */
+      before = sec;
       var k = Math.max(0, Math.min(K - 1.001, sec / tr.dt)), a = Math.floor(k), t = k - a, d = '';
       var mix = function (arr) { return arr[a] + (arr[a + 1] - arr[a]) * t; };
+      var c = pose(mix(tr.m), mix(tr.pos), mix(tr.ang));
+      while (shown <= a) edges[shown++].classList.add('on');
       tr.angles.forEach(function (deg, b) {
-        var r = Math.max(0, tr.beams[a][b] + (tr.beams[a + 1][b] - tr.beams[a][b]) * t), al = deg * Math.PI / 180;
-        var px = Math.max(36, Math.min(W - 8, CX + Math.sin(al) * r * LAT)), py = CY - Math.cos(al) * r * FWD;
-        rays[b].setAttribute('x2', px.toFixed(1)); rays[b].setAttribute('y2', py.toFixed(1));
-        ends[b].setAttribute('cx', px.toFixed(1)); ends[b].setAttribute('cy', py.toFixed(1));
-        d += (b ? 'L' : 'M' + CX + ' ' + CY + 'L') + px.toFixed(1) + ' ' + py.toFixed(1);
+        var h = hit(c, deg, Math.max(0, tr.beams[a][b] + (tr.beams[a + 1][b] - tr.beams[a][b]) * t));
+        rays[b].setAttribute('x1', c.x.toFixed(1)); rays[b].setAttribute('y1', (-c.y).toFixed(1));
+        rays[b].setAttribute('x2', h[0].toFixed(1)); rays[b].setAttribute('y2', h[1].toFixed(1));
+        d += (b ? 'L' : 'M' + c.x.toFixed(1) + ' ' + (-c.y).toFixed(1) + 'L') + h[0].toFixed(1) + ' ' + h[1].toFixed(1);
       });
       patch.setAttribute('d', d + 'Z');
-      pos.setAttribute('cx', (CX - Math.max(-1, Math.min(1, mix(tr.pos))) * 110).toFixed(1));
+      car.setAttribute('transform', 'translate(' + c.x.toFixed(1) + ' ' + (-c.y).toFixed(1) + ') rotate(' + (-c.yaw * 180 / Math.PI).toFixed(1) + ') scale(' + BIG + ')');
       if (sec < textAt || sec - textAt > .12) {
         textAt = sec;
         out[0].textContent = Math.round((tr.m[a + 1] - tr.m[a]) / tr.dt * 3.6) + ' km/h';
-        out[1].textContent = Math.round((mix(tr.m) - tr.m[0]) / 10) * 10 + ' m';
+        out[1].textContent = (Math.round((mix(tr.m) - tr.m[0]) / 10) * 10).toLocaleString('en-US') + ' m';
         out[2].textContent = Math.round(tr.beams[a][mid]) + ' m';
       }
     }
-    paint(MOTION ? 0 : 20);
-    if (!MOTION || !('IntersectionObserver' in window)) return;
+    if (!MOTION || !('IntersectionObserver' in window)) {   /* still: the whole map drawn, the car 20 s into the lap */
+      paint(20);
+      edges.forEach(function (e) { e.classList.add('on'); });
+      return;
+    }
+    paint(0);
     var t0 = null, onScreen = false;
     new IntersectionObserver(function (es) {
       onScreen = es[0].isIntersecting;
@@ -1266,9 +1319,9 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function extras(d) {
     try {
       countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
-      if (d.lap && d.track) strip(document.getElementById('chart-speed'), document.getElementById('sectors'), d.lap, d.track, document.getElementById('lap-map'), document.getElementById('read-lap'));
+      if (d.lap && d.track) strip(document.getElementById('chart-speed'), d.lap, d.track, document.getElementById('lap-map'), document.getElementById('lap-here'), document.getElementById('lap'));
       if (d.trace && d.track) scene(d.track, d.trace, d.summary.best_lap_torcs_s, d.ghost, d.summary.best_version);
-      if (d.trace) sense(document.getElementById('sense'), document.getElementById('sense-read'), d.trace, d.summary.best_lap_torcs_s);
+      if (d.trace && d.track) sense(document.getElementById('sense'), document.getElementById('sense-read'), d.trace, d.track, d.summary.best_lap_torcs_s);
     } catch (e) { if (window.console) console.error(e); }
   }
 
