@@ -137,6 +137,18 @@ def trace(run_csv, dt=0.5):
     return {'dt': dt, 'lap_m': round(lap_m, 1), 'm': out}
 
 
+def track(ds=8.0):
+    """The centre line every ds metres as x, y (raceline.py) and height z (elevation.py), all in metres."""
+    import elevation
+    import raceline
+    segs, _ = raceline.read_segments()
+    S, X, Y = raceline.centre_line(segs, ds)[:3]
+    prof = elevation.read_profile()[0]
+    cx, cy = (min(X) + max(X)) / 2, (min(Y) + max(Y)) / 2
+    return {'x': [round(x - cx, 1) for x in X], 'y': [round(y - cy, 1) for y in Y],
+            'z': [round(elevation.at(prof, d, 1), 1) for d in S]}
+
+
 def build():
     vs = versions()
     laps = {v['v']: v['lap_s'] for v in vs}
@@ -171,7 +183,7 @@ def build():
         'run_csv': res['run_csv'],
     }
     return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob(),
-            'trace': trace(res['run_csv'])}
+            'trace': trace(res['run_csv']), 'track': track()}
 
 
 def main():

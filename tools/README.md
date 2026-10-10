@@ -592,7 +592,8 @@ judged lap's top speed and largest `|trackPos|`), one row per version for the ch
 best lap before and after, theme), the six rule questions with their fallback
 versions, the number and dates of the IBM Bob sessions, and the judged lap's distance
 from the start line every 0.5 s (read from its run CSV: the car on the landing screen
-drives the track outline at that pace). `--check` writes nothing
+drives the track outline at that pace), and that outline: the centre line every 8 m as
+x, y and height, from `raceline.py` and `elevation.py`. `--check` writes nothing
 and exits 1 if the file on disk differs from what would be written.
 
 **Where it is used.** By whoever changes the presentation website or its sources:

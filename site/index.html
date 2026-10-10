@@ -81,13 +81,17 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .lede { font-size: 1.2rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .8rem; }
 .entry { max-width: 38rem; margin: 0 0 1.8rem; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
-/* the Corkscrew behind the opening screen, and a car driving it at the judged lap's pace */
-.backdrop { position: absolute; top: 3%; bottom: 3%; right: 0; aspect-ratio: 1040 / 1097; pointer-events: none; }
-.backdrop svg { display: block; width: 100%; height: 100%; }
-.backdrop .road { fill: none; stroke: #fff; stroke-opacity: .075; stroke-width: 13; stroke-linejoin: round; }
+/* the Corkscrew behind the opening screen, drawn in three dimensions from its plan and heights, and a car driving it at the judged lap's pace */
+.backdrop { position: absolute; right: -2rem; top: 50%; width: min(66%, 60rem); transform: translateY(-50%); pointer-events: none; }
+.backdrop svg { display: block; width: 100%; height: auto; overflow: visible; }
+.backdrop .ground { fill: #000; fill-opacity: .3; }
+.backdrop .side { fill: #5d6673; }
+.backdrop .road { fill: #2b333f; stroke: #4a5361; stroke-width: 1; }
+.backdrop .pillar { fill: none; stroke: #fff; stroke-opacity: .09; stroke-width: 1.5; }
 .backdrop .car { fill: #eceff2; }
-.backdrop .tail { fill: none; stroke: var(--brand); stroke-linecap: round; }
 .backdrop .car .wing { fill: var(--brand); }
+.backdrop .tail { fill: none; stroke: var(--brand); stroke-linecap: round; }
+@media (max-width: 760px) { .backdrop { width: 135%; right: -40%; top: auto; bottom: 1rem; transform: none; opacity: .6; } }
 .jump { display: flex; flex-wrap: wrap; gap: .35rem 1.3rem; margin: 1.8rem 0 0; padding-top: 1rem; border-top: 1px solid var(--rule); max-width: 38rem; font: 500 1rem var(--display); }
 .jump span { color: var(--muted); }
 /* shown only where the opening screen fills the window, so nothing below it gives the scroll away */
@@ -221,8 +225,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 
 /* the run viewer: text beside its screenshot */
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 2rem 3rem; align-items: center; }
-.shot img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
-.shot:hover img { border-color: var(--brand); }
+.shot video { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
+.shot:hover video { border-color: var(--brand); }
 @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
 .act[id] { scroll-margin-top: 3.4rem; }
 #error { display: none; margin: 1rem 0; padding: .8rem 1rem; border: 2px solid var(--rej); background: var(--panel); }
@@ -260,15 +264,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 
 <main>
 <div class="hero dark">
-  <div class="backdrop" aria-hidden="true"><svg viewBox="0 0 1040 1097">
-    <path class="road" id="road" d="M515.5 1077.1 L520.3 1077.0 L525.1 1076.8 L529.9 1076.5 L534.7 1076.1 L539.4 1075.5 L544.1 1074.8 L548.8 1074.0 L553.5 1073.1 L558.2 1072.1 L562.9 1071.1 L567.6 1070.1 L572.2 1069.1 L576.9 1068.1 L581.6 1067.1 L586.2 1066.1 L590.9 1065.2 L595.6 1064.2 L600.3 1063.2 L604.9 1062.2 L609.6 1061.2 L614.3 1060.2 L619.0 1059.2 L623.6 1058.2 L628.3 1057.2 L633.0 1056.2 L637.7 1055.2 L642.3 1054.2 L647.0 1053.2 L651.7 1052.2 L656.4 1051.2 L661.0 1050.2 L665.7 1049.3 L670.4 1048.3 L675.1 1047.3 L679.7 1046.3 L684.4 1045.3 L689.1 1044.3 L693.8 1043.3 L698.4 1042.3 L703.1 1041.3 L707.8 1040.3 L712.5 1039.3 L717.1 1038.3 L721.8 1037.3 L726.5 1036.3 L731.2 1035.3 L735.8 1034.2 L740.4 1032.9 L744.9 1031.4 L749.4 1029.7 L753.7 1027.7 L758.0 1025.6 L762.2 1023.2 L766.2 1020.7 L770.2 1018.0 L774.0 1015.2 L777.8 1012.3 L781.6 1009.4 L785.4 1006.5 L789.3 1003.6 L793.1 1000.8 L796.9 997.9 L800.7 995.0 L804.5 992.1 L808.3 989.3 L812.2 986.4 L816.0 983.5 L819.8 980.6 L823.6 977.8 L827.4 974.9 L831.2 972.0 L835.1 969.1 L838.9 966.3 L842.7 963.4 L846.5 960.5 L850.3 957.6 L854.1 954.8 L858.0 951.9 L861.8 949.0 L865.6 946.1 L869.4 943.3 L873.2 940.4 L877.0 937.5 L880.9 934.6 L884.7 931.7 L888.5 928.9 L892.3 926.0 L896.1 923.1 L899.9 920.2 L903.8 917.4 L907.6 914.5 L911.4 911.6 L915.2 908.7 L919.0 905.9 L922.8 903.0 L926.7 900.1 L930.5 897.2 L934.3 894.4 L938.1 891.5 L941.9 888.6 L945.7 885.7 L949.5 882.8 L953.0 879.5 L956.0 875.8 L958.5 871.8 L960.6 867.5 L962.2 863.0 L963.2 858.3 L963.7 853.6 L963.6 848.7 L963.0 844.0 L961.9 839.4 L960.3 834.9 L958.2 830.6 L955.7 826.5 L952.7 822.8 L949.4 819.4 L945.8 816.2 L942.2 813.1 L938.5 810.0 L934.4 807.6 L930.0 805.7 L925.4 804.5 L920.7 803.9 L915.9 803.9 L911.1 804.4 L906.5 805.4 L901.9 806.9 L897.6 808.8 L893.3 811.0 L889.4 813.7 L885.6 816.6 L882.1 819.8 L878.8 823.3 L875.7 827.0 L872.9 830.8 L870.0 834.6 L867.1 838.4 L864.2 842.2 L861.4 846.1 L858.5 849.9 L855.6 853.7 L852.7 857.5 L849.9 861.3 L847.0 865.1 L844.1 869.0 L841.2 872.8 L838.3 876.6 L835.2 880.2 L832.0 883.8 L828.7 887.2 L825.3 890.6 L821.9 893.9 L818.3 897.1 L814.7 900.3 L811.1 903.3 L807.3 906.3 L803.5 909.3 L799.7 912.1 L795.9 914.9 L791.9 917.6 L788.0 920.3 L784.0 922.9 L780.0 925.5 L775.9 928.0 L771.8 930.4 L767.7 932.9 L763.5 935.2 L759.3 937.6 L755.1 939.8 L750.9 942.1 L746.7 944.2 L742.4 946.4 L738.1 948.5 L733.8 950.6 L729.5 952.7 L725.2 954.8 L720.9 956.9 L716.6 959.0 L712.3 961.1 L708.0 963.2 L703.7 965.3 L699.4 967.3 L695.1 969.3 L690.5 970.8 L685.9 971.9 L681.2 972.6 L676.4 972.9 L671.6 972.7 L666.9 972.1 L662.2 971.1 L657.7 969.7 L653.2 967.9 L649.0 965.7 L644.9 963.2 L641.2 960.3 L637.6 957.0 L634.4 953.5 L631.5 949.7 L628.9 945.7 L626.7 941.4 L624.9 937.1 L623.0 932.6 L621.2 928.2 L619.4 923.8 L617.6 919.4 L615.7 915.0 L613.9 910.5 L612.1 906.1 L610.3 901.7 L608.5 897.3 L606.6 892.9 L604.8 888.5 L603.0 884.0 L601.2 879.6 L599.4 875.2 L597.5 870.8 L595.7 866.4 L593.9 861.9 L592.1 857.5 L590.3 853.1 L588.4 848.7 L586.6 844.3 L584.8 839.9 L583.0 835.4 L581.1 831.0 L579.3 826.6 L577.5 822.2 L575.7 817.8 L573.9 813.3 L572.0 808.9 L570.2 804.5 L568.4 800.1 L566.6 795.7 L564.8 791.3 L562.9 786.8 L561.1 782.4 L559.3 778.0 L557.5 773.6 L555.7 769.2 L553.8 764.7 L552.0 760.3 L550.2 755.9 L548.4 751.5 L546.5 747.1 L544.7 742.6 L542.9 738.2 L541.1 733.8 L539.3 729.4 L537.7 724.9 L536.3 720.3 L535.2 715.7 L534.3 710.9 L533.7 706.3 L533.3 701.5 L533.3 696.7 L533.5 691.9 L534.0 687.2 L534.7 682.5 L535.8 677.8 L537.1 673.2 L538.7 668.7 L540.7 664.3 L542.9 660.1 L545.3 656.0 L548.1 652.1 L551.1 648.4 L554.4 645.0 L558.0 641.8 L561.6 638.7 L565.3 635.6 L568.9 632.5 L572.6 629.4 L576.2 626.3 L579.8 623.2 L583.5 620.1 L587.1 617.0 L590.8 613.9 L594.4 610.8 L598.0 607.7 L601.7 604.7 L605.3 601.6 L609.0 598.5 L612.6 595.4 L616.2 592.3 L619.9 589.2 L623.5 586.1 L627.1 583.0 L630.8 579.9 L634.4 576.8 L638.1 573.7 L641.7 570.6 L645.3 567.5 L649.0 564.4 L652.6 561.3 L656.3 558.2 L659.9 555.1 L663.5 552.0 L667.2 548.9 L670.8 545.8 L674.6 542.8 L678.3 539.8 L682.1 536.9 L685.9 534.1 L689.8 531.3 L693.7 528.6 L697.7 525.9 L701.7 523.3 L705.7 520.7 L709.8 518.2 L713.9 515.8 L718.1 513.5 L722.3 511.2 L726.5 508.9 L730.8 506.8 L735.1 504.7 L739.4 502.7 L743.7 500.7 L748.2 498.8 L752.6 497.0 L757.0 495.2 L761.5 493.5 L766.0 491.9 L770.5 490.3 L775.0 488.6 L779.4 487.0 L783.9 485.4 L788.4 483.8 L792.9 482.1 L797.4 480.5 L801.9 478.9 L806.4 477.2 L810.9 475.6 L815.4 474.0 L819.9 472.4 L824.4 470.7 L828.9 469.1 L833.4 467.5 L837.9 465.9 L842.4 464.2 L846.8 462.6 L851.3 461.0 L855.8 459.4 L860.3 457.7 L864.8 456.1 L869.3 454.5 L873.8 452.9 L878.3 451.2 L882.8 449.6 L887.3 448.0 L891.8 446.3 L896.3 444.7 L900.8 443.1 L905.3 441.5 L909.8 439.8 L914.3 438.2 L918.7 436.6 L923.2 435.0 L927.7 433.3 L932.2 431.7 L936.7 430.1 L941.2 428.5 L945.7 426.8 L950.2 425.2 L954.7 423.6 L959.2 421.9 L963.7 420.3 L968.2 418.7 L972.7 417.1 L977.1 415.3 L981.5 413.3 L985.7 411.1 L989.8 408.6 L993.7 405.8 L997.4 402.9 L1000.9 399.6 L1004.2 396.2 L1007.3 392.5 L1010.1 388.6 L1012.5 384.6 L1014.7 380.3 L1016.5 375.9 L1017.9 371.3 L1018.9 366.6 L1019.6 361.9 L1020.0 357.1 L1020.0 352.4 L1019.7 347.6 L1019.1 342.8 L1018.3 338.1 L1017.2 333.5 L1015.8 328.9 L1014.2 324.4 L1012.3 320.0 L1010.3 315.7 L1008.1 311.5 L1005.6 307.3 L1003.0 303.3 L1000.2 299.5 L997.3 295.7 L994.2 292.0 L991.0 288.5 L987.7 285.1 L984.2 281.8 L980.8 278.4 L977.4 275.1 L973.9 271.8 L970.5 268.5 L967.1 265.1 L963.6 261.8 L960.2 258.5 L956.8 255.2 L953.3 251.8 L949.9 248.5 L946.5 245.2 L943.1 241.9 L939.6 238.5 L936.2 235.2 L932.8 231.9 L929.3 228.6 L925.9 225.2 L922.5 221.9 L919.0 218.6 L915.6 215.3 L912.2 211.9 L908.7 208.6 L905.3 205.3 L901.9 202.0 L898.4 198.6 L895.0 195.3 L891.6 192.0 L888.1 188.6 L884.7 185.3 L881.3 182.0 L877.8 178.7 L874.4 175.3 L871.0 172.0 L867.6 168.7 L864.1 165.4 L860.7 162.0 L857.3 158.7 L853.8 155.4 L850.4 152.1 L847.0 148.7 L843.5 145.4 L840.1 142.1 L836.7 138.8 L833.2 135.4 L829.8 132.1 L826.4 128.8 L822.9 125.5 L819.5 122.1 L816.1 118.8 L812.6 115.5 L809.2 112.2 L805.8 108.8 L802.3 105.5 L798.9 102.2 L795.5 98.9 L792.1 95.5 L788.6 92.2 L785.2 88.9 L781.8 85.6 L778.3 82.2 L774.9 78.9 L771.5 75.6 L768.0 72.2 L764.6 68.9 L761.2 65.6 L757.7 62.3 L754.3 58.9 L750.9 55.6 L747.4 52.3 L744.0 49.0 L740.6 45.6 L737.1 42.3 L733.7 39.0 L730.3 35.7 L726.8 32.3 L723.3 29.1 L719.4 26.3 L715.3 24.0 L710.9 22.2 L706.2 20.9 L701.5 20.2 L696.8 20.0 L692.0 20.4 L687.3 21.2 L682.6 22.0 L677.9 22.9 L673.2 23.7 L668.5 24.5 L663.8 25.3 L659.0 26.2 L654.3 27.0 L649.6 27.8 L644.9 28.6 L640.2 29.4 L635.5 30.3 L630.8 31.1 L626.1 31.9 L621.4 32.7 L616.7 33.5 L612.0 34.4 L607.3 35.2 L602.6 36.2 L598.0 37.3 L593.4 38.7 L588.9 40.2 L584.4 41.9 L580.0 43.9 L575.7 45.9 L571.3 47.9 L567.0 49.9 L562.7 51.9 L558.3 53.9 L554.0 55.9 L549.7 58.0 L545.3 60.0 L541.0 62.0 L536.8 64.1 L532.5 66.3 L528.2 68.5 L524.0 70.8 L519.8 73.0 L515.7 75.4 L511.5 77.8 L507.4 80.2 L503.3 82.6 L499.3 85.1 L495.2 87.7 L491.2 90.3 L487.2 92.9 L483.2 95.6 L479.3 98.3 L475.4 101.1 L471.5 103.8 L467.6 106.6 L463.8 109.4 L459.9 112.3 L456.0 115.1 L452.2 117.9 L448.3 120.7 L444.4 123.5 L440.5 126.3 L436.7 129.1 L432.8 131.9 L428.9 134.7 L425.0 137.5 L421.1 140.2 L417.2 143.0 L413.3 145.7 L409.3 148.4 L405.3 151.0 L401.4 153.6 L397.3 156.1 L393.3 158.7 L389.2 161.2 L385.2 163.8 L381.2 166.4 L377.2 169.1 L373.3 171.8 L369.3 174.5 L365.4 177.2 L361.6 180.0 L357.6 182.8 L353.8 185.7 L350.0 188.5 L346.2 191.4 L342.4 194.4 L338.7 197.3 L334.9 200.2 L331.1 203.2 L327.4 206.1 L323.6 209.0 L319.8 212.0 L316.0 214.9 L312.3 217.9 L308.5 220.8 L304.7 223.7 L301.0 226.7 L297.2 229.6 L293.4 232.5 L289.7 235.5 L285.9 238.4 L282.1 241.3 L278.3 244.3 L274.5 247.2 L270.6 249.9 L266.5 252.3 L262.3 254.6 L258.0 256.7 L253.7 258.7 L249.2 260.6 L244.8 262.3 L240.4 264.0 L235.9 265.7 L231.4 267.4 L227.0 269.1 L222.5 270.8 L218.0 272.5 L213.6 274.2 L209.1 275.9 L204.6 277.6 L200.2 279.3 L195.7 281.0 L191.2 282.7 L186.7 284.5 L182.5 286.6 L178.5 289.2 L175.0 292.4 L171.9 296.1 L169.6 300.3 L168.0 304.8 L167.2 309.5 L167.5 314.3 L169.1 318.7 L171.8 322.7 L174.6 326.5 L177.4 330.4 L180.2 334.3 L182.1 338.7 L183.0 343.3 L183.0 348.1 L182.1 352.8 L180.6 357.4 L178.5 361.6 L175.9 365.7 L173.0 369.4 L169.6 372.8 L166.1 376.1 L162.6 379.3 L159.1 382.6 L155.6 385.8 L152.1 389.1 L148.6 392.3 L145.1 395.6 L141.6 398.8 L138.1 402.1 L134.6 405.3 L131.0 408.5 L127.3 411.5 L123.5 414.4 L119.6 417.1 L115.6 419.8 L111.5 422.2 L107.4 424.6 L103.1 426.8 L98.8 428.8 L94.4 430.8 L90.1 432.9 L85.9 435.1 L81.8 437.5 L77.7 440.0 L73.8 442.7 L70.0 445.6 L66.4 448.7 L63.0 452.1 L59.8 455.6 L56.6 459.2 L53.4 462.7 L50.2 466.3 L47.0 469.8 L43.7 473.4 L40.6 477.0 L37.6 480.7 L34.8 484.6 L32.3 488.6 L30.0 492.8 L27.9 497.1 L26.0 501.5 L24.4 506.0 L23.0 510.6 L21.9 515.2 L21.1 519.9 L20.4 524.7 L20.1 529.5 L20.0 534.2 L20.2 539.0 L20.6 543.7 L21.3 548.5 L22.2 553.2 L23.3 557.8 L24.7 562.4 L26.4 566.9 L28.3 571.2 L30.4 575.5 L32.7 579.7 L35.3 583.7 L38.0 587.6 L41.0 591.4 L44.2 595.0 L47.5 598.4 L51.0 601.7 L54.6 604.7 L58.5 607.6 L62.3 610.4 L66.2 613.2 L70.1 615.9 L74.0 618.7 L77.9 621.5 L81.8 624.3 L85.7 627.1 L89.5 629.9 L93.4 632.6 L97.3 635.4 L101.2 638.2 L105.1 641.0 L109.0 643.8 L112.9 646.6 L116.7 649.3 L120.6 652.1 L124.5 654.9 L128.4 657.7 L132.3 660.5 L136.2 663.2 L140.1 666.0 L143.9 668.8 L147.8 671.6 L151.7 674.4 L155.6 677.2 L159.5 679.9 L163.4 682.7 L167.3 685.5 L171.1 688.3 L175.0 691.1 L178.9 693.8 L182.8 696.6 L186.7 699.4 L190.6 702.2 L194.5 705.0 L198.3 707.8 L202.2 710.5 L206.1 713.3 L210.0 716.1 L213.9 718.9 L217.6 721.9 L221.0 725.2 L224.3 728.7 L227.3 732.4 L230.0 736.4 L232.4 740.5 L234.6 744.8 L236.4 749.2 L237.9 753.7 L239.1 758.3 L239.9 763.1 L240.4 767.8 L240.5 772.6 L240.3 777.4 L239.7 782.1 L238.8 786.8 L237.5 791.4 L235.9 795.9 L234.0 800.3 L231.8 804.5 L229.7 808.8 L227.5 813.1 L225.4 817.4 L223.3 821.6 L221.1 825.9 L219.0 830.2 L216.8 834.5 L214.7 838.7 L212.6 843.0 L210.4 847.3 L208.3 851.5 L206.1 855.8 L204.0 860.1 L201.9 864.4 L199.7 868.6 L197.6 872.9 L195.4 877.2 L193.3 881.5 L191.2 885.7 L189.0 890.0 L186.9 894.3 L184.7 898.5 L182.6 902.8 L180.5 907.1 L178.3 911.4 L176.2 915.6 L174.0 919.9 L171.9 924.2 L169.8 928.5 L167.6 932.7 L165.5 937.0 L163.3 941.3 L161.2 945.5 L159.1 949.8 L156.9 954.1 L154.8 958.4 L152.6 962.6 L150.5 966.9 L148.4 971.2 L146.2 975.5 L144.1 979.7 L141.9 984.0 L139.8 988.3 L137.7 992.6 L135.5 996.8 L133.4 1001.1 L131.2 1005.4 L129.1 1009.6 L127.0 1013.9 L124.8 1018.2 L122.7 1022.5 L120.5 1026.7 L118.4 1031.0 L116.3 1035.3 L114.1 1039.5 L112.0 1043.8 L110.2 1048.2 L109.3 1052.9 L109.4 1057.7 L110.4 1062.3 L112.5 1066.7 L115.4 1070.4 L119.0 1073.4 L123.3 1075.6 L127.9 1076.8 L132.7 1077.1 L137.5 1077.1 L142.3 1077.1 L147.0 1077.1 L151.8 1077.1 L156.6 1077.1 L161.4 1077.1 L166.2 1077.1 L170.9 1077.1 L175.7 1077.1 L180.5 1077.1 L185.3 1077.1 L190.1 1077.1 L194.8 1077.1 L199.6 1077.1 L204.4 1077.1 L209.2 1077.1 L214.0 1077.1 L218.7 1077.1 L223.5 1077.1 L228.2 1077.1 L233.0 1077.1 L237.8 1077.1 L242.6 1077.1 L247.4 1077.1 L252.1 1077.1 L256.9 1077.1 L261.7 1077.1 L266.5 1077.1 L271.3 1077.1 L276.0 1077.1 L280.8 1077.1 L285.6 1077.1 L290.4 1077.1 L295.2 1077.1 L299.9 1077.1 L304.7 1077.1 L309.5 1077.1 L314.3 1077.1 L319.0 1077.1 L323.8 1077.1 L328.6 1077.1 L333.4 1077.1 L338.2 1077.1 L342.9 1077.1 L347.7 1077.1 L352.5 1077.1 L357.3 1077.1 L362.1 1077.1 L366.8 1077.1 L371.6 1077.1 L376.4 1077.1 L381.2 1077.1 L385.9 1077.1 L390.7 1077.1 L395.5 1077.1 L400.3 1077.1 L405.1 1077.1 L409.8 1077.1 L414.6 1077.1 L419.4 1077.1 L424.2 1077.1 L429.0 1077.1 L433.7 1077.1 L438.5 1077.1 L443.3 1077.1 L448.1 1077.1 L452.9 1077.1 L457.6 1077.1 L462.4 1077.1 L467.2 1077.1 L472.0 1077.1 L476.7 1077.1 L481.5 1077.1 L486.3 1077.1 L491.1 1077.1 L495.9 1077.1 L500.6 1077.1 L505.4 1077.1 L510.2 1077.1 L515.0 1077.1 Z"/>
-    <g class="car" id="car" transform="translate(515.5 1077.1)"><g transform="scale(.34)">
-      <rect x="-13" y="-8.6" width="6.5" height="3.6" rx="1"/><rect x="-13" y="5" width="6.5" height="3.6" rx="1"/>
-      <rect x="7" y="-8" width="5.5" height="3.2" rx="1"/><rect x="7" y="4.8" width="5.5" height="3.2" rx="1"/>
-      <path d="M-15 0 L-9 -3.4 L5 -2.6 L17 -1 L17 1 L5 2.6 L-9 3.4 Z"/>
-      <rect class="wing" x="-17.5" y="-6.2" width="3.4" height="12.4"/><rect class="wing" x="14.6" y="-6.8" width="2.8" height="13.6"/>
-    </g></g>
-  </svg></div>
+  <div class="backdrop" aria-hidden="true"><svg id="scene"></svg></div>
   <div class="wrap">
     <div>
       <h1 aria-label="One lap of the Corkscrew in 1:05.56">One lap of the Corkscrew in <span class="time" id="time" data-from="2:43.38">1:05.56</span></h1>
@@ -420,7 +416,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
     <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
-  <a class="shot" href="viewer/"><picture><source srcset="viewer.webp" type="image/webp" media="(prefers-reduced-motion: no-preference)"><img src="viewer.jpg" width="1500" height="900" loading="lazy" alt="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."></picture></a>
+  <a class="shot" href="viewer/"><video id="clip" muted loop playsinline preload="none" poster="viewer.jpg" width="1500" height="900" aria-label="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."><source src="viewer.mp4" type="video/mp4"></video></a>
 </div>
 </section>
 
@@ -672,41 +668,86 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }, { threshold: .9 }).observe(nodes[0].closest('.facts'));
   }
 
-  /* the car on the landing screen drives the outline at the judged lap's own pace */
-  function drive(tr, lapS) {
-    var road = document.getElementById('road'), car = document.getElementById('car');
-    if (!road.getTotalLength || !MOTION) return;
-    var L = road.getTotalLength(), lapM = tr.lap_m, t0 = null, onScreen = true;
-    /* the road just driven, as three stacked strokes: longer and fainter the further back, so the trail is long where the car is fast */
-    var tails = [[2.4, 3, .22], [1.3, 4, .4], [.5, 5, .8]].map(function (o) {
-      var p = road.cloneNode(false);
-      p.removeAttribute('id'); p.setAttribute('class', 'tail'); p.setAttribute('stroke-width', o[1]); p.setAttribute('stroke-opacity', o[2]);
-      car.parentNode.insertBefore(p, car);
-      return { p: p, back: o[0] };
-    });
-    function at(sec) {            /* path length reached sec seconds into the lap */
-      var s = Math.max(0, sec) / tr.dt, i = Math.min(tr.m.length - 2, Math.floor(s));
-      return (tr.m[i] + (tr.m[i + 1] - tr.m[i]) * Math.min(1, s - i) - tr.m[0]) / lapM * L;
+  /* The landing screen's track: the centre line (x, y, height in metres) seen from the south and above, the road
+     as a ribbon with its true plan, heights stretched, a shadow on the ground under it. The car drives it at the
+     judged lap's own pace; behind it, the road of the last seconds, so the trail is long where the car is fast. */
+  function scene(tk, tr, lapS) {
+    var YAW = -.35, FLAT = .5, RISE = .87 * 2.6, HALF = 12, CAR = 30 / 35;   /* view angle, how flat the ground looks, height scale, half road width (m), car scale */
+    var svg = document.getElementById('scene'), n = tk.x.length, i;
+    var p11 = Math.cos(YAW), p12 = -Math.sin(YAW), p21 = -Math.sin(YAW) * FLAT, p22 = -Math.cos(YAW) * FLAT;
+    var z0 = Math.min.apply(null, tk.z);
+    function pr(x, y, z) { return [p11 * x + p12 * y, p21 * x + p22 * y - (z - z0) * RISE]; }
+    var mid = [], foot = [], L = [], Rt = [], gL = [], gR = [], cum = [0], all = [];
+    for (i = 0; i < n; i++) {
+      var j = (i + 1) % n, h = (i + n - 1) % n, dx = tk.x[j] - tk.x[h], dy = tk.y[j] - tk.y[h], q = HALF / Math.sqrt(dx * dx + dy * dy);
+      var nx = -dy * q, ny = dx * q, x = tk.x[i], y = tk.y[i], z = tk.z[i];
+      mid.push(pr(x, y, z)); foot.push(pr(x, y, z0));
+      L.push(pr(x + nx, y + ny, z)); Rt.push(pr(x - nx, y - ny, z));
+      gL.push(pr(x + nx, y + ny, z0)); gR.push(pr(x - nx, y - ny, z0));
     }
-    var l0 = tr.m[0] % lapM / lapM * L;
+    for (i = 0; i < n; i++) { var a = mid[i], b = mid[(i + 1) % n]; cum.push(cum[i] + Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]))); }
+    var line = function (ps, dy) { return 'M' + ps.map(function (q) { return q[0].toFixed(1) + ' ' + (q[1] + (dy || 0)).toFixed(1); }).join('L') + 'Z'; };
+    all = L.concat(Rt, gL, gR);
+    var xs = all.map(function (q) { return q[0]; }), ys = all.map(function (q) { return q[1]; });
+    var x0 = Math.min.apply(null, xs) - 20, y0 = Math.min.apply(null, ys) - 20;
+    svg.setAttribute('viewBox', [x0, y0, Math.max.apply(null, xs) + 20 - x0, Math.max.apply(null, ys) + 30 - y0].map(Math.round).join(' '));
+    svg.appendChild(el('path', { class: 'ground', 'fill-rule': 'evenodd', d: line(gL) + line(gR) }));
+    var posts = '';
+    for (i = 0; i < n; i += 5) if (foot[i][1] - mid[i][1] > 8) posts += 'M' + mid[i][0].toFixed(1) + ' ' + mid[i][1].toFixed(1) + 'L' + foot[i][0].toFixed(1) + ' ' + foot[i][1].toFixed(1);
+    svg.appendChild(el('path', { class: 'pillar', d: posts }));
+    svg.appendChild(el('path', { class: 'side', 'fill-rule': 'evenodd', d: line(L, 5) + line(Rt, 5) }));
+    svg.appendChild(el('path', { class: 'road', 'fill-rule': 'evenodd', d: line(L) + line(Rt) }));
+    var tails = [[2.4, 4, .25], [1.3, 6, .45], [.5, 8, .85]].map(function (o) {
+      return { p: svg.appendChild(el('path', { class: 'tail', d: line(mid), 'stroke-width': o[1], 'stroke-opacity': o[2], 'stroke-dasharray': '0 99999' })), back: o[0] };
+    });
+    var car = svg.appendChild(el('g', { class: 'car' }));
+    [['rect', { x: -13, y: -8.6, width: 6.5, height: 3.6, rx: 1 }], ['rect', { x: -13, y: 5, width: 6.5, height: 3.6, rx: 1 }],
+     ['rect', { x: 7, y: -8, width: 5.5, height: 3.2, rx: 1 }], ['rect', { x: 7, y: 4.8, width: 5.5, height: 3.2, rx: 1 }],
+     ['path', { d: 'M-15 0 L-9 -3.4 L5 -2.6 L17 -1 L17 1 L5 2.6 L-9 3.4 Z' }],
+     ['rect', { class: 'wing', x: -17.5, y: -6.2, width: 3.4, height: 12.4 }], ['rect', { class: 'wing', x: 14.6, y: -6.8, width: 2.8, height: 13.6 }]]
+      .forEach(function (o) { car.appendChild(el(o[0], o[1])); });
+
+    function metres(sec) {          /* distance driven sec seconds into the lap */
+      var k = Math.max(0, sec) / tr.dt, i = Math.min(tr.m.length - 2, Math.floor(k));
+      return tr.m[i] + (tr.m[i + 1] - tr.m[i]) * Math.min(1, k - i);
+    }
+    function place(m) {             /* where on the drawing that is: point, heading and length along the centre line */
+      var f = m % tr.lap_m / tr.lap_m * n, i = Math.floor(f) % n, j = (i + 1) % n, t = f - Math.floor(f);
+      return { x: mid[i][0] + (mid[j][0] - mid[i][0]) * t, y: mid[i][1] + (mid[j][1] - mid[i][1]) * t,
+               dir: Math.atan2(tk.y[j] - tk.y[i], tk.x[j] - tk.x[i]), len: cum[i] + (cum[i + 1] - cum[i]) * t };
+    }
+    function paint(sec) {
+      var m = metres(sec), c = place(m), co = Math.cos(c.dir) * CAR, si = Math.sin(c.dir) * CAR;
+      car.setAttribute('transform', 'matrix(' + [p11 * co + p12 * si, p21 * co + p22 * si, p12 * co - p11 * si, p22 * co - p21 * si, c.x, c.y].map(function (v) { return v.toFixed(2); }).join(' ') + ')');
+      tails.forEach(function (o) {
+        var len = Math.max(0, m - metres(sec - o.back)) / tr.lap_m * cum[n];
+        o.p.setAttribute('stroke-dasharray', len.toFixed(1) + ' 99999');
+        o.p.setAttribute('stroke-dashoffset', (len - c.len).toFixed(1));
+      });
+    }
+    paint(0);
+    if (!MOTION) return;
+    var t0 = null, onScreen = true;
     if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
       onScreen = es[0].isIntersecting;
       if (onScreen) requestAnimationFrame(frame);
-    }).observe(road);
+    }).observe(svg);
     function frame(t) {
       if (!onScreen) return;
       if (t0 == null) t0 = t;
-      var sec = (t - t0) / 1000 % lapS, run = at(sec), l = (l0 + run) % L;
-      tails.forEach(function (o) {
-        var len = run - at(sec - o.back);
-        o.p.setAttribute('stroke-dasharray', len.toFixed(1) + ' ' + (L * 2).toFixed(0));
-        o.p.setAttribute('stroke-dashoffset', (len - l).toFixed(1));
-      });
-      var a = road.getPointAtLength(l), b = road.getPointAtLength((l + 3) % L);
-      car.setAttribute('transform', 'translate(' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ') rotate(' + (Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI).toFixed(1) + ')');
+      paint((t - t0) / 1000 % lapS);
       requestAnimationFrame(frame);
     }
   }
+
+  /* the run viewer's silent clip plays while it is on screen; with reduced motion it stays on its still picture */
+  (function () {
+    var v = document.getElementById('clip');
+    if (!MOTION || !('IntersectionObserver' in window)) return;
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();
+    }, { threshold: .25 }).observe(v);
+  })();
 
   window.addEventListener('beforeprint', function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
 
@@ -872,7 +913,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function extras(d) {
     try {
       countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
-      if (d.trace) drive(d.trace, d.summary.best_lap_torcs_s);
+      if (d.trace && d.track) scene(d.track, d.trace, d.summary.best_lap_torcs_s);
     } catch (e) { if (window.console) console.error(e); }
   }
 
