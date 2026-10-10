@@ -185,7 +185,23 @@ summary .muted { margin-left: .6rem; font-size: .94rem; }
 .check li { display: flex; gap: 1rem; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--rule); }
 .check .done { color: var(--best); font-weight: 600; white-space: nowrap; }
 .check .todo { color: var(--muted); white-space: nowrap; }
-footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--muted); font-size: .94rem; }
+footer { padding: 2.6rem 0 3rem; color: var(--muted); font-size: .94rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 2rem 3rem; justify-content: space-between; align-items: center; }
+footer p { max-width: 38rem; margin: 0 0 .5rem; }
+.lockup { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+.lockup svg { width: 4.2rem; height: 4.2rem; flex: none; }
+.lockup strong { display: block; color: var(--ink); font: 700 1.9rem/1.1 var(--display); }
+.lockup .team { font: 600 1.15rem var(--display); }
+.qr { display: block; text-align: center; text-decoration: none; font: 500 .94rem var(--display); }
+.qr img { display: block; width: 8.5rem; height: auto; margin-bottom: .4rem; }
+
+/* the run viewer: text beside its screenshot */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 2rem 3rem; align-items: center; }
+.shot img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
+.shot:hover img { border-color: var(--best); }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+.skip { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; margin: 1.6rem 0 0; }
+.act[id] { scroll-margin-top: 3.4rem; }
 #error { display: none; margin: 1rem 0; padding: .8rem 1rem; border: 2px solid var(--rej); background: var(--panel); }
 </style>
 </head>
@@ -291,6 +307,7 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
     </div>
   </div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
+  <p class="skip"><a class="button ghost" href="#judges">Skip to the judges' part</a><span class="muted small">Technical summary, use of IBM Bob, deliverables, the record and the rules.</span></p>
 </div>
 </section>
 
@@ -362,17 +379,19 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
 </div>
 </section>
 
+<div class="kerb" aria-hidden="true"></div>
 <section id="viewer" class="dark">
-<div class="wrap">
-  <h2>The run viewer</h2>
-  <div class="text">
+<div class="wrap split">
+  <div>
+    <h2>The run viewer</h2>
     <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
     <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
+  <a class="shot" href="viewer/"><img src="viewer.jpg" width="1500" height="900" loading="lazy" alt="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."></a>
 </div>
 </section>
 
-<div class="act">
+<div class="act" id="judges">
   <div class="kerb" aria-hidden="true"></div>
   <div class="wrap">
     <p class="part">Part 3 of 3</p>
@@ -487,10 +506,26 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
 </section>
 </main>
 
-<footer>
+<footer class="dark">
   <div class="wrap">
-    One Qubit Racing, Adriano Torres. AI Racing League – Go FullSpeed with IBM Bob, submitted 11 October 2026.
-    Code, telemetry and the record of every version: <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE</a>.
+    <div>
+      <p class="lockup">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="100" cy="100" r="84" fill="none" stroke="#8a4dff" stroke-width="16"/>
+          <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#fff" stroke-width="16"/>
+          <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#e0343c" stroke-width="16" stroke-dasharray="14.66 14.66"/>
+          <g transform="translate(100 100) skewX(-8) translate(-100 -100)" fill="#fff">
+            <rect x="57" y="58" width="10" height="84" rx="1.5"/>
+            <polygon points="100,58 110,58 110,142 98,142 98,76 88,85 82,77"/>
+            <polyline points="126,58 146,100 126,142" fill="none" stroke="#fff" stroke-width="10"/>
+          </g>
+        </svg>
+        <span><strong>One Qubit Racing</strong><span class="team">AI Racing League entry</span></span>
+      </p>
+      <p>Adriano Torres. AI Racing League – Go FullSpeed with IBM Bob, submitted 11 October 2026.</p>
+      <p>Code, telemetry and the record of every version: <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE</a>.</p>
+    </div>
+    <a class="qr" href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE"><img src="qr-github.png" width="820" height="820" loading="lazy" alt="QR code for the GitHub repository"><span>Scan for the repository</span></a>
   </div>
 </footer>
 
@@ -519,6 +554,9 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
   var seen = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
     es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); seen.unobserve(e.target); } });
   }, { rootMargin: '0px 0px -12% 0px' }) : null;
+  var seenChart = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); seenChart.unobserve(e.target); } });
+  }, { threshold: .8 }) : null;
   if (MOTION && seen) document.querySelectorAll('main section > .wrap').forEach(function (n) { n.classList.add('reveal'); seen.observe(n); });
 
   /* the lap time counts down from the first full lap to the best */
@@ -529,12 +567,12 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
     if (!MOTION || !window.requestAnimationFrame) return;
     function frame(t) {
       if (t0 == null) t0 = t;
-      var k = Math.min(1, (t - t0) / 5700), c = Math.round((from + (to - from) * (1 - Math.pow(1 - k, 4))) * 100);
+      var k = Math.min(1, (t - t0) / 4350), c = Math.round((from + (to - from) * (1 - Math.pow(1 - k, 4))) * 100);
       n.textContent = Math.floor(c / 6000) + ':' + ('0' + (c % 6000 / 100).toFixed(2)).slice(-5);
       if (k < 1) requestAnimationFrame(frame);
     }
     n.textContent = n.getAttribute('data-from');
-    setTimeout(function () { requestAnimationFrame(frame); }, 350);
+    requestAnimationFrame(frame);   /* 4.35 s: it lands as the logo completes */
   })();
 
   /* the top bar marks the section being read */
@@ -602,7 +640,7 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
       svg.appendChild(dot);
     });
     svg.querySelector('.step').setAttribute('pathLength', 1);
-    if (MOTION && seen) { box.classList.add('anim'); seen.observe(box); }
+    if (MOTION && seenChart) { box.classList.add('anim'); seenChart.observe(box); }
     var cursor = el('circle', { class: 'cursor', r: o.r + 4, cx: -20, cy: -20 });
     svg.appendChild(cursor);
     box.appendChild(svg);
