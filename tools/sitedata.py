@@ -128,7 +128,7 @@ def trace(run_csv, lap_m, dt=0.2):
                 laps += 1
             ts.append(t)
             rows.append([d + laps * lap_m, float(row['trackPos']), float(row['angle'])]
-                        + [float(row['track%d' % k]) for k in range(19)])
+                        + [float(row.get('track%d' % k) or 0) for k in range(19)])   # the earliest runs have no beam columns
     out, i = [], 0
     for k in range(int(ts[-1] / dt) + 1):
         while ts[i + 1] < k * dt:
@@ -140,6 +140,16 @@ def trace(run_csv, lap_m, dt=0.2):
     return {'dt': dt, 'angles': angles,
             'm': [round(r[0], 1) for r in out], 'pos': [round(r[1], 3) for r in out], 'ang': [round(r[2], 3) for r in out],
             'beams': [[round(v) for v in r[3:]] for r in out]}
+
+
+def ghost(vs, lap_m, until_s, dt=0.2):
+    """The earliest lap that has telemetry, for the second car on the opening screen: the same samples as trace()
+    without the beams, from the start to just after the moment the judged lap ends."""
+    for v in vs:
+        run_csv = load(os.path.join(PRES, v['v'] + '.json'))['result'].get('run_csv')
+        if run_csv and v['lap_s'] is not None:
+            t, n = trace(run_csv, lap_m, dt), int(until_s / dt) + 12
+            return {'v': v['v'], 'lap': v['lap'], 'run_csv': run_csv, 'm': t['m'][:n], 'pos': t['pos'][:n], 'ang': t['ang'][:n]}
 
 
 def lapstats(run_csv, lap_m, lap_s, step=10):
@@ -234,7 +244,8 @@ def build():
     }
     return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob(),
             'trace': trace(res['run_csv'], tk['lap_m']), 'track': tk,
-            'lap': lapstats(res['run_csv'], tk['lap_m'], res['lap_s'])}
+            'lap': lapstats(res['run_csv'], tk['lap_m'], res['lap_s']),
+            'ghost': ghost(vs, tk['lap_m'], res['lap_s'])}
 
 
 def main():
