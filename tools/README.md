@@ -590,7 +590,9 @@ a summary (best lap, first lap, counts of kept / enabling / rejected versions, t
 judged lap's top speed and largest `|trackPos|`), one row per version for the chart
 (all 133: lap, decision, batch, plain-language title), one row per batch (versions,
 best lap before and after, theme), the six rule questions with their fallback
-versions, and the number and dates of the IBM Bob sessions. `--check` writes nothing
+versions, the number and dates of the IBM Bob sessions, and the judged lap's distance
+from the start line every 0.5 s (read from its run CSV: the car on the landing screen
+drives the track outline at that pace). `--check` writes nothing
 and exits 1 if the file on disk differs from what would be written.
 
 **Where it is used.** By whoever changes the presentation website or its sources:

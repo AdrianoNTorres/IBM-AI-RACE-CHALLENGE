@@ -26,7 +26,9 @@
   --ink: #18202b;       /* asphalt */
   --muted: #56616f;
   --rule: #c6ccd4;
-  --best: #6b2fd0;      /* timing-screen purple: a new best lap */
+  --brand: #8a4dff;     /* the logo's purple: every dot, rule and underline */
+  --best: #6b2fd0;      /* the same hue, darkened so that text in it stays readable */
+  --intro: 3.85s;       /* how long the logo and the lap time take on load: change this one number */
   --kept: #8a94a1;
   --rej: #cf2a32;       /* kerb red */
   --mark: #9a6a00;
@@ -38,15 +40,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #1a1f26; --panel: #222932; --ink: #eceff2; --muted: #a3adb9; --rule: #3a434f;
-    --best: #b891ff; --kept: #77818e; --rej: #ff6b6f; --mark: #f4c430; --band: rgba(244, 196, 48, .10);
+    --best: #b891ff; /* the logo's hue, lightened for text */ --kept: #77818e; --rej: #ff6b6f; --mark: #f4c430; --band: rgba(244, 196, 48, .10);
   }
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--body); font-variant-numeric: tabular-nums; }
-a { color: inherit; text-decoration-color: var(--best); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px solid var(--best); outline-offset: 3px; }
+a { color: inherit; text-decoration-color: var(--brand); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
 .wrap { max-width: 68rem; margin: 0 auto; padding-inline: 1.25rem; }
 .text { max-width: 44rem; }
 
@@ -67,11 +69,11 @@ header.top .wrap { display: flex; gap: 1.6rem; justify-content: space-between; a
 header.top nav { display: flex; gap: 1.2rem; min-width: 0; overflow-x: auto; white-space: nowrap; font-weight: 500; scrollbar-width: none; }
 header.top nav a { padding-block: .95rem; text-decoration: none; color: var(--muted); }
 header.top nav a:hover { color: var(--ink); }
-header.top nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -3px var(--best); }
+header.top nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -3px var(--brand); }
 section[id] { scroll-margin-top: 3.4rem; }
 
-.hero { display: grid; align-items: center; min-height: min(calc(100vh - 3.4rem - 10px), 54rem); min-height: min(calc(100svh - 3.4rem - 10px), 54rem); padding-block: 2.5rem; }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
+.hero { position: relative; overflow: hidden; display: grid; align-items: center; min-height: min(calc(100vh - 3.4rem - 10px), 54rem); min-height: min(calc(100svh - 3.4rem - 10px), 54rem); padding-block: 2.5rem; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
 .hero .mark { width: clamp(11rem, 25vw, 20rem); height: auto; }
 h1 { font: 600 clamp(1.5rem, 3.2vw, 2.4rem)/1.1 var(--display); margin: 0 0 1.4rem; }
 h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11rem); line-height: .92; letter-spacing: -.02em; margin-top: .1em; }
@@ -79,6 +81,17 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .lede { font-size: 1.2rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .8rem; }
 .entry { max-width: 38rem; margin: 0 0 1.8rem; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
+/* the Corkscrew behind the opening screen, and a car driving it at the judged lap's pace */
+.backdrop { position: absolute; top: 3%; bottom: 3%; right: 0; aspect-ratio: 1040 / 1097; pointer-events: none; }
+.backdrop svg { display: block; width: 100%; height: 100%; }
+.backdrop .road { fill: none; stroke: #fff; stroke-opacity: .075; stroke-width: 13; stroke-linejoin: round; }
+.backdrop .car { fill: #eceff2; fill-opacity: .8; }
+.backdrop .car .wing { fill: var(--brand); fill-opacity: 1; }
+.jump { display: flex; flex-wrap: wrap; gap: .35rem 1.3rem; margin: 1.8rem 0 0; padding-top: 1rem; border-top: 1px solid var(--rule); max-width: 38rem; font: 500 1rem var(--display); }
+.jump span { color: var(--muted); }
+/* shown only where the opening screen fills the window, so nothing below it gives the scroll away */
+.cue { display: none; position: absolute; left: 50%; bottom: .7rem; width: 1.6rem; height: 1.6rem; margin-left: -.8rem; fill: none; stroke: var(--muted); stroke-width: 2; }
+@media (max-height: 928px) and (min-width: 761px) { .cue { display: block; } }
 .kerb { height: 10px; background: repeating-linear-gradient(90deg, #e0343c 0 28px, #fff 28px 56px); }
 @media (max-width: 760px) {
   .hero .wrap { grid-template-columns: 1fr; }
@@ -96,6 +109,16 @@ section { padding-block: 3.6rem; }
 .act .lede { margin: 0; }
 .act + section { padding-top: 2.6rem; }
 p { margin: 0 0 1rem; }
+/* list bullets are the logo's ring */
+.text ul, .flow ul { list-style: none; padding-left: 1.5rem; }
+.text ul li, .flow ul li { position: relative; }
+.text ul li::before, .flow ul li::before { content: ""; position: absolute; left: -1.4rem; top: .52em; width: .62em; height: .62em; border: .16em solid var(--brand); border-radius: 50%; box-sizing: border-box; }
+.totop { margin: 1.4rem 0 0; font: 500 1rem var(--display); }
+/* reading progress: the logo's kerb arc fills round the ring; the ring is also the way back to the top */
+.progress { position: fixed; right: 1rem; bottom: 1rem; z-index: 9; width: 3.2rem; height: 3.2rem; padding: 0; border: 0; border-radius: 50%; cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.progress.on { opacity: 1; visibility: visible; }
+.progress svg { display: block; width: 100%; height: 100%; }
+.progress:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
 .muted { color: var(--muted); }
 .small { font-size: .94rem; }
 
@@ -108,15 +131,15 @@ p { margin: 0 0 1rem; }
 .chart .step { fill: none; stroke: var(--ink); stroke-width: 1.6; }
 .chart .lead { stroke: var(--mark); stroke-width: 1.2; stroke-dasharray: 3 3; }
 .chart .band { fill: var(--band); }
-.chart .d-best { fill: var(--best); }
+.chart .d-best { fill: var(--brand); }
 .chart .d-kept { fill: var(--kept); }
 .chart .d-rej { fill: var(--bg); stroke: var(--rej); stroke-width: 1.6; }
 .chart .cursor { fill: none; stroke: var(--ink); stroke-width: 2; }
-.readout { min-height: 3.4em; margin: .5rem 0 0; padding: .6rem .8rem; background: var(--panel); border-left: 4px solid var(--best); }
+.readout { min-height: 3.4em; margin: .5rem 0 0; padding: .6rem .8rem; background: var(--panel); border-left: 4px solid var(--brand); }
 .readout b { font: 700 1.1rem var(--display); margin-right: .7rem; }
 .legend { display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; margin: .7rem 0 0; padding: 0; list-style: none; color: var(--muted); font-size: .94rem; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .45rem; }
-.legend .b { background: var(--best); } .legend .k { background: var(--kept); } .legend .r { border: 2px solid var(--rej); }
+.legend .b { background: var(--brand); } .legend .k { background: var(--kept); } .legend .r { border: 2px solid var(--rej); }
 
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1.2rem 2rem; margin: 2rem 0 0; padding: 0; }
 .facts div { border-top: 2px solid var(--ink); padding-top: .5rem; }
@@ -127,7 +150,7 @@ p { margin: 0 0 1rem; }
 .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 1.5rem 0; border: 2px solid var(--ink); }
 .flow > div { padding: 1.1rem 1.2rem; background: var(--panel); }
 .flow > div + div { border-left: 2px solid var(--ink); }
-.flow ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+.flow ul { margin: .4rem 0 0; }
 .flow li { margin-bottom: .35rem; }
 .flow .when { color: var(--muted); font-size: .94rem; margin: 0 0 .5rem; }
 @media (max-width: 760px) { .flow { grid-template-columns: 1fr; } .flow > div + div { border-left: 0; border-top: 2px solid var(--ink); } }
@@ -154,7 +177,7 @@ td q { color: var(--muted); font-style: italic; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
 .slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
 .button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
-.button:hover { background: var(--best); color: var(--bg); }
+.button:hover { background: var(--brand); color: #fff; }
 .button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
 .button.ghost:hover { color: var(--best); box-shadow: inset 0 0 0 2px var(--best); }
 
@@ -164,23 +187,23 @@ summary { cursor: pointer; padding-block: .3rem; }
 summary h3 { display: inline; margin: 0; }
 summary .muted { margin-left: .6rem; font-size: .94rem; }
 
-/* motion: the logo and the lap time on load, each chart once when it scrolls into view */
+/* motion: the logo and the lap time on load; each chart's line and dots once, when most of the chart is on screen */
 @media (prefers-reduced-motion: no-preference) {
   /* the dashes exist only while drawing: once done the ring is a plain closed stroke, with no seam at the top */
-  .mark .ring { animation: draw 3.3s cubic-bezier(.6, 0, .2, 1) backwards; }
-  .mark .kerb-draw { animation: draw 1.35s 2.25s ease-out backwards; }
-  .mark .ket { animation: appear .9s 3.45s ease-out both; }
+  .mark .ring { animation: draw calc(var(--intro) * .76) cubic-bezier(.6, 0, .2, 1) backwards; }
+  .mark .kerb-draw { animation: draw calc(var(--intro) * .31) calc(var(--intro) * .52) ease-out backwards; }
+  .mark .ket { animation: appear calc(var(--intro) * .2) calc(var(--intro) * .8) ease-out both; }
+  .chart.anim.in .d-rej { animation: blink .7s ease-in-out both; }
   .chart.anim .step { stroke-dasharray: 1; stroke-dashoffset: 1; }
   .chart.anim circle, .chart.anim .note, .chart.anim .lead { opacity: 0; }
   .chart.anim.in .step { stroke-dashoffset: 0; transition: stroke-dashoffset 1.6s ease-out; }
   .chart.anim.in circle { opacity: 1; transition: opacity .25s; }
   .chart.anim.in .note, .chart.anim.in .lead { opacity: 1; transition: opacity .5s 1.5s; }
-  .reveal { opacity: 0; transform: translateY(14px); }
-  .reveal.in { opacity: 1; transform: none; transition: opacity .5s ease-out, transform .5s ease-out; }
 }
 /* starts a little past the end of the dash, so nothing at all is painted before the stroke sets off */
 @keyframes draw { from { stroke-dasharray: 1 3; stroke-dashoffset: 1.04; } to { stroke-dasharray: 1 3; stroke-dashoffset: 0; } }
 @keyframes appear { from { opacity: 0; } }
+@keyframes blink { 50% { stroke-opacity: .3; } }
 .check { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: 44rem; }
 .check li { display: flex; gap: 1rem; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--rule); }
 .check .done { color: var(--best); font-weight: 600; white-space: nowrap; }
@@ -198,9 +221,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 /* the run viewer: text beside its screenshot */
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 2rem 3rem; align-items: center; }
 .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
-.shot:hover img { border-color: var(--best); }
+.shot:hover img { border-color: var(--brand); }
 @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
-.skip { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; margin: 1.6rem 0 0; }
 .act[id] { scroll-margin-top: 3.4rem; }
 #error { display: none; margin: 1rem 0; padding: .8rem 1rem; border: 2px solid var(--rej); background: var(--panel); }
 </style>
@@ -237,12 +259,22 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 
 <main>
 <div class="hero dark">
+  <div class="backdrop" aria-hidden="true"><svg viewBox="0 0 1040 1097">
+    <path class="road" id="road" d="M516 1077 L523 1077 L530 1077 L537 1076 L544 1075 L551 1074 L558 1072 L565 1071 L572 1069 L579 1068 L586 1066 L593 1065 L600 1063 L607 1062 L614 1060 L621 1059 L628 1057 L635 1056 L642 1054 L649 1053 L656 1051 L663 1050 L670 1048 L677 1047 L684 1045 L691 1044 L698 1042 L705 1041 L712 1039 L719 1038 L726 1036 L733 1035 L740 1033 L747 1031 L754 1028 L760 1024 L766 1021 L772 1017 L778 1012 L784 1008 L789 1004 L795 999 L801 995 L806 991 L812 986 L818 982 L824 978 L829 973 L835 969 L841 965 L847 961 L852 956 L858 952 L864 948 L869 943 L875 939 L881 935 L887 930 L892 926 L898 922 L904 917 L909 913 L915 909 L921 904 L927 900 L932 896 L938 891 L944 887 L950 883 L955 878 L959 872 L961 865 L963 858 L964 851 L963 844 L961 837 L958 831 L954 825 L949 819 L944 815 L939 810 L932 807 L925 805 L918 804 L911 804 L904 806 L898 809 L891 812 L886 817 L880 822 L876 827 L871 833 L867 838 L863 844 L858 850 L854 856 L850 861 L846 867 L841 873 L837 878 L832 884 L827 889 L822 894 L817 899 L811 903 L805 908 L800 912 L794 916 L788 920 L782 924 L776 928 L770 932 L764 935 L757 939 L751 942 L745 945 L738 948 L732 952 L725 955 L719 958 L712 961 L706 964 L699 967 L693 970 L686 972 L679 973 L672 973 L665 972 L658 970 L651 967 L645 963 L639 959 L634 954 L630 948 L627 941 L624 935 L621 928 L618 922 L616 915 L613 908 L610 902 L608 895 L605 888 L602 882 L599 875 L597 869 L594 862 L591 855 L588 849 L586 842 L583 835 L580 829 L578 822 L575 816 L572 809 L569 802 L567 796 L564 789 L561 782 L558 776 L556 769 L553 763 L550 756 L547 749 L545 743 L542 736 L539 729 L537 723 L535 716 L534 709 L533 701 L533 694 L534 687 L535 680 L537 673 L540 666 L543 660 L547 654 L551 648 L556 643 L562 639 L567 634 L573 629 L578 625 L583 620 L589 615 L594 611 L600 606 L605 602 L611 597 L616 592 L622 588 L627 583 L633 578 L638 574 L644 569 L649 564 L654 560 L660 555 L665 550 L671 546 L676 541 L682 537 L688 533 L694 529 L700 525 L706 521 L712 517 L718 513 L724 510 L731 507 L737 504 L744 501 L750 498 L757 495 L764 493 L770 490 L777 488 L784 485 L791 483 L797 481 L804 478 L811 476 L818 473 L824 471 L831 468 L838 466 L845 463 L851 461 L858 459 L865 456 L872 454 L878 451 L885 449 L892 446 L899 444 L905 441 L912 439 L919 437 L925 434 L932 432 L939 429 L946 427 L952 424 L959 422 L966 420 L973 417 L979 414 L986 411 L992 407 L997 403 L1003 398 L1007 392 L1011 387 L1015 380 L1017 374 L1019 367 L1020 360 L1020 352 L1019 345 L1018 338 L1016 331 L1014 324 L1011 318 L1008 311 L1004 305 L1000 299 L996 294 L991 288 L986 283 L981 278 L976 273 L971 268 L965 263 L960 258 L955 253 L950 249 L945 244 L940 239 L934 234 L929 229 L924 224 L919 219 L914 214 L909 209 L904 204 L898 199 L893 194 L888 189 L883 184 L878 179 L873 174 L868 169 L862 164 L857 159 L852 154 L847 149 L842 144 L837 139 L832 134 L826 129 L821 124 L816 119 L811 114 L806 109 L801 104 L795 99 L790 94 L785 89 L780 84 L775 79 L770 74 L765 69 L759 64 L754 59 L749 54 L744 49 L739 44 L734 39 L729 34 L723 29 L717 25 L711 22 L704 20 L697 20 L690 21 L683 22 L676 23 L668 25 L661 26 L654 27 L647 28 L640 29 L633 31 L626 32 L619 33 L612 34 L605 36 L598 37 L591 39 L584 42 L578 45 L571 48 L565 51 L558 54 L552 57 L545 60 L539 63 L532 66 L526 70 L520 73 L514 77 L507 80 L501 84 L495 88 L489 92 L483 96 L477 100 L472 104 L466 108 L460 112 L454 116 L448 121 L442 125 L437 129 L431 133 L425 137 L419 142 L413 146 L407 150 L401 154 L395 157 L389 161 L383 165 L377 169 L371 173 L365 177 L360 181 L354 186 L348 190 L342 194 L337 199 L331 203 L325 208 L320 212 L314 216 L309 221 L303 225 L297 230 L292 234 L286 238 L280 243 L275 247 L269 251 L262 255 L256 258 L249 261 L243 263 L236 266 L229 268 L222 271 L216 273 L209 276 L202 278 L196 281 L189 284 L182 287 L177 291 L172 296 L169 302 L167 309 L168 317 L172 323 L176 328 L180 334 L183 341 L183 348 L181 355 L179 362 L174 368 L170 373 L164 378 L159 383 L154 387 L149 392 L143 397 L138 402 L133 407 L127 411 L122 416 L116 420 L109 423 L103 427 L97 430 L90 433 L84 436 L78 440 L72 444 L66 449 L61 454 L57 459 L52 465 L47 470 L42 475 L38 481 L34 487 L30 493 L27 499 L24 506 L22 513 L21 520 L20 527 L20 534 L20 541 L21 549 L23 556 L25 562 L27 569 L30 576 L34 582 L38 588 L43 593 L47 598 L53 603 L58 608 L64 612 L70 616 L76 620 L82 624 L88 628 L93 633 L99 637 L105 641 L111 645 L117 649 L123 654 L128 658 L134 662 L140 666 L146 670 L152 674 L158 679 L163 683 L169 687 L175 691 L181 695 L187 699 L193 704 L198 708 L204 712 L210 716 L216 720 L221 725 L226 731 L230 736 L234 743 L236 749 L239 756 L240 763 L240 770 L240 777 L239 784 L238 791 L235 798 L232 805 L229 811 L225 817 L222 824 L219 830 L216 837 L213 843 L209 849 L206 856 L203 862 L200 869 L197 875 L193 881 L190 888 L187 894 L184 901 L180 907 L177 914 L174 920 L171 926 L168 933 L164 939 L161 946 L158 952 L155 958 L152 965 L148 971 L145 978 L142 984 L139 990 L136 997 L132 1003 L129 1010 L126 1016 L123 1022 L119 1029 L116 1035 L113 1042 L110 1048 L109 1055 L110 1062 L114 1069 L119 1073 L126 1076 L133 1077 L140 1077 L147 1077 L154 1077 L161 1077 L169 1077 L176 1077 L183 1077 L190 1077 L197 1077 L204 1077 L212 1077 L219 1077 L226 1077 L233 1077 L240 1077 L247 1077 L255 1077 L262 1077 L269 1077 L276 1077 L283 1077 L290 1077 L298 1077 L305 1077 L312 1077 L319 1077 L326 1077 L333 1077 L341 1077 L348 1077 L355 1077 L362 1077 L369 1077 L376 1077 L384 1077 L391 1077 L398 1077 L405 1077 L412 1077 L419 1077 L427 1077 L434 1077 L441 1077 L448 1077 L455 1077 L462 1077 L470 1077 L477 1077 L484 1077 L491 1077 L498 1077 L505 1077 L513 1077 Z"/>
+    <g class="car" id="car" transform="translate(516 1077)">
+      <rect x="-13" y="-8.6" width="6.5" height="3.6" rx="1"/><rect x="-13" y="5" width="6.5" height="3.6" rx="1"/>
+      <rect x="7" y="-8" width="5.5" height="3.2" rx="1"/><rect x="7" y="4.8" width="5.5" height="3.2" rx="1"/>
+      <path d="M-15 0 L-9 -3.4 L5 -2.6 L17 -1 L17 1 L5 2.6 L-9 3.4 Z"/>
+      <rect class="wing" x="-17.5" y="-6.2" width="3.4" height="12.4"/><rect class="wing" x="14.6" y="-6.8" width="2.8" height="13.6"/>
+    </g>
+  </svg></div>
   <div class="wrap">
     <div>
       <h1 aria-label="One lap of the Corkscrew in 1:05.56">One lap of the Corkscrew in <span class="time" id="time" data-from="2:43.38">1:05.56</span></h1>
       <p class="lede">Down from <span data-s="first_lap">2:43.38</span> on the first full lap. A rule-based driver for the TORCS simulator, improved one measured change at a time over <span data-s="versions">133</span> recorded versions. No damage, never off the track.</p>
       <p class="entry">Entry for AI Racing League – Go FullSpeed with IBM Bob by <strong class="team">One Qubit Racing</strong>, a team of one: Adriano Torres.</p>
       <p class="actions"><a class="button" href="#lap">Watch the lap</a><a class="button ghost" href="viewer/">Open the run viewer</a></p>
+      <p class="jump"><span>For the judges:</span><a href="#lap">Lap video</a><a href="#summary">Technical summary</a><a href="#bob">Use of IBM Bob</a><a href="#deliverables">Videos and certificate</a><a href="#rules">Rules</a><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></p>
     </div>
     <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="One Qubit Racing logo: a ring with a kerb-striped arc around the quantum state one">
       <defs>
@@ -264,6 +296,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       </g>
     </svg>
   </div>
+  <svg class="cue" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
 </div>
 <div class="act">
   <div class="kerb" aria-hidden="true"></div>
@@ -307,7 +340,6 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     </div>
   </div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
-  <p class="skip"><a class="button ghost" href="#judges">Skip to the judges' part</a><span class="muted small">Technical summary, use of IBM Bob, deliverables, the record and the rules.</span></p>
 </div>
 </section>
 
@@ -387,7 +419,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
     <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
-  <a class="shot" href="viewer/"><img src="viewer.jpg" width="1500" height="900" loading="lazy" alt="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."></a>
+  <a class="shot" href="viewer/"><picture><source srcset="viewer.webp" type="image/webp" media="(prefers-reduced-motion: no-preference)"><img src="viewer.jpg" width="1500" height="900" loading="lazy" alt="The run viewer replaying v1.33 against v1.07 on a map of the Corkscrew: v1.33 at 232 km/h, 1,686 m into the lap and 2.58 seconds ahead, with the steering wheel, throttle and brake traces of both cars."></picture></a>
 </div>
 </section>
 
@@ -486,6 +518,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     </table>
   </div>
   </details>
+  <p class="totop"><a href="#top">Back to top</a></p>
 </div>
 </section>
 
@@ -502,6 +535,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     </table>
   </div>
   <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
+  <p class="totop"><a href="#top">Back to top</a></p>
 </div>
 </section>
 </main>
@@ -529,6 +563,18 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   </div>
 </footer>
 
+<button class="progress dark" id="progress-ring" type="button" aria-label="Back to top">
+  <svg viewBox="0 0 48 48" aria-hidden="true">
+    <defs><mask id="read-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48"><circle id="read-arc" cx="24" cy="24" r="19" fill="none" stroke="#fff" stroke-width="7" pathLength="1" stroke-dasharray="0 2" transform="rotate(-90 24 24)"/></mask></defs>
+    <circle cx="24" cy="24" r="19" fill="none" stroke="#8a4dff" stroke-opacity=".35" stroke-width="5"/>
+    <g mask="url(#read-mask)" transform="rotate(-90 24 24)">
+      <circle cx="24" cy="24" r="19" fill="none" stroke="#fff" stroke-width="5"/>
+      <circle cx="24" cy="24" r="19" fill="none" stroke="#e0343c" stroke-width="5" stroke-dasharray="4.974 4.974"/>
+    </g>
+    <path d="M17 27l7-7 7 7" fill="none" stroke="#eceff2" stroke-width="2.5"/>
+  </svg>
+</button>
+
 <script>
 (function () {
   'use strict';
@@ -551,28 +597,25 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 
   /* Motion, only for visitors who have not asked for less of it. Nothing is hidden unless the observer exists to show it. */
   var MOTION = window.matchMedia && matchMedia('(prefers-reduced-motion: no-preference)').matches;
-  var seen = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
-    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); seen.unobserve(e.target); } });
-  }, { rootMargin: '0px 0px -12% 0px' }) : null;
   var seenChart = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
     es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); seenChart.unobserve(e.target); } });
   }, { threshold: .8 }) : null;
-  if (MOTION && seen) document.querySelectorAll('main section > .wrap').forEach(function (n) { n.classList.add('reveal'); seen.observe(n); });
 
   /* the lap time counts down from the first full lap to the best */
   (function () {
     var n = document.getElementById('time');
     var secs = function (t) { var p = t.split(':'); return p[0] * 60 + +p[1]; };
     var from = secs(n.getAttribute('data-from')), to = secs(n.textContent), t0 = null;
+    var INTRO = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--intro')) * 1000 || 3850;
     if (!MOTION || !window.requestAnimationFrame) return;
     function frame(t) {
       if (t0 == null) t0 = t;
-      var k = Math.min(1, (t - t0) / 4350), c = Math.round((from + (to - from) * (1 - Math.pow(1 - k, 4))) * 100);
+      var k = Math.min(1, (t - t0) / INTRO), c = Math.round((from + (to - from) * (1 - Math.pow(1 - k, 4))) * 100);
       n.textContent = Math.floor(c / 6000) + ':' + ('0' + (c % 6000 / 100).toFixed(2)).slice(-5);
       if (k < 1) requestAnimationFrame(frame);
     }
     n.textContent = n.getAttribute('data-from');
-    requestAnimationFrame(frame);   /* 4.35 s: it lands as the logo completes */
+    requestAnimationFrame(frame);   /* lands as the logo completes: both take --intro */
   })();
 
   /* the top bar marks the section being read */
@@ -591,6 +634,63 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }, { rootMargin: '-45% 0px -50% 0px' });
     document.querySelectorAll('main section[id]').forEach(function (s) { reading.observe(s); });
   }
+  /* reading progress on the ring, bottom right */
+  (function () {
+    var ring = document.getElementById('progress-ring'), arc = document.getElementById('read-arc'), busy = false;
+    function paint() {
+      busy = false;
+      var max = document.documentElement.scrollHeight - innerHeight, y = window.scrollY || 0;
+      arc.setAttribute('stroke-dasharray', (max > 0 ? Math.min(1, y / max) : 0).toFixed(3) + ' 2');
+      ring.classList.toggle('on', y > innerHeight * .6);
+    }
+    window.addEventListener('scroll', function () { if (!busy) { busy = true; requestAnimationFrame(paint); } }, { passive: true });
+    ring.addEventListener('click', function () { window.scrollTo(0, 0); });
+    paint();
+  })();
+
+  /* the facts count up from zero the first time they are on screen */
+  function countUp(nodes) {
+    if (!MOTION || !('IntersectionObserver' in window)) return;
+    var jobs = nodes.map(function (n) {
+      var end = n.textContent, lap = end.indexOf(':') > 0, p = end.split(':');
+      var to = lap ? p[0] * 60 + +p[1] : +end.replace(/,/g, '');
+      var fmt = function (v) { var c = Math.round(v * 100); return lap ? Math.floor(c / 6000) + ':' + ('0' + (c % 6000 / 100).toFixed(2)).slice(-5) : Math.round(v).toLocaleString('en-US'); };
+      n.textContent = fmt(0);
+      return { n: n, to: to, fmt: fmt, end: end };
+    });
+    new IntersectionObserver(function (es, ob) {
+      if (!es[0].isIntersecting) return;
+      ob.disconnect();
+      var t0 = null;
+      requestAnimationFrame(function frame(t) {
+        if (t0 == null) t0 = t;
+        var k = Math.min(1, (t - t0) / 1400), e = 1 - Math.pow(1 - k, 3);
+        jobs.forEach(function (j) { j.n.textContent = k < 1 ? j.fmt(j.to * e) : j.end; });
+        if (k < 1) requestAnimationFrame(frame);
+      });
+    }, { threshold: .9 }).observe(nodes[0].closest('.facts'));
+  }
+
+  /* the car on the landing screen drives the outline at the judged lap's own pace */
+  function drive(tr, lapS) {
+    var road = document.getElementById('road'), car = document.getElementById('car');
+    if (!road.getTotalLength || !MOTION) return;
+    var L = road.getTotalLength(), lapM = tr.lap_m, t0 = null, onScreen = true;
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
+      onScreen = es[0].isIntersecting;
+      if (onScreen) requestAnimationFrame(frame);
+    }).observe(road);
+    function frame(t) {
+      if (!onScreen) return;
+      if (t0 == null) t0 = t;
+      var s = (t - t0) / 1000 % lapS / tr.dt, i = Math.min(tr.m.length - 2, Math.floor(s));
+      var l = (tr.m[i] + (tr.m[i + 1] - tr.m[i]) * Math.min(1, s - i)) % lapM / lapM * L;
+      var a = road.getPointAtLength(l), b = road.getPointAtLength((l + 5) % L);
+      car.setAttribute('transform', 'translate(' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ') rotate(' + (Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI).toFixed(1) + ')');
+      requestAnimationFrame(frame);
+    }
+  }
+
   window.addEventListener('beforeprint', function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
 
   /* One chart: a dot per version, the best lap so far as a step line, notes on chosen versions. */
@@ -637,6 +737,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       var kind = v.decision === 'rejected' ? 'd-rej' : isBest[i] ? 'd-best' : 'd-kept';
       var dot = el('circle', { class: kind, cx: x(i), cy: y(v.lap_s), r: kind === 'd-kept' ? o.r - .8 : o.r });
       dot.style.transitionDelay = (1.5 * i / vs.length).toFixed(2) + 's';   /* the dots land as the line passes them */
+      dot.style.animationDelay = (1.5 * i / vs.length + .3).toFixed(2) + 's';
       svg.appendChild(dot);
     });
     svg.querySelector('.step').setAttribute('pathLength', 1);
@@ -680,6 +781,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       var val = s[n.getAttribute('data-s')];
       n.textContent = typeof val === 'number' && val >= 1000 ? val.toLocaleString('en-US') : val;
     });
+    countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
+    drive(d.trace, s.best_lap_torcs_s);
     document.querySelectorAll('[data-b]').forEach(function (n) { n.textContent = d.bob[n.getAttribute('data-b')]; });
 
     chart(document.getElementById('chart-all'), document.getElementById('read-all'), vs, {

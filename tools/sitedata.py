@@ -5,7 +5,7 @@
 
 Sources (all local): project-stats.csv (one row per version) and docs/presentation/
 (vX.Y.json for the plain-language titles, batch-NN.json, manual/rules.json,
-index/bob-tasks.jsonl). Nothing is typed here: every number comes from those files.
+index/bob-tasks.jsonl) and the judged lap's run CSV. Nothing is typed here: every number comes from those files.
 """
 import csv
 import glob
@@ -111,6 +111,32 @@ def bob():
     return {'tasks': len(dates), 'first': min(dates), 'last': max(dates)}
 
 
+def trace(run_csv, dt=0.5):
+    """The judged lap as distance driven every dt seconds, from its run CSV. The car starts
+    about 10 m before the line, so the distance runs on past one lap: take it modulo lap_m."""
+    ts, ds, lap_m, laps = [], [], 0.0, 0
+    with open(os.path.join(ROOT, run_csv), newline='') as f:
+        for row in csv.DictReader(f):
+            t, d = float(row['curLapTime']), float(row['distFromStart'])
+            if t < 0:
+                continue
+            if ts and t < ts[-1]:
+                break
+            if ts and d < ds[-1] - laps * lap_m - 1000:
+                laps += 1
+            if not laps:
+                lap_m = max(lap_m, d)
+            ts.append(t)
+            ds.append(d + laps * lap_m)
+    out, i = [], 0
+    for k in range(int(ts[-1] / dt) + 1):
+        while ts[i + 1] < k * dt:
+            i += 1
+        f = (k * dt - ts[i]) / ((ts[i + 1] - ts[i]) or 1)
+        out.append(round(ds[i] + f * (ds[i + 1] - ds[i])))
+    return {'dt': dt, 'lap_m': round(lap_m, 1), 'm': out}
+
+
 def build():
     vs = versions()
     laps = {v['v']: v['lap_s'] for v in vs}
@@ -144,7 +170,8 @@ def build():
         'all30_s': res['all30_s'],
         'run_csv': res['run_csv'],
     }
-    return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob()}
+    return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob(),
+            'trace': trace(res['run_csv'])}
 
 
 def main():
