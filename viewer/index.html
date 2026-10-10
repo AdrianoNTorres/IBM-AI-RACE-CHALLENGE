@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Run viewer</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff5a1f'/%3E%3Cpath d='M8 22c0-9 4-12 9-12s7 3 7 6-3 5-6 5-4 2-4 4' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>One Qubit Racing: run viewer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='100' fill='%2318202b'/%3E%3Cg transform='translate(100 100) scale(.86) translate(-100 -100)'%3E%3Ccircle cx='100' cy='100' r='84' fill='none' stroke='%238a4dff' stroke-width='16'/%3E%3Cpath d='M85.4 182.7 A84 84 0 0 1 17.3 85.4' fill='none' stroke='%23fff' stroke-width='16'/%3E%3Cpath d='M85.4 182.7 A84 84 0 0 1 17.3 85.4' fill='none' stroke='%23e0343c' stroke-width='16' stroke-dasharray='14.66 14.66'/%3E%3Cg transform='translate(100 100) skewX(-8) translate(-100 -100)' fill='%23fff'%3E%3Crect x='57' y='58' width='10' height='84' rx='1.5'/%3E%3Cpolygon points='100,58 110,58 110,142 98,142 98,76 88,85 82,77'/%3E%3Cpolyline points='126,58 146,100 126,142' fill='none' stroke='%23fff' stroke-width='10'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
 <script>
 /* theme before the first paint, so the page does not flash */
 (function () {
@@ -17,16 +17,33 @@
   root.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=p190">
+<link rel="stylesheet" href="css/app.css?v=p191">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
 
+<!-- the team's logo, drawn once and used in the top bar and the footer. It was drawn for asphalt, so it carries its own dark disc in either theme -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="oqr" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="100" fill="#18202b"/>
+    <g transform="translate(100 100) scale(.86) translate(-100 -100)">
+      <circle cx="100" cy="100" r="84" fill="none" stroke="#8a4dff" stroke-width="16"/>
+      <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#fff" stroke-width="16"/>
+      <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#e0343c" stroke-width="16" stroke-dasharray="14.66 14.66"/>
+      <g transform="translate(100 100) skewX(-8) translate(-100 -100)" fill="#fff">
+        <rect x="57" y="58" width="10" height="84" rx="1.5"/>
+        <polygon points="100,58 110,58 110,142 98,142 98,76 88,85 82,77"/>
+        <polyline points="126,58 146,100 126,142" fill="none" stroke="#fff" stroke-width="10"/>
+      </g>
+    </g>
+  </symbol>
+</svg>
+
 <header id="top">
-  <div id="brand">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><path d="M8 22c0-9 4-12 9-12s7 3 7 6-3 5-6 5-4 2-4 4"/></svg>
-    <div><b>Run viewer</b><span id="brandSub"></span></div>
-  </div>
+  <a id="brand" href="../" title="One Qubit Racing: the project's presentation">
+    <svg viewBox="0 0 200 200" aria-hidden="true"><use href="#oqr"/></svg>
+    <div><b>One Qubit Racing</b><span id="brandSub">Run viewer</span></div>
+  </a>
   <nav id="tabs" aria-label="Pages">
     <button class="tab" data-t="pv">Versions</button>
     <button class="tab" data-t="pm">Track</button>
@@ -82,6 +99,12 @@
   <span id="pos" class="num"></span>
 </footer>
 
+<footer id="foot">
+  <a class="flock" href="../"><svg viewBox="0 0 200 200" aria-hidden="true"><use href="#oqr"/></svg><b>One Qubit Racing</b></a>
+  <span class="fnote">Entry for AI Racing League – Go FullSpeed with IBM Bob, by Adriano Torres</span>
+  <nav aria-label="The project"><a href="../">Presentation</a><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></nav>
+</footer>
+
 <div id="tour" hidden><div id="tourHole"></div><div id="tourCard" role="dialog" aria-modal="false" aria-labelledby="tourTitle"></div></div>
 <div id="devnote" hidden></div>
 <div id="tip"></div>
@@ -90,26 +113,26 @@
 
 <!-- the 3D library and its model loader are modules that name the library "three": this says where that is -->
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
-<script src="js/core.js?v=p190"></script>
-<script src="js/keys.js?v=p190"></script>
-<script src="js/theme.js?v=p190"></script>
-<script src="js/track.js?v=p190"></script>
-<script src="js/validate.js?v=p190"></script>
-<script src="js/local.js?v=p190"></script>
-<script src="js/data.js?v=p190"></script>
-<script src="js/app.js?v=p190"></script>
-<script src="js/sectors.js?v=p190"></script>
-<script src="js/versions.js?v=p190"></script>
-<script src="js/map.js?v=p190"></script>
-<script src="js/inputs.js?v=p190"></script>
-<script src="js/analysis.js?v=p190"></script>
-<script src="js/telemetry.js?v=p190"></script>
-<script src="js/settings.js?v=p190"></script>
-<script src="js/entry.js?v=p190"></script>
-<script src="js/help.js?v=p190"></script>
-<script src="js/tutorial.js?v=p190"></script>
-<script src="js/device.js?v=p190"></script>
-<script src="js/view3d.js?v=p190"></script>
+<script src="js/core.js?v=p191"></script>
+<script src="js/keys.js?v=p191"></script>
+<script src="js/theme.js?v=p191"></script>
+<script src="js/track.js?v=p191"></script>
+<script src="js/validate.js?v=p191"></script>
+<script src="js/local.js?v=p191"></script>
+<script src="js/data.js?v=p191"></script>
+<script src="js/app.js?v=p191"></script>
+<script src="js/sectors.js?v=p191"></script>
+<script src="js/versions.js?v=p191"></script>
+<script src="js/map.js?v=p191"></script>
+<script src="js/inputs.js?v=p191"></script>
+<script src="js/analysis.js?v=p191"></script>
+<script src="js/telemetry.js?v=p191"></script>
+<script src="js/settings.js?v=p191"></script>
+<script src="js/entry.js?v=p191"></script>
+<script src="js/help.js?v=p191"></script>
+<script src="js/tutorial.js?v=p191"></script>
+<script src="js/device.js?v=p191"></script>
+<script src="js/view3d.js?v=p191"></script>
 <script>RV.boot();</script>
 </body>
 </html>

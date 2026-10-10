@@ -94,7 +94,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); overflow: hidden;   /* the column never grows past the window: a full top bar clips its chips instead */
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; grid-template-columns: minmax(0, 1fr); overflow: hidden;   /* the column never grows past the window: a full top bar clips its chips instead */
   background: var(--bg); color: var(--ink-2); font: 14px/1.5 var(--font-ui);
 }
 .num { font-variant-numeric: tabular-nums; }
@@ -184,10 +184,8 @@ tbody tr:last-child td { border-bottom: 0; }
   content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 3px;
   background: repeating-linear-gradient(90deg, var(--ink) 0 10px, transparent 10px 20px); opacity: .12; pointer-events: none;
 }
-#brand { display: flex; align-items: center; gap: 11px; padding: 0 18px 0 16px; }
-#brand svg { width: 30px; height: 30px; flex: none; }
-#brand svg rect { fill: var(--accent); }
-#brand svg path { fill: none; stroke: var(--accent-ink); stroke-width: 3.2; stroke-linecap: round; }
+#brand { display: flex; align-items: center; gap: 11px; padding: 0 18px 0 16px; text-decoration: none; }
+#brand svg { width: 36px; height: 36px; flex: none; }
 #brand b { white-space: nowrap; display: block; color: var(--ink); font: 600 18px/1.1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
 #brand span { display: block; color: var(--mute); font-size: 12px; line-height: 1.2; }
 #tabs { display: flex; }
@@ -626,6 +624,13 @@ body.touring #addVer { opacity: .45; pointer-events: none; }   /* entered versio
 /* ---------- replay bar, tooltip, toast ---------- */
 #bar { display: none; gap: 10px; align-items: center; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--line); }
 #bar.on { display: flex; }
+/* ---------- footer: whose site this is, and the way back to the presentation ---------- */
+#foot { display: flex; align-items: center; gap: 14px; min-height: 30px; padding: 3px 16px; background: var(--surface); border-top: 1px solid var(--line); color: var(--mute); font-size: 12px; line-height: 1.3; }
+#foot a { color: var(--ink-2); text-decoration: none; } #foot a:hover { color: var(--ink); text-decoration: underline; }
+#foot .flock { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; } #foot .flock svg { width: 20px; height: 20px; flex: none; }
+#foot .flock b { color: var(--ink); font: 600 13px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+#foot .fnote { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#foot nav { display: flex; gap: 16px; margin-left: auto; white-space: nowrap; }
 #bar input[type=range] { flex: 1; min-width: 120px; }
 #play { min-width: 86px; }
 #bar .spd { display: inline-flex; align-items: center; gap: 8px; color: var(--mute); margin-left: 6px; }
@@ -718,6 +723,7 @@ body.touring #addVer { opacity: .45; pointer-events: none; }   /* entered versio
   #pe, #pt, #ps, #ph { padding: 16px 14px; overflow: visible; }
   .helpgrid { grid-template-columns: 1fr; } .helpnav { position: static; }
   #bar { position: sticky; bottom: 0; flex-wrap: wrap; } #pos { min-width: 0; }
+  #foot { flex-wrap: wrap; gap: 4px 14px; padding: 10px 14px; } #foot .fnote { white-space: normal; flex: 1 1 100%; order: 3; }
   /* the readout goes under the 2D | 3D switch, and a row of sub-tabs wider than the screen scrolls by itself */
   #overlay { top: 58px; } #v3bar { top: 8px; }
   .subtabs { display: flex; max-width: 100%; overflow-x: auto; } .subtabs button { flex: none; }
