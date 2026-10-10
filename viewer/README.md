@@ -141,7 +141,6 @@ Example: `index.html#tab=pm&run=v1.05&cmp=v0.96&frame=2440&mode=detailed`
 | `js/versions.js`, `js/map.js`, `js/telemetry.js`, `js/settings.js` | One file per page. |
 | `js/tutorial.js` | The welcome and the guided tour. |
 | `tracks/corkscrew.xml` | The Corkscrew track file from TORCS (GPL), the default map. |
-| `legacy/` | The previous viewer (a page opened from disk plus `build.py`, which pre-built its data). Kept only as the reference the new code was checked against; not used by the site and safe to delete. `build.py` no longer runs from this location. |
 
 The scripts are classic scripts sharing one global, `RV`, not ES modules, so that the page also opens from disk.
 

@@ -16,7 +16,6 @@ without modifying it directly — each race gets a private copy.
 | Every gear change of a lap and its short stints | `python tools/gears.py runs/<file>.csv [--short 1]` |
 | Step trace of a run against the planned line | `python tools/trace.py runs/<file>.csv 2200 2640 [step]` |
 | **Record a version once** (changelog entry, batch row, ledger rows, run CSV, commit, tag) | `python tools/record.py %TEMP%\vNNN\version.md [--dry-run]` |
-| What each sub-agent of a session cost (turns, context, minutes) | `python tools/agentcost.py [--all] [--detail]` |
 | Batch-end doc sync: remap the tuning card's driver line numbers and check every knob row | `python tools/cardlines.py [--from v1.17] [--write]` |
 | One race (optionally with knob overrides) | `python tools/race.py [--set knob=value ...]` |
 | Race cache: size / empty it | `python tools/race.py --cache-info` / `--cache-clear` |
@@ -262,29 +261,6 @@ an open Pattern watch item.
 **Implementation.** Each argument is a run CSV or a folder of `accept.py` runs
 (`*s1_p0.csv`); rows with `curLapTime` ≥ 0; a change is any row whose `gear` differs
 from the row before.
-
----
-
-## agentcost.py — what a session's agents cost
-
-**What it does.** Reads a Claude Code session's transcripts and prints per sub-agent
-and for the orchestrator: turns, context at the first and largest turn, the context
-summed over all turns ("processed" tokens), wall minutes, minutes waiting for tools
-(races), minutes of model time and the model it ran on. Below the table, "by model" adds
-up every agent and the orchestrator per model (agents, turns, tokens processed): the
-figure to watch against the plan's limit, Opus first. `--all` prints one line per session; `--detail` adds
-tool calls, files read and characters written. Times are UTC.
-
-**Where it is used.** By the orchestrator at batch end, for the batch's cost line, and
-to check whether a workflow change lowered the cost.
-
-**Why it exists.** Every turn reads the whole context again, so a version costs turns
-× context; the figure reported when an agent ends is only its last context size, and
-the minutes agents reported themselves did not match the transcripts.
-
-**Implementation.** Parses `~/.claude/projects/<project>/<session>/subagents/*.jsonl`:
-one usage record per model message, tool waits from the timestamps of each call and
-its result.
 
 ---
 
