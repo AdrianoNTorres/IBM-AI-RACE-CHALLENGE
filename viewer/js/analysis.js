@@ -146,7 +146,8 @@
     dlg.addEventListener('pointerdown', e => { if (e.target === dlg) closePopup(); });
     RV.$('anClose').onclick = closePopup;
     RV.$('anLoop').onclick = () => { closePopup(); loop(z); };
-    RV.$('anTrack').onclick = () => { closePopup(); loop(z); RV.showTab('pm'); };
+    /* not a second loop button: the car is put where the area starts and held there, on the Track tab */
+    RV.$('anTrack').onclick = () => { closePopup(); RV.play.setLoop(null); RV.play.set(false); RV.play.go(RV.idxAtD(S.R, z.d0)); RV.showTab('pm'); };
     RV.$('anLoop').focus();
   }
 
