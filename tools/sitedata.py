@@ -112,11 +112,11 @@ def bob():
     return {'tasks': len(dates), 'first': min(dates), 'last': max(dates)}
 
 
-def trace(run_csv, dt=0.2):
+def trace(run_csv, lap_m, dt=0.2):
     """The judged lap every dt seconds, from its run CSV: distance driven (m), trackPos, the car's angle to the
     track (rad) and the 19 beam readings (m), with the beams' angles as the driver sets them. The car starts
-    about 10 m before the line, so the distance runs on past one lap: take it modulo lap_m."""
-    ts, rows, lap_m, laps = [], [], 0.0, 0
+    about 10 m before the line, so the distance runs on past one lap (lap_m is added at the line)."""
+    ts, rows, laps = [], [], 0
     with open(os.path.join(ROOT, run_csv), newline='') as f:
         for row in csv.DictReader(f):
             t, d = float(row['curLapTime']), float(row['distFromStart'])
@@ -126,8 +126,6 @@ def trace(run_csv, dt=0.2):
                 break
             if ts and d < rows[-1][0] - laps * lap_m - 1000:
                 laps += 1
-            if not laps:
-                lap_m = max(lap_m, d)
             ts.append(t)
             rows.append([d + laps * lap_m, float(row['trackPos']), float(row['angle'])]
                         + [float(row['track%d' % k]) for k in range(19)])
@@ -139,20 +137,22 @@ def trace(run_csv, dt=0.2):
         out.append([a + f * (b - a) for a, b in zip(rows[i], rows[i + 1])])
     with open(os.path.join(ROOT, 'driver', 'snakeoil3_v1.py'), encoding='utf-8') as f:
         angles = json.loads(re.search(r'^TRACK_ANGLES\s*=\s*(\[[^\]]*\])', f.read(), re.M).group(1).replace(' .', ' 0.').replace('-.', '-0.'))
-    return {'dt': dt, 'lap_m': round(lap_m, 1), 'angles': angles,
-            'm': [round(r[0], 1) for r in out], 'pos': [round(r[1], 2) for r in out], 'ang': [round(r[2], 3) for r in out],
+    return {'dt': dt, 'angles': angles,
+            'm': [round(r[0], 1) for r in out], 'pos': [round(r[1], 3) for r in out], 'ang': [round(r[2], 3) for r in out],
             'beams': [[round(v) for v in r[3:]] for r in out]}
 
 
-def track(ds=8.0):
-    """The centre line every ds metres as x, y (raceline.py) and height z (elevation.py), all in metres."""
+def track(n=600):
+    """The centre line as n evenly spaced stations round the lap: x, y (raceline.py) and height z (elevation.py),
+    in metres, and the lap's length. Station i is i * lap_m / n metres from the start line."""
     import elevation
     import raceline
     segs, _ = raceline.read_segments()
-    S, X, Y = raceline.centre_line(segs, ds)[:3]
+    lap_m = raceline.centre_line(segs, 100.0)[5]
+    S, X, Y = [c[:n] for c in raceline.centre_line(segs, lap_m / n)[:3]]
     prof = elevation.read_profile()[0]
     cx, cy = (min(X) + max(X)) / 2, (min(Y) + max(Y)) / 2
-    return {'x': [round(x - cx, 1) for x in X], 'y': [round(y - cy, 1) for y in Y],
+    return {'lap_m': round(lap_m, 2), 'x': [round(x - cx, 1) for x in X], 'y': [round(y - cy, 1) for y in Y],
             'z': [round(elevation.at(prof, d, 1), 1) for d in S]}
 
 
@@ -164,6 +164,7 @@ def build():
     first = with_lap[0]
     res = load(os.path.join(PRES, best['v'] + '.json'))['result']
     bs = batches()
+    tk = track()
     dates = sorted({v['date'] for v in vs if v['date']})
     summary = {
         'best_version': best['v'],
@@ -190,7 +191,7 @@ def build():
         'run_csv': res['run_csv'],
     }
     return {'summary': summary, 'versions': vs, 'batches': bs, 'rules': rules(laps), 'bob': bob(),
-            'trace': trace(res['run_csv']), 'track': track()}
+            'trace': trace(res['run_csv'], tk['lap_m']), 'track': tk}
 
 
 def main():
