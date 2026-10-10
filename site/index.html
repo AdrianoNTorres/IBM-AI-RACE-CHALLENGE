@@ -50,7 +50,8 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--body); font-variant-numeric: tabular-nums; }
 a { color: inherit; text-decoration-color: var(--brand); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.chart:focus { outline: none; }
 .wrap { max-width: 68rem; margin: 0 auto; padding-inline: 1.25rem; }
 .text { max-width: 44rem; }
 
@@ -392,7 +393,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   <p id="error"role="alert">The numbers on this page are read from <code>data.json</code>, which could not be loaded. Open the page through a web server: run <code>python -m http.server</code> in the <code>site</code> folder and visit <code>http://localhost:8000</code>.</p>
 
   <div class="chart" id="chart-all" tabindex="0" role="img" aria-label="Lap time of every version, from 2:43.38 at v0.2 to 1:05.56 at v1.33. Use the left and right arrow keys to step through the versions."></div>
-  <p class="readout" id="read-all" aria-live="polite">Point at the chart, or focus it and use the arrow keys, to read any version.</p>
+  <p class="readout" id="read-all" aria-live="polite">Point at the chart, or use the left and right arrow keys, to read any version.</p>
   <ul class="legend">
     <li><i class="b"></i>a new best lap</li>
     <li><i class="k"></i>kept, no new best</li>
@@ -1262,15 +1263,34 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       var px = (e.clientX - r.left) / r.width * W;
       show(Math.round((px - L) / (W - L - R) * (vs.length - 1)));
     });
-    box.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight') show(cur + 1);
-      else if (e.key === 'ArrowLeft') show(cur < 0 ? vs.length - 1 : cur - 1);
-      else if (e.key === 'Home') show(0);
-      else if (e.key === 'End') show(vs.length - 1);
-      else return;
-      e.preventDefault();
-    });
+    box.addEventListener('pointerenter', function () { overChart = box; });
+    box.addEventListener('pointerleave', function () { if (overChart === box) overChart = null; });
+    box.addEventListener('focus', function () { if (cur < 0) show(vs.length - 1); });   /* the ring on the line is the focus mark */
+    charts.push({ box: box, key: function (k) {
+      if (k === 'ArrowRight') show(cur + 1);
+      else if (k === 'ArrowLeft') show(cur < 0 ? vs.length - 1 : cur - 1);
+      else if (k === 'Home') show(0);
+      else if (k === 'End') show(vs.length - 1);
+    } });
   }
+
+  /* The keys reach a chart without a click: the one with focus, else the one under the pointer,
+     else (arrows only, Home and End keep scrolling the page) the one that is whole on screen. */
+  var charts = [], overChart = null;
+  document.addEventListener('keydown', function (e) {
+    var arrow = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+    if (!arrow && e.key !== 'Home' && e.key !== 'End') return;
+    if (e.ctrlKey || e.altKey || e.metaKey || /^(VIDEO|INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    var c = charts.filter(function (c) { return c.box === document.activeElement; })[0] ||
+            charts.filter(function (c) { return c.box === overChart; })[0] ||
+            (arrow && charts.filter(function (c) {
+              var r = c.box.getBoundingClientRect();
+              return r.top >= 0 && r.bottom <= innerHeight;
+            })[0]);
+    if (!c) return;
+    c.key(e.key);
+    e.preventDefault();
+  });
 
   function build(d) {
     var vs = d.versions, s = d.summary, byV = {};
