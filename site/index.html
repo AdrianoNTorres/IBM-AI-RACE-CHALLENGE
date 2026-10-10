@@ -821,7 +821,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     /* A lap as the car is drawn: samples every tr.dt seconds (distance, place across the road, angle, beams), joined
        by a smooth curve so the car does not move in steps. Past the last sample it carries on at its final speed. */
     function curve(arr, a, t) {
-      var last = arr.length - 1, p0 = arr[Math.max(0, a - 1)], p1 = arr[a], p2 = arr[Math.min(last, a + 1)], p3 = arr[Math.min(last, a + 2)];
+      var last = arr.length - 1, p1 = arr[a], p2 = arr[Math.min(last, a + 1)];
+      var p0 = a ? arr[a - 1] : 2 * p1 - p2, p3 = a + 2 <= last ? arr[a + 2] : 2 * p2 - p1;   /* at either end the missing neighbour continues the line, so the car neither sets off nor arrives at half speed */
       return p1 + .5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
     }
     function state(set, sec) {
