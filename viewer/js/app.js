@@ -180,7 +180,7 @@
   function setLoop(range) {
     S.loop = range; S.loopDraft = null;
     const chip = $('loopChip');
-    chip.hidden = !range;
+    chip.hidden = !range; $('loopPick').hidden = !!range;    /* one button in that place: choose a loop, or end the one that runs */
     S.chartsDirty = true;
   }
   RV.play = { go: go, set: setPlaying, setLoop: setLoop };
