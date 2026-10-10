@@ -62,7 +62,8 @@ a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px soli
 .band { --band-bg: var(--panel); --band-panel: var(--bg); background: var(--band-bg); }
 .band > .wrap { --bg: var(--band-bg); --panel: var(--band-panel); }
 
-header.top { position: sticky; top: 0; z-index: 10; font: 600 1rem var(--display); letter-spacing: .01em; }
+header.top { position: sticky; top: 0; z-index: 10; font: 600 1rem var(--display); letter-spacing: .01em; border-bottom: 1px solid transparent; transition: border-color .2s; }
+header.top.scrolled { border-bottom-color: var(--rule); }
 header.top .wrap { display: flex; gap: 1.6rem; justify-content: space-between; align-items: center; }
 .brand { display: flex; align-items: center; gap: .6rem; padding-block: .7rem; text-decoration: none; white-space: nowrap; }
 .brand svg { width: 1.9rem; height: 1.9rem; }
@@ -73,7 +74,8 @@ header.top nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -3px var
 section[id] { scroll-margin-top: 3.4rem; }
 
 .hero { position: relative; overflow: hidden; display: grid; align-items: center; min-height: min(calc(100vh - 3.4rem - 10px), 54rem); min-height: min(calc(100svh - 3.4rem - 10px), 54rem); padding-block: 2.5rem; }
-.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
+/* --fade: the opening text fades out as it scrolls up towards the top bar */
+.hero .wrap { opacity: var(--fade, 1); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
 .hero .mark { width: clamp(11rem, 25vw, 20rem); height: auto; }
 h1 { font: 600 clamp(1.5rem, 3.2vw, 2.4rem)/1.1 var(--display); margin: 0 0 1.4rem; }
 h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11rem); line-height: .92; letter-spacing: -.02em; margin-top: .1em; }
@@ -634,11 +636,14 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   /* reading progress on the ring, bottom right */
   (function () {
     var ring = document.getElementById('progress-ring'), arc = document.getElementById('read-arc'), busy = false;
+    var bar = document.querySelector('header.top'), hero = document.querySelector('.hero');
     function paint() {
       busy = false;
       var max = document.documentElement.scrollHeight - innerHeight, y = window.scrollY || 0;
       arc.setAttribute('stroke-dasharray', (max > 0 ? Math.min(1, y / max) : 0).toFixed(3) + ' 2');
       ring.classList.toggle('on', y > innerHeight * .6);
+      bar.classList.toggle('scrolled', y > 8);
+      hero.style.setProperty('--fade', Math.max(0, 1 - y / (hero.offsetHeight * .5)).toFixed(3));
     }
     window.addEventListener('scroll', function () { if (!busy) { busy = true; requestAnimationFrame(paint); } }, { passive: true });
     ring.addEventListener('click', function () { window.scrollTo(0, 0); });
