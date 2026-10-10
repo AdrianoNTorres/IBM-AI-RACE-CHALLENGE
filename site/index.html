@@ -907,13 +907,43 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }
     var ghost = gh ? makeCar('ghost') : null, tagG = gh ? svg.appendChild(el('text', { class: 'tag old' }, gh.v)) : null;
     var main = makeCar(), tagM = svg.appendChild(el('text', { class: 'tag' }, name));
-    function patchOf(set, st, q) { /* the patch of road a car's beams reach: from the car round the end of each beam, left to right */
-      var c = q.c, co = Math.cos(c.yaw), si = Math.sin(c.yaw), d = 'M' + fix([q.at[0], q.at[1] - 1]);
+    /* A point of the real world as a place on the road: metres along the lap (counted on from the car, so it does
+       not wrap at the line) and metres left of the centre line. Only the road from just behind the car to a little
+       past the beam's reach is searched, so a point is never put on another part of the track. */
+    function roadAt(px, py, m, r) {
+      var step = tk.lap_m / n, j0 = Math.floor(m / step) - 2, j1 = Math.ceil((m + 1.6 * r + 20) / step), best = Infinity, out = [m, 0], j;
+      for (j = j0; j < j1; j++) {
+        var a = (j % n + n) % n, b = (a + 1) % n, ex = tk.x[b] - tk.x[a], ey = tk.y[b] - tk.y[a], ee = ex * ex + ey * ey;
+        var t = Math.max(0, Math.min(1, ((px - tk.x[a]) * ex + (py - tk.y[a]) * ey) / ee)), dx = px - tk.x[a] - ex * t, dy = py - tk.y[a] - ey * t, dd = dx * dx + dy * dy;
+        if (dd < best) { best = dd; out = [(j + t) * step, (ex * dy - ey * dx) / Math.sqrt(ee)]; }
+      }
+      return out;
+    }
+    function onRoad(sn) {          /* that place in the picture, where the road is WIDE times as wide */
+      var w = world(sn[0]);
+      return pr(w.x - w.ty * sn[1] * WIDE, w.y + w.tx * sn[1] * WIDE, lift(w.z));
+    }
+    /* The patch of road a car's beams reach: from the car round the end of each beam, left to right. A beam is a
+       straight line on the real road, but the picture's road is widened, so each beam's end is first found as a place
+       on the road (how far along, how far across) and drawn there: a beam that reached an edge ends on the drawn
+       edge, never beyond it. Between two beams the outline runs along the road, not straight across the picture, so
+       it follows a curved edge without cutting the corner. */
+    function patchOf(set, st, q) {
+      var w = world(st.m), yaw = Math.atan2(w.ty, w.tx) - st.ang, co = Math.cos(yaw), si = Math.sin(yaw);
+      var cx = w.x - w.ty * st.pos * 6, cy = w.y + w.tx * st.pos * 6;   /* the car on the real road: 6 m is half its width */
+      var ends = [[st.m, st.pos * 6]], d = 'M' + fix([q.at[0], q.at[1] - 1]), k, e, g, steps, u;
       tr.angles.forEach(function (deg, b) {
-        var r = Math.min(REACH, set.beams[st.a][b] + (set.beams[st.b][b] - set.beams[st.a][b]) * st.t), al = deg * Math.PI / 180;
-        var f = r * Math.cos(al), l = -r * Math.sin(al) * WIDE;
-        d += 'L' + fix(pr(c.x + f * co - l * si, c.y + f * si + l * co, lift(world(st.m + f).z)));
+        var raw = set.beams[st.a][b] + (set.beams[st.b][b] - set.beams[st.a][b]) * st.t, r = Math.max(0, Math.min(REACH, raw)), al = deg * Math.PI / 180;
+        var f = r * Math.cos(al), l = -r * Math.sin(al), sn = roadAt(cx + f * co - l * si, cy + f * si + l * co, st.m, r);
+        if (raw < REACH && Math.abs(sn[1]) > 3) sn[1] = sn[1] < 0 ? -6 : 6;   /* it reached an edge: readings are whole metres, so put it on the edge itself */
+        else if (raw >= REACH) sn[0] = Math.max(sn[0], st.m + REACH);          /* beyond the patch's reach: the patch ends in one line across the road */
+        sn[1] = Math.max(-6, Math.min(6, sn[1]));
+        ends.push(sn);
       });
+      for (k = 1; k < ends.length; k++) {
+        e = ends[k - 1]; g = ends[k]; steps = Math.max(1, Math.min(14, Math.ceil(Math.abs(g[0] - e[0]) / 7)));
+        for (u = 1; u <= steps; u++) d += 'L' + fix(onRoad([e[0] + (g[0] - e[0]) * u / steps, e[1] + (g[1] - e[1]) * u / steps]));
+      }
       return d + 'Z';
     }
     function headTo(line, set, st, at, alpha) {
