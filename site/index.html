@@ -125,6 +125,11 @@ p { margin: 0 0 1rem; }
 .text ul, .flow ul { list-style: none; padding-left: 1.5rem; }
 .text ul li, .flow ul li { position: relative; }
 .text ul li::before, .flow ul li::before { content: ""; position: absolute; left: -1.4rem; top: .52em; width: .62em; height: .62em; border: .16em solid var(--brand); border-radius: 50%; box-sizing: border-box; }
+/* the question that turned the project, set large */
+.pull { quotes: "“" "”"; margin: 2rem 0; padding: .2rem 0 .2rem 1.4rem; border-left: 5px solid var(--brand); }
+.pull p { margin: 0 0 .6rem; font: 600 clamp(1.5rem, 3.2vw, 2.15rem)/1.2 var(--display); }
+.pull p::before { content: open-quote; } .pull p::after { content: close-quote; }
+.pull footer { padding: 0; color: var(--muted); font: 500 1rem var(--display); background: none; }
 .totop { margin: 1.4rem 0 0; font: 500 1rem var(--display); }
 /* reading progress: the logo's kerb arc fills round the ring; the ring is also the way back to the top */
 .progress { position: fixed; right: 1rem; bottom: 1rem; z-index: 9; width: 3.2rem; height: 3.2rem; padding: 0; border: 0; border-radius: 50%; cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
@@ -407,7 +412,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   <h2>The journey</h2>
   <div class="text">
     <p>For the first 105 versions the car drove on its sensors alone, because we held back track memory until the officials answered. That approach ran out at about 1:13.6: in batch 12 four of five versions were rejected, since a car cannot set up wide for a corner it does not yet know is coming. On 4 October the officials allowed a pre-mapped track, and the question that turned the project came three days later:</p>
-    <p><q>Since we can memorize the track can't we precompute the most optimal racing line and adjust that?</q></p>
+    <blockquote class="pull"><p>Since we can memorize the track can't we precompute the most optimal racing line and adjust that?</p><footer>Asked on 7 October 2026</footer></blockquote>
     <p>The last eight seconds came from that line, the speed it allows and the rulings that let the car use the whole road.</p>
   </div>
   <div class="chart" id="chart-end" tabindex="0" role="img" aria-label="Lap time from v1.05 to v1.33, 1:13.56 down to 1:05.56, with the four rulings that opened new gains. Use the left and right arrow keys to step through the versions."></div>
