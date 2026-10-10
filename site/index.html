@@ -50,21 +50,44 @@ a:focus-visible, .chart:focus-visible, summary:focus-visible { outline: 3px soli
 .wrap { max-width: 68rem; margin: 0 auto; padding-inline: 1.25rem; }
 .text { max-width: 44rem; }
 
-header.top { padding-block: 1.1rem; font: 600 1rem var(--display); letter-spacing: .01em; }
-header.top .wrap { display: flex; flex-wrap: wrap; gap: .4rem 1.6rem; justify-content: space-between; }
-header.top nav { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; font-weight: 500; }
-header.top nav a { text-decoration: none; color: var(--muted); }
-header.top nav a:hover { color: var(--ink); }
+/* the asphalt the logo was drawn for: the top bar, the opening screen and the viewer band, in either theme */
+.dark {
+  --bg: #141a22; --panel: #1f2630; --ink: #eceff2; --muted: #a3adb9; --rule: #3a434f;
+  --best: #b891ff; --kept: #77818e; --rej: #ff6b6f; --mark: #f4c430;
+  background: var(--bg); color: var(--ink);
+}
+/* a band takes the panel colour and hands the page colour to the panels inside it */
+.band { --band-bg: var(--panel); --band-panel: var(--bg); background: var(--band-bg); }
+.band > .wrap { --bg: var(--band-bg); --panel: var(--band-panel); }
 
-.hero { padding-block: 2.5rem 2.2rem; }
-h1 { font: 700 clamp(2.4rem, 6.4vw, 4.9rem)/1.0 var(--display); letter-spacing: -.012em; margin: 0 0 1.2rem; max-width: 15ch; }
+header.top { position: sticky; top: 0; z-index: 10; font: 600 1rem var(--display); letter-spacing: .01em; }
+header.top .wrap { display: flex; gap: 1.6rem; justify-content: space-between; align-items: center; }
+.brand { display: flex; align-items: center; gap: .6rem; padding-block: .7rem; text-decoration: none; white-space: nowrap; }
+.brand svg { width: 1.9rem; height: 1.9rem; }
+header.top nav { display: flex; gap: 1.2rem; min-width: 0; overflow-x: auto; white-space: nowrap; font-weight: 500; scrollbar-width: none; }
+header.top nav a { padding-block: .95rem; text-decoration: none; color: var(--muted); }
+header.top nav a:hover { color: var(--ink); }
+header.top nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -3px var(--best); }
+section[id] { scroll-margin-top: 3.4rem; }
+
+.hero { display: grid; align-items: center; min-height: min(calc(100vh - 3.4rem - 10px), 54rem); min-height: min(calc(100svh - 3.4rem - 10px), 54rem); padding-block: 2.5rem; }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
+.hero .mark { width: clamp(11rem, 25vw, 20rem); height: auto; }
+h1 { font: 600 clamp(1.5rem, 3.2vw, 2.4rem)/1.1 var(--display); margin: 0 0 1.4rem; }
+h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11rem); line-height: .92; letter-spacing: -.02em; margin-top: .1em; }
 .team { font-weight: 700; color: var(--best); }
-.lede { font-size: 1.2rem; line-height: 1.5; max-width: 40rem; margin: 0 0 2rem; }
-.kerb { height: 10px; background: repeating-linear-gradient(90deg, var(--rej) 0 28px, #fff 28px 56px); }
+.lede { font-size: 1.2rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .8rem; }
+.entry { max-width: 38rem; margin: 0 0 1.8rem; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
+.kerb { height: 10px; background: repeating-linear-gradient(90deg, #e0343c 0 28px, #fff 28px 56px); }
+@media (max-width: 760px) {
+  .hero .wrap { grid-template-columns: 1fr; }
+  .hero .mark { order: -1; width: 7rem; }
+}
 
 h2 { font: 700 clamp(1.7rem, 3.4vw, 2.5rem)/1.1 var(--display); margin: 0 0 1rem; }
 h3 { font: 600 1.25rem/1.25 var(--display); margin: 0 0 .4rem; }
-section { padding-block: 3.2rem 0; }
+section { padding-block: 3.6rem; }
 p { margin: 0 0 1rem; }
 .muted { color: var(--muted); }
 .small { font-size: .94rem; }
@@ -124,20 +147,58 @@ td q { color: var(--muted); font-style: italic; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
 .slot iframe, .slot video, .slot img { width: 100%; height: 100%; border: 0; }
 .button { display: inline-block; padding: .7rem 1.2rem; background: var(--ink); color: var(--bg); font: 600 1.1rem var(--display); text-decoration: none; }
-.button:hover { background: var(--best); color: #fff; }
+.button:hover { background: var(--best); color: var(--bg); }
+.button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.button.ghost:hover { color: var(--best); box-shadow: inset 0 0 0 2px var(--best); }
+
+/* folded tables */
+details + details { margin-top: 1.6rem; }
+summary { cursor: pointer; padding-block: .3rem; }
+summary h3 { display: inline; margin: 0; }
+summary .muted { margin-left: .6rem; font-size: .94rem; }
+
+/* motion: the logo and the lap time on load, each chart once when it scrolls into view */
+@media (prefers-reduced-motion: no-preference) {
+  /* the dashes exist only while drawing: once done the ring is a plain closed stroke, with no seam at the top */
+  .mark .ring { animation: draw 3.3s cubic-bezier(.6, 0, .2, 1) backwards; }
+  .mark .kerb-draw { animation: draw 1.35s 2.25s ease-out backwards; }
+  .mark .ket { animation: appear .9s 3.45s ease-out both; }
+  .chart.anim .step { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .chart.anim circle, .chart.anim .note, .chart.anim .lead { opacity: 0; }
+  .chart.anim.in .step { stroke-dashoffset: 0; transition: stroke-dashoffset 1.6s ease-out; }
+  .chart.anim.in circle { opacity: 1; transition: opacity .25s; }
+  .chart.anim.in .note, .chart.anim.in .lead { opacity: 1; transition: opacity .5s 1.5s; }
+  .reveal { opacity: 0; transform: translateY(14px); }
+  .reveal.in { opacity: 1; transform: none; transition: opacity .5s ease-out, transform .5s ease-out; }
+}
+/* starts a little past the end of the dash, so nothing at all is painted before the stroke sets off */
+@keyframes draw { from { stroke-dasharray: 1 3; stroke-dashoffset: 1.04; } to { stroke-dasharray: 1 3; stroke-dashoffset: 0; } }
+@keyframes appear { from { opacity: 0; } }
 .check { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: 44rem; }
 .check li { display: flex; gap: 1rem; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--rule); }
 .check .done { color: var(--best); font-weight: 600; white-space: nowrap; }
 .check .todo { color: var(--muted); white-space: nowrap; }
-footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--muted); font-size: .94rem; }
+footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--muted); font-size: .94rem; }
 #error { display: none; margin: 1rem 0; padding: .8rem 1rem; border: 2px solid var(--rej); background: var(--panel); }
 </style>
 </head>
 <body>
 
-<header class="top">
+<header class="top dark" id="top">
   <div class="wrap">
-    <span class="team">One Qubit Racing</span>
+    <a class="brand team" href="#top">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="84" fill="none" stroke="#8a4dff" stroke-width="16"/>
+        <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#fff" stroke-width="16"/>
+        <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#e0343c" stroke-width="16" stroke-dasharray="14.66 14.66"/>
+        <g transform="translate(100 100) skewX(-8) translate(-100 -100)" fill="#fff">
+          <rect x="57" y="58" width="10" height="84" rx="1.5"/>
+          <polygon points="100,58 110,58 110,142 98,142 98,76 88,85 82,77"/>
+          <polyline points="126,58 146,100 126,142" fill="none" stroke="#fff" stroke-width="10"/>
+        </g>
+      </svg>
+      One Qubit Racing
+    </a>
     <nav aria-label="Sections">
       <a href="#how">How it drives</a>
       <a href="#journey">Journey</a>
@@ -152,10 +213,41 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
 </header>
 
 <main>
-<div class="hero wrap">
-  <h1>One lap of the Corkscrew, from 2:43.38 down to 1:05.56</h1>
-  <p class="lede">A rule-based driver for the TORCS simulator, improved one measured change at a time over 133 recorded versions. No damage, never off the track. Entry for AI Racing League – Go FullSpeed with IBM Bob by <strong class="team">One Qubit Racing</strong>, a team of one: Adriano Torres.</p>
-  <p id="error" role="alert">The numbers on this page are read from <code>data.json</code>, which could not be loaded. Open the page through a web server: run <code>python -m http.server</code> in the <code>site</code> folder and visit <code>http://localhost:8000</code>.</p>
+<div class="hero dark">
+  <div class="wrap">
+    <div>
+      <h1 aria-label="One lap of the Corkscrew in 1:05.56">One lap of the Corkscrew in <span class="time" id="time" data-from="2:43.38">1:05.56</span></h1>
+      <p class="lede">Down from <span data-s="first_lap">2:43.38</span> on the first full lap. A rule-based driver for the TORCS simulator, improved one measured change at a time over <span data-s="versions">133</span> recorded versions. No damage, never off the track.</p>
+      <p class="entry">Entry for AI Racing League – Go FullSpeed with IBM Bob by <strong class="team">One Qubit Racing</strong>, a team of one: Adriano Torres.</p>
+      <p class="actions"><a class="button" href="#lap">Watch the lap</a><a class="button ghost" href="viewer/">Open the run viewer</a></p>
+    </div>
+    <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="One Qubit Racing logo: a ring with a kerb-striped arc around the quantum state one">
+      <defs>
+        <mask id="kerb-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+          <path class="kerb-draw" d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#fff" stroke-width="20" pathLength="1"/>
+        </mask>
+      </defs>
+      <circle class="ring" cx="100" cy="100" r="84" fill="none" stroke="#8a4dff" stroke-width="16" pathLength="1" transform="rotate(-90 100 100)"/>
+      <g mask="url(#kerb-mask)">
+        <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#fff" stroke-width="16"/>
+        <path d="M85.4 182.7 A84 84 0 0 1 17.3 85.4" fill="none" stroke="#e0343c" stroke-width="16" stroke-dasharray="14.66 14.66"/>
+      </g>
+      <g class="ket">
+        <g transform="translate(100 100) skewX(-8) translate(-100 -100)" fill="#fff">
+          <rect x="57" y="58" width="10" height="84" rx="1.5"/>
+          <polygon points="100,58 110,58 110,142 98,142 98,76 88,85 82,77"/>
+          <polyline points="126,58 146,100 126,142" fill="none" stroke="#fff" stroke-width="10"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+</div>
+<div class="kerb" aria-hidden="true"></div>
+
+<section id="progress">
+<div class="wrap">
+  <h2>Every version, from <span data-s="first_lap">2:43.38</span> to <span data-s="best_lap">1:05.56</span></h2>
+  <p id="error"role="alert">The numbers on this page are read from <code>data.json</code>, which could not be loaded. Open the page through a web server: run <code>python -m http.server</code> in the <code>site</code> folder and visit <code>http://localhost:8000</code>.</p>
 
   <div class="chart" id="chart-all" tabindex="0" role="img" aria-label="Lap time of every version, from 2:43.38 at v0.2 to 1:05.56 at v1.33. Use the left and right arrow keys to step through the versions."></div>
   <p class="readout" id="read-all" aria-live="polite">Point at the chart, or focus it and use the arrow keys, to read any version.</p>
@@ -174,9 +266,10 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <div><dt>Top speed</dt><dd><span data-s="top_kmh">296</span> km/h</dd></div>
   </dl>
 </div>
-<div class="kerb" aria-hidden="true"></div>
+</section>
 
-<section class="wrap" id="lap">
+<section id="lap" class="band">
+<div class="wrap">
   <h2>The lap</h2>
   <div class="slots">
     <div class="slot wide filled video" id="slot-lap">
@@ -184,9 +277,11 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     </div>
   </div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
+</div>
 </section>
 
-<section class="wrap" id="how">
+<section id="how">
+<div class="wrap">
   <h2>How the driver works</h2>
   <div class="text">
     <p>The driver is one Python file of explicit rules. It contains no neural network and no trained model. The example driver supplied with the challenge aims for 300 km/h, never brakes and crashes on its first lap; everything below was built on top of it.</p>
@@ -228,9 +323,11 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <h3>How a change earns its place</h3>
     <p>One mechanism per version, so its effect can be measured. In the final versions each candidate drove 730 laps with its settings and its plan deliberately nudged: 70 for the lap time, compared run by run against the version before, and 660 around the new values to look for a way off the road. Any damage, or any lap with the car's centre past the edge, rejected the version. Of 133 versions, 100 were kept, 11 were kept as groundwork for a later gain and 22 were rejected. The record of every one, with what was learned, is in the <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/blob/main/docs/CHANGELOG.md">changelog</a>.</p>
   </div>
+</div>
 </section>
 
-<section class="wrap" id="journey">
+<section id="journey" class="band">
+<div class="wrap">
   <h2>The journey</h2>
   <div class="text">
     <p>For the first 105 versions the car drove on its sensors alone, because we held back track memory until the officials answered. That approach ran out at about 1:13.6: in batch 12 four of five versions were rejected, since a car cannot set up wide for a corner it does not yet know is coming. On 4 October the officials allowed a pre-mapped track, and the question that turned the project came three days later:</p>
@@ -239,17 +336,21 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
   </div>
   <div class="chart" id="chart-end" tabindex="0" role="img" aria-label="Lap time from v1.05 to v1.33, 1:13.56 down to 1:05.56, with the four rulings that opened new gains. Use the left and right arrow keys to step through the versions."></div>
   <p class="readout" id="read-end" aria-live="polite">The last 29 versions, with the decision that opened each run of gains.</p>
+</div>
 </section>
 
-<section class="wrap" id="viewer">
+<section id="viewer" class="dark">
+<div class="wrap">
   <h2>The run viewer</h2>
   <div class="text">
     <p>Every version's lap can be replayed in the browser: the car on a map of the track with its range beams, the pedals and steering step by step, and any two laps side by side to see where the time went. It is the tool that showed where the car had road it was not using.</p>
     <p><a class="button" href="viewer/">Open the run viewer</a></p>
   </div>
+</div>
 </section>
 
-<section class="wrap" id="summary">
+<section id="summary">
+<div class="wrap">
   <h2>Technical summary</h2>
   <div class="text">
     <p>The driver is a rule-based controller in one Python file. It contains no machine-learning model. Steering, braking, throttle and gear changes come from explicit logic reading the simulator's live sensors: 19 range beams, wheel speeds, engine speed, speed, track position and angle.</p>
@@ -260,9 +361,11 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <p><strong>Key challenge.</strong> On sensors alone the car cannot prepare for a corner it has not seen. The lap time stalled at 1:13.6 until the officials allowed a pre-mapped track.</p>
     <p><strong>Rules.</strong> Six questions of legality are recorded, each with a fallback version: four confirmed by the officials, two our own reading.</p>
   </div>
+</div>
 </section>
 
-<section class="wrap" id="bob">
+<section id="bob" class="band">
+<div class="wrap">
   <h2>How IBM Bob and Granite were used</h2>
   <div class="text">
     <p>IBM Bob, the coding assistant built on IBM Granite, was this project's analyst, planner and reviewer. Its log holds <span data-b="tasks">13</span> sessions between 1 and 6 October, and it drafted the outline of this page.</p>
@@ -276,9 +379,11 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <p>Bob was at its best reading code, analysing data and planning. Its direct edits to the driver's control code were less dependable: in my experience about half of them left the lap slower or less stable. That is an impression from working with it, not a measured figure. So I settled early on a division of work. Bob handled analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
     <p>The driver itself contains no model. Granite helped build it; it does not drive it.</p>
   </div>
+</div>
 </section>
 
-<section class="wrap" id="deliverables">
+<section id="deliverables">
+<div class="wrap">
   <h2>Deliverables</h2>
   <div class="slots">
     <!-- Replace the inside of each video slot with the <iframe> of the video. -->
@@ -294,11 +399,14 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     <li><span>Technical video (5 minutes)</span><span class="todo">not uploaded yet</span></li>
     <li><span><a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE">GitHub repository</a></span><span class="done">public</span></li>
   </ul>
+</div>
 </section>
 
-<section class="wrap" id="record">
+<section id="record" class="band">
+<div class="wrap">
   <h2>The record, version by version</h2>
-  <h3>Ten versions that tell the story</h3>
+  <details open>
+  <summary><h3>Ten versions that tell the story</h3></summary>
   <div class="scroll">
     <table id="key">
       <thead><tr><th class="n">Version</th><th class="n">Lap</th><th>Why it matters</th></tr></thead>
@@ -316,17 +424,22 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
       </tbody>
     </table>
   </div>
+  </details>
 
-  <h3 style="margin-top:2.4rem">Every batch</h3>
+  <details>
+  <summary><h3>Every batch</h3><span class="muted" id="batch-note"></span></summary>
   <div class="scroll">
     <table id="batches">
       <thead><tr><th class="n">Batch</th><th class="n">Versions</th><th class="n">Best lap</th><th>What it worked on</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
+  </details>
+</div>
 </section>
 
-<section class="wrap" id="rules">
+<section id="rules">
+<div class="wrap">
   <h2>Rules, and what we would submit instead</h2>
   <div class="text">
     <p>Six times the driver began to rely on something whose legality was not obvious. Four were put to the officials and confirmed. Two are our own reading of those answers and were not asked separately. Each one names the version we would submit if it were turned down.</p>
@@ -338,6 +451,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     </table>
   </div>
   <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
+</div>
 </section>
 </main>
 
@@ -367,6 +481,47 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
   }
   function mss(s) { var m = Math.floor(s / 60); return m + ':' + ('0' + Math.round(s - m * 60)).slice(-2); }
   var WORD = { kept: 'kept', enabling: 'kept as groundwork', rejected: 'rejected' };
+
+  /* Motion, only for visitors who have not asked for less of it. Nothing is hidden unless the observer exists to show it. */
+  var MOTION = window.matchMedia && matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  var seen = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); seen.unobserve(e.target); } });
+  }, { rootMargin: '0px 0px -12% 0px' }) : null;
+  if (MOTION && seen) document.querySelectorAll('main section > .wrap').forEach(function (n) { n.classList.add('reveal'); seen.observe(n); });
+
+  /* the lap time counts down from the first full lap to the best */
+  (function () {
+    var n = document.getElementById('time');
+    var secs = function (t) { var p = t.split(':'); return p[0] * 60 + +p[1]; };
+    var from = secs(n.getAttribute('data-from')), to = secs(n.textContent), t0 = null;
+    if (!MOTION || !window.requestAnimationFrame) return;
+    function frame(t) {
+      if (t0 == null) t0 = t;
+      var k = Math.min(1, (t - t0) / 5700), c = Math.round((from + (to - from) * (1 - Math.pow(1 - k, 4))) * 100);
+      n.textContent = Math.floor(c / 6000) + ':' + ('0' + (c % 6000 / 100).toFixed(2)).slice(-5);
+      if (k < 1) requestAnimationFrame(frame);
+    }
+    n.textContent = n.getAttribute('data-from');
+    setTimeout(function () { requestAnimationFrame(frame); }, 350);
+  })();
+
+  /* the top bar marks the section being read */
+  if ('IntersectionObserver' in window) {
+    var links = {}, nav = document.querySelector('header.top nav');
+    nav.querySelectorAll('a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+    var reading = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        for (var id in links) links[id].removeAttribute('aria-current');
+        var a = links[e.target.id];
+        if (!a) return;
+        a.setAttribute('aria-current', 'true');
+        nav.scrollLeft = a.offsetLeft - nav.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;   /* keep it in sight on a phone */
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    document.querySelectorAll('main section[id]').forEach(function (s) { reading.observe(s); });
+  }
+  window.addEventListener('beforeprint', function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
 
   /* One chart: a dot per version, the best lap so far as a step line, notes on chosen versions. */
   function chart(box, readout, vs, o) {
@@ -410,8 +565,12 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
     vs.forEach(function (v, i) {
       if (v.lap_s == null) return;
       var kind = v.decision === 'rejected' ? 'd-rej' : isBest[i] ? 'd-best' : 'd-kept';
-      svg.appendChild(el('circle', { class: kind, cx: x(i), cy: y(v.lap_s), r: kind === 'd-kept' ? o.r - .8 : o.r }));
+      var dot = el('circle', { class: kind, cx: x(i), cy: y(v.lap_s), r: kind === 'd-kept' ? o.r - .8 : o.r });
+      dot.style.transitionDelay = (1.5 * i / vs.length).toFixed(2) + 's';   /* the dots land as the line passes them */
+      svg.appendChild(dot);
     });
+    svg.querySelector('.step').setAttribute('pathLength', 1);
+    if (MOTION && seen) { box.classList.add('anim'); seen.observe(box); }
     var cursor = el('circle', { class: 'cursor', r: o.r + 4, cx: -20, cy: -20 });
     svg.appendChild(cursor);
     box.appendChild(svg);
@@ -486,6 +645,7 @@ footer { margin-top: 4rem; padding: 1.6rem 0 3rem; border-top: 2px solid var(--i
       after: preLaps.reduce(function (a, v) { return v.lap_s < a.lap_s ? v : a; }).lap,
       theme: 'A first lap, then braking, a first racing line and corner speed by sharpness, one small step per version.' }]
       .concat(d.batches);
+    document.getElementById('batch-note').textContent = 'the start and ' + d.batches.length + ' batches of versions';
     rows.forEach(function (b) {
       var tr = document.createElement('tr');
       td(tr, b.batch, 'n');
