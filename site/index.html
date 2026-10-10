@@ -88,6 +88,13 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 h2 { font: 700 clamp(1.7rem, 3.4vw, 2.5rem)/1.1 var(--display); margin: 0 0 1rem; }
 h3 { font: 600 1.25rem/1.25 var(--display); margin: 0 0 .4rem; }
 section { padding-block: 3.6rem; }
+/* the three parts of the page: a kerb, then a title that sits on top of the part's first section */
+.act { padding-bottom: 0; }
+.act .wrap { padding-top: 3.4rem; }
+.act h2 { font-size: clamp(2.5rem, 6.4vw, 4.4rem); line-height: 1; letter-spacing: -.012em; margin-bottom: .8rem; }
+.act .part { margin: 0 0 .5rem; color: var(--muted); font: 600 1.05rem var(--display); }
+.act .lede { margin: 0; }
+.act + section { padding-top: 2.6rem; }
 p { margin: 0 0 1rem; }
 .muted { color: var(--muted); }
 .small { font-size: .94rem; }
@@ -242,7 +249,14 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
     </svg>
   </div>
 </div>
-<div class="kerb" aria-hidden="true"></div>
+<div class="act">
+  <div class="kerb" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="part">Part 1 of 3</p>
+    <h2>The result</h2>
+    <p class="lede">Every version's lap time, then the lap itself.</p>
+  </div>
+</div>
 
 <section id="progress">
 <div class="wrap">
@@ -279,6 +293,15 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
 </div>
 </section>
+
+<div class="act">
+  <div class="kerb" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="part">Part 2 of 3</p>
+    <h2>How it got there</h2>
+    <p class="lede">How the driver works, what turned the project, and the tool that replays every lap.</p>
+  </div>
+</div>
 
 <section id="how">
 <div class="wrap">
@@ -348,6 +371,15 @@ footer { padding: 1.6rem 0 3rem; border-top: 2px solid var(--ink); color: var(--
   </div>
 </div>
 </section>
+
+<div class="act">
+  <div class="kerb" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="part">Part 3 of 3</p>
+    <h2>For the judges</h2>
+    <p class="lede">The technical summary, how IBM Bob was used, the deliverables and the full record.</p>
+  </div>
+</div>
 
 <section id="summary">
 <div class="wrap">
