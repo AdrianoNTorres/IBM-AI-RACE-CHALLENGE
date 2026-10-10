@@ -309,7 +309,9 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 </head>
 <body>
 
-<header class="top dark" id="top">
+<!-- the target of every "Back to top" link: it has to be an element that scrolls with the page, which the pinned top bar never does -->
+<div id="top"></div>
+<header class="top dark">
   <div class="wrap">
     <a class="brand team" href="#top">
       <svg viewBox="0 0 200 200" aria-hidden="true">
