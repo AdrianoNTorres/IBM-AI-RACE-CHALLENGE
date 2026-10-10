@@ -3,8 +3,8 @@
    - Racing-line accuracy: how close the car's line is to the reference lap's line, as a percentage, and a path
      on the map coloured from green (on the line) to red (furthest from it).
    - Sector health: green, yellow or red for each sector, from the time lost in it.
-   - Problem areas: the stretches of the lap where the most time is lost. Each gets a pin on the map (a click plays
-     it on a loop) and a band on the telemetry charts (a click on its tag explains what differs there).
+   - Problem areas: the stretches of the lap where the most time is lost. Each gets a pin on the map and a band on the telemetry
+     charts; a click on the pin or on the band's tag explains what differs there.
    Everything is worked out once per pair of runs and kept on the run (R._an). The map layers and the pins plug into
    the overlay framework (RV.map.addLayer), so they have their switch, opacity and width under Layers, Analysis. */
 (function () {
@@ -196,7 +196,7 @@
   });
   RV.map.addLayer({
     id: 'pins', g: 'Analysis', label: 'Problem pins', on: true, alpha: 1,
-    d: 'A pin where the car in focus loses the most time to the reference lap (the fastest lap; for the fastest lap itself, the next fastest): yellow, or red for the worst. Click a pin to play that stretch on a loop.',
+    d: 'A pin where the car in focus loses the most time to the reference lap (the fastest lap; for the fastest lap itself, the next fastest): yellow, or red for the worst. Click a pin for a short explanation of what the car does differently there.',
     screen(ctx, w2s) {
       hits = [];
       const R = S.R, A = of(R);
@@ -215,11 +215,11 @@
       }
     },
   });
-  /* a click on a pin plays its stretch on a loop */
+  /* a click on a pin opens the explanation of its area, where the stretch can be played on a loop */
   RV.map.onHit((mx, my) => {
     if (!RV.map.LAYERS.find(L => L.id === 'pins').on) return null;
     const h = hits.find(q => Math.hypot(q[0] - mx, q[1] - my) < 14);
-    return h ? () => loop(h[2]) : null;
+    return h ? () => popup(h[2]) : null;
   });
 
   /* ---------- the delta to the compared cars ----------
