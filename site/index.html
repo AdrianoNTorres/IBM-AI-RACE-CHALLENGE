@@ -233,7 +233,11 @@ td q { color: var(--muted); font-style: italic; }
 .lapgrid + .strip { margin-top: 1.6rem; }
 .ramp i { flex: 1; height: .5rem; background: linear-gradient(90deg, #8a4dff, #e0343c, #f4c430); }
 /* what the car sees: the 19 range beams replayed beside the text that explains them */
-.split.even { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+.split.even { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: stretch; }
+/* the two panels end on the same line: whichever column is shorter gives its spare height to its picture */
+.split.even > div, .sense { display: flex; flex-direction: column; }
+.sense.fan, .sense > div { flex: 1; }
+.sense > div { display: flex; align-items: center; }
 .sense { margin: 0; padding: 1rem 1.1rem; border: 1px solid var(--rule); }
 .sense svg { display: block; width: 100%; height: auto; }
 .sense .ray { stroke: #cdb8ff; stroke-opacity: .45; stroke-width: 1.6; }
