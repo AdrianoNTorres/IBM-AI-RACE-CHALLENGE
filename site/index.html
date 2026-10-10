@@ -92,7 +92,7 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 /* the Corkscrew behind the opening screen, drawn in three dimensions from its plan and heights, and a car driving it at the judged lap's pace */
 .backdrop { position: absolute; right: 1.5rem; top: 50%; width: min(64%, 58rem); transform: translateY(-50%); pointer-events: none; }
 /* moving parts are never what the browser holds the scroll position against: a readout that changes size would drag the page with it */
-.backdrop, .lapmap .here, .sense { overflow-anchor: none; }
+.backdrop, .sense { overflow-anchor: none; }
 .backdrop svg { display: block; width: 100%; height: auto; overflow: visible; }
 .backdrop .floor { fill: none; stroke: url(#floor-fade); stroke-width: 1; }
 .backdrop .ghost { filter: saturate(.4); }
@@ -214,24 +214,13 @@ td q { color: var(--muted); font-style: italic; }
 .slot.video { aspect-ratio: 16 / 9; }
 .slot.video iframe { display: block; width: 100%; height: 100%; }
 .slot.wide { grid-column: 1 / -1; max-width: 52rem; }
-/* the lap video with the lap's speed and sector times beside it */
-.lapgrid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1.6rem 2.2rem; align-items: start; }
-.lapgrid .slots { margin-top: 0; }
-@media (max-width: 900px) { .lapgrid { grid-template-columns: 1fr; } }
+/* the lap video across the section, the lap's speed and sector times under it */
 .strip svg { min-width: 560px; }
 .strip .area { fill: url(#speed-ramp); fill-opacity: .6; }
 .strip .hair { stroke: var(--ink); stroke-width: 1; }
-/* the lap from above, coloured by speed */
-.lapmap { position: relative; margin: 0 0 .5rem; padding: .7rem; border: 1px solid var(--rule); }
-.lapmap .here { position: absolute; left: .9rem; top: .7rem; margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.3; }
-.lapmap .here b { display: block; color: var(--ink); font: 700 1.7rem/1.1 var(--display); }
-.lapmap svg { display: block; width: 100%; height: auto; }
-.lapmap text { font: 600 44px var(--display); fill: #eceff2; }
-.lapmap .pin { fill: #fff; stroke: #141a22; stroke-width: 7; }
-.lapmap .line { stroke: #fff; stroke-width: 7; }
-.ramp { display: flex; align-items: center; gap: .6rem; margin: 0; }
-.lapgrid + .strip { margin-top: 1.6rem; }
-.ramp i { flex: 1; height: .5rem; background: linear-gradient(90deg, #8a4dff, #e0343c, #f4c430); }
+#slot-lap + .strip { margin-top: 1.4rem; }
+.strip .now { opacity: 0; transition: opacity .3s; }
+.strip .now.on { opacity: 1; }
 /* what the car sees: the 19 range beams replayed beside the text that explains them */
 .split.even { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: stretch; }
 /* the two panels end on the same line: whichever column is shorter gives its spare height to its picture */
@@ -419,21 +408,12 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 </div>
 </section>
 
-<section id="lap" class="band">
+<section id="lap" class="dark">
 <div class="wrap">
   <h2>The lap</h2>
-  <div class="lapgrid">
-  <div class="slots">
-    <div class="slot wide filled video" id="slot-lap">
-      <iframe src="https://www.youtube-nocookie.com/embed/yuep0Uarx2Y" title="One Qubit Racing: one lap of the Corkscrew in 1:05.56 (TORCS)" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    </div>
-  </div>
-  <aside aria-hidden="true">
-    <div class="lapmap dark" id="lap-map">
-      <p class="here" id="lap-here"><b></b><span></span></p>
-    </div>
-    <p class="ramp small muted"><span id="ramp-lo"></span><i></i><span id="ramp-hi"></span></p>
-  </aside>
+  <!-- data-lap-start: the second of the video at which the lap clock starts. The mark on the speed trace under the video is placed from it. -->
+  <div class="slot filled video" id="slot-lap">
+    <iframe id="lap-video" data-lap-start="5.75" src="https://www.youtube-nocookie.com/embed/yuep0Uarx2Y?enablejsapi=1&amp;vq=hd1080" title="One Qubit Racing: one lap of the Corkscrew in 1:05.56 (TORCS)" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
   </div>
   <div class="chart strip" id="chart-speed" role="img"></div>
   <p class="text small muted" style="margin-top:1rem">The simulation is deterministic: running the submitted driver again reproduces the lap's telemetry file byte for byte (<code>python tools/finalize.py --verify runs/run_20261008_223916.csv</code>).</p>
@@ -461,14 +441,14 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   <figure class="sense fan dark" aria-hidden="true">
     <h3>What the car sees</h3>
     <div id="fan"></div>
-    <figcaption class="small muted">The 19 range beams from the car, nose up, each reaching to the edge of the road. Sideways distances are drawn seven times larger than distances ahead, or the road would be a hairline.</figcaption>
+    <figcaption class="small muted">Sideways distances are drawn seven times larger than distances ahead, or the road would be a hairline.</figcaption>
   </figure>
   </div>
   <figure class="sense dark">
     <h3>The road those beams find</h3>
     <div id="sense" role="img" aria-label="The judged lap replayed on a map that starts empty: the car's 19 range beams reach the edges of the road ahead, and every point they touch stays on the map, so over one lap the beams draw the whole circuit."></div>
     <dl class="sectors" id="sense-read" aria-hidden="true"></dl>
-    <figcaption class="small muted">The same moment of the judged lap on an empty map. Every dot is a place where a beam met the edge of the road: one lap of them draws the circuit. The car is drawn larger than life so it can be seen.</figcaption>
+    <figcaption class="small muted">The car is drawn larger than life so it can be seen.</figcaption>
   </figure>
   </div>
   <div class="flow">
@@ -1021,10 +1001,9 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     return 'rgb(' + RAMP[i].map(function (c, j) { return Math.round(c + (RAMP[i + 1][j] - c) * t); }).join(',') + ')';
   }
 
-  /* The judged lap's speed by distance, with the three sectors and their times, the fastest and slowest points named;
-     and the same lap from above, coloured by that speed. One place on the lap is marked on both, and it moves round
-     the lap as the page is scrolled past the section. */
-  function strip(box, lap, tk, mapBox, here, section) {
+  /* The judged lap's speed by distance, with the three sectors and their times, the fastest and slowest points named.
+     While the lap video above it plays, a mark shows where on the lap the car in the video is. */
+  function strip(box, lap, tk, tr, frame) {
     var W = 960, H = 230, L = 40, R = 12, T = 26, B = 26, top = 300, lapM = tk.lap_m, lo = lap.slow.kmh, hi = lap.top.kmh;
     var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
     var x = function (m) { return L + (W - L - R) * m / lapM; }, y = function (v) { return T + (H - T - B) * (1 - v / top); };
@@ -1035,7 +1014,8 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       svg.appendChild(el('line', { class: 'grid', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
       svg.appendChild(el('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, v));
     });
-    [0, 1000, 2000, 3000].forEach(function (m) { svg.appendChild(el('text', { x: x(m), y: H - 7, 'text-anchor': m ? 'middle' : 'start' }, m ? m / 1000 + ' km' : 'start')); });
+    svg.appendChild(el('text', { x: L - 6, y: H - 7, 'text-anchor': 'end' }, 'km/h'));
+    [1000, 2000, 3000].forEach(function (m) { svg.appendChild(el('text', { x: x(m), y: H - 7, 'text-anchor': 'middle' }, m / 1000 + ' km')); });
     var line = lap.kmh.map(function (v, i) { return x(Math.min(lapM, i * lap.step)).toFixed(1) + ' ' + y(v).toFixed(1); }).join('L');
     svg.appendChild(el('path', { class: 'area', d: 'M' + x(0) + ' ' + y(0) + 'L' + line + 'L' + x(lapM) + ' ' + y(0) + 'Z' }));
     svg.appendChild(el('path', { class: 'speed', d: 'M' + line }));
@@ -1047,55 +1027,48 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       svg.appendChild(el('circle', { class: 'd-best', cx: x(o[0].m), cy: y(o[0].kmh), r: 3.5 }));
       svg.appendChild(el('text', { class: 'note', x: x(o[0].m) + 8, y: y(o[0].kmh) + o[1] }, o[0].kmh + ' km/h'));
     });
-    var hair = svg.appendChild(el('line', { class: 'hair', y1: T, y2: H - B })), dot = svg.appendChild(el('circle', { class: 'cursor', r: 6 }));
+    var now = svg.appendChild(el('g', { class: 'now' }));
+    var hair = now.appendChild(el('line', { class: 'hair', y1: T, y2: H - B })), dot = now.appendChild(el('circle', { class: 'cursor', r: 6 })), tag = now.appendChild(el('text', { class: 'note' }));
     box.appendChild(svg);
     box.setAttribute('aria-label', 'Speed along the judged lap, from the start line round to the line again. Fastest ' + lap.top.kmh + ' km/h at ' + lap.top.m +
       ' m, slowest corner ' + lap.slow.kmh + ' km/h at ' + lap.slow.m + ' m. Sector times: ' + lap.sectors.map(function (c) { return c.name + ' ' + c.s.toFixed(2) + ' s'; }).join(', ') + '.');
 
-    /* the map: north up, one short piece of road per station, coloured by the speed there */
-    var n = tk.x.length, P = tk.x.map(function (v, i) { return [v, -tk.y[i]]; }), i;
-    var xs = P.map(function (q) { return q[0]; }), ys = P.map(function (q) { return q[1]; }), PAD = 80;
-    var bx = Math.min.apply(null, xs) - PAD, by = Math.min.apply(null, ys) - PAD, bw = Math.max.apply(null, xs) + PAD - bx, bh = Math.max.apply(null, ys) + PAD - by;
-    var map = el('svg', { viewBox: [bx, by, bw, bh].map(Math.round).join(' ') });
-    for (i = 0; i < n; i++) {
-      var q = P[(i + 1) % n];
-      map.appendChild(el('line', { x1: P[i][0], y1: P[i][1], x2: q[0], y2: q[1], stroke: ramp((kmhAt(i / n * lapM) - lo) / (hi - lo)), 'stroke-width': 17, 'stroke-linecap': 'round' }));
-    }
-    var ux = P[1][0] - P[n - 1][0], uy = P[1][1] - P[n - 1][1], ul = Math.sqrt(ux * ux + uy * uy);
-    map.appendChild(el('line', { class: 'line', x1: P[0][0] - uy / ul * 26, y1: P[0][1] + ux / ul * 26, x2: P[0][0] + uy / ul * 26, y2: P[0][1] - ux / ul * 26 }));
-    map.appendChild(el('text', { x: P[0][0], y: P[0][1] + 62, 'text-anchor': 'middle' }, 'start'));
-    var pin = map.appendChild(el('circle', { class: 'pin', r: 21 }));
-    mapBox.appendChild(map);
-    document.getElementById('ramp-lo').textContent = lo + ' km/h';
-    document.getElementById('ramp-hi').textContent = hi + ' km/h';
-
-    var big = here.querySelector('b'), small = here.querySelector('span');
-    function show(m) {
-      var v = kmhAt(m), f = m / lapM * n, a = Math.floor(f) % n, e = P[(a + 1) % n], t = f - Math.floor(f);
+    /* where the car is, sec seconds on the lap clock: from the lap's telemetry; nothing is shown before or after the lap */
+    var K = tr.m.length;
+    function show(sec) {
+      var k = sec / tr.dt, on = k >= 0 && k <= K - 1;
+      now.classList.toggle('on', on);
+      if (!on) return;
+      var a = Math.min(K - 2, Math.floor(k)), m = Math.max(0, Math.min(lapM, tr.m[a] + (tr.m[a + 1] - tr.m[a]) * (k - a) - lapM)), v = kmhAt(m), far = x(m) > W * .86;
       hair.setAttribute('x1', x(m)); hair.setAttribute('x2', x(m));
       dot.setAttribute('cx', x(m)); dot.setAttribute('cy', y(v));
-      pin.setAttribute('cx', P[a][0] + (e[0] - P[a][0]) * t); pin.setAttribute('cy', P[a][1] + (e[1] - P[a][1]) * t);
-      big.textContent = Math.round(v) + ' km/h';
-      small.textContent = (Math.round(m / 10) * 10).toLocaleString('en-US') + ' m into the lap';
+      tag.setAttribute('x', x(m) + (far ? -10 : 10)); tag.setAttribute('y', H - B - 8);
+      tag.setAttribute('text-anchor', far ? 'end' : 'start');
+      tag.textContent = Math.round(v) + ' km/h';
     }
-    /* the start line as the section comes up the screen, the end of the lap as it leaves; the mark glides to its place */
-    var at = 0, want = 0, busy = false;
-    function target() {
-      var r = section.getBoundingClientRect(), vh = window.innerHeight;
-      return Math.max(0, Math.min(1, (vh * .85 - r.top) / (r.height + vh * .35))) * lapM * .999;
+    /* YouTube's player script tells the page where the video is; it is fetched only once the video is near the screen */
+    if (!frame || !('IntersectionObserver' in window)) return;
+    var start = +frame.getAttribute('data-lap-start') || 0, player = null, playing = false;
+    function tick() {
+      if (!playing) return;
+      show(player.getCurrentTime() - start);
+      requestAnimationFrame(tick);
     }
-    function glide() {
-      at += (want - at) * (MOTION ? .14 : 1);
-      if (Math.abs(want - at) < 1) at = want;
-      show(at);
-      busy = at !== want;
-      if (busy) requestAnimationFrame(glide);
-    }
-    function follow() { want = target(); if (!busy) { busy = true; requestAnimationFrame(glide); } }
-    window.addEventListener('scroll', follow, { passive: true });
-    window.addEventListener('resize', follow);
-    at = want = target();
-    show(at);
+    window.onYouTubeIframeAPIReady = function () {
+      player = new window.YT.Player(frame, { events: { onStateChange: function (e) {
+        var was = playing;
+        playing = e.data === 1;
+        if (playing && !was) requestAnimationFrame(tick);
+        else if (!playing && e.data !== -1 && player.getCurrentTime) show(e.data === 0 ? -1 : player.getCurrentTime() - start);   /* paused: the mark stays; ended: it goes */
+      } } });
+    };
+    new IntersectionObserver(function (es, ob) {
+      if (!es[0].isIntersecting) return;
+      ob.disconnect();
+      var js = document.createElement('script');
+      js.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(js);
+    }, { rootMargin: '600px' }).observe(frame);
   }
 
   /* the car from above, in metres, nose towards +x: the landing screen's car and the one in "What the car sees" */
@@ -1381,7 +1354,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
   function extras(d) {
     try {
       countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
-      if (d.lap && d.track) strip(document.getElementById('chart-speed'), d.lap, d.track, document.getElementById('lap-map'), document.getElementById('lap-here'), document.getElementById('lap'));
+      if (d.lap && d.track && d.trace) strip(document.getElementById('chart-speed'), d.lap, d.track, d.trace, document.getElementById('lap-video'));
       if (d.trace && d.track) scene(d.track, d.trace, d.summary.best_lap_torcs_s, d.ghost, d.summary.best_version);
       if (d.trace && d.track) sense(document.getElementById('sense'), document.getElementById('sense-read'), d.trace, d.track, d.summary.best_lap_torcs_s);
     } catch (e) { if (window.console) console.error(e); }
