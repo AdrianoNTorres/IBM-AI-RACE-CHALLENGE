@@ -76,7 +76,7 @@ header.top nav a:hover { color: var(--ink); }
 header.top nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -3px var(--brand); }
 section[id] { scroll-margin-top: 3.4rem; }
 
-.hero { background-image: radial-gradient(46% 62% at 72% 52%, rgba(138, 77, 255, .2), transparent 72%), var(--grain); }
+.hero { background-image: radial-gradient(min(46%, 44rem) 62% at min(72%, calc(50% + 20rem)) 52%, rgba(138, 77, 255, .2), transparent 72%), var(--grain); }
 .hero { position: relative; overflow: hidden; display: grid; align-items: center; min-height: min(calc(100vh - 3.4rem - 10px), 54rem); min-height: min(calc(100svh - 3.4rem - 10px), 54rem); padding-block: 2.5rem; }
 /* --fade: the opening text fades out as it scrolls up towards the top bar */
 .hero .wrap { opacity: var(--fade, 1); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem 4rem; align-items: center; width: 100%; }
@@ -90,7 +90,8 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .entry { max-width: 38rem; margin: 0 0 1.8rem; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
 /* the Corkscrew behind the opening screen, drawn in three dimensions from its plan and heights, and a car driving it at the judged lap's pace */
-.backdrop { position: absolute; right: 1.5rem; top: 50%; width: min(64%, 58rem); transform: translateY(-50%); pointer-events: none; }
+/* on a very wide window the track, its glow and its readout stay with the centred text, not with the window's edge */
+.backdrop { position: absolute; right: max(1.5rem, calc(50% - 46rem)); top: 50%; width: min(64%, 58rem); transform: translateY(-50%); pointer-events: none; }
 /* moving parts are never what the browser holds the scroll position against: a readout that changes size would drag the page with it */
 .backdrop, .sense { overflow-anchor: none; }
 .backdrop svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -103,7 +104,7 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .backdrop .trace.old { stroke: #ff8a8e; stroke-width: 2.2; }
 .backdrop .sight.old { fill: #ff8a8e; stroke: #ff8a8e; }
 /* the replay's clock, speed and lead over the earliest recorded lap */
-.hud { position: absolute; right: 1.5rem; bottom: 2.4rem; z-index: 1; display: grid; grid-template-columns: 6.2rem 3.6rem 15rem; gap: 0 1.8rem; overflow-anchor: none; margin: 0; opacity: var(--fade, 1); color: var(--muted); font-size: .9rem; line-height: 1.3; }
+.hud { position: absolute; right: max(1.5rem, calc(50% - 46rem)); bottom: 2.4rem; z-index: 1; display: grid; grid-template-columns: 6.2rem 3.6rem 15rem; gap: 0 1.8rem; overflow-anchor: none; margin: 0; opacity: var(--fade, 1); color: var(--muted); font-size: .9rem; line-height: 1.3; }
 .hud[hidden] { display: none; }
 .hud b { display: block; color: var(--ink); font: 700 1.7rem/1.1 var(--display); }
 .hud .old { color: #ff8a8e; }
@@ -552,7 +553,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       <li><strong>It organised and reviewed.</strong> Bob restructured the repository, wrote its READMEs, reviewed the run viewer from four points of view (race engineer, driver, data analyst, first-time visitor) and built the viewer's first hosted phases.</li>
     </ul>
     <h3>Where each tool fitted best</h3>
-    <p>Bob was at its best reading code, analysing data and planning. Its direct edits to the driver's control code were less dependable: in my experience about half of them left the lap slower or less stable. That is an impression from working with it, not a measured figure. So I settled early on a division of work. Bob handled analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
+    <p>Bob was at its best reading code, analysing data and planning. Its direct edits to the driver's control code were less dependable: in my experience majority of them left the lap slower or less stable. That is an impression from working with it, not a measured figure. So I settled early on a division of work. Bob handled analysis, planning and review, and the driver's code was written with Claude Code, with every version measured in the simulator before it was kept.</p>
     <p>The driver itself contains no model. Granite helped build it; it does not drive it.</p>
   </div>
 </div>
