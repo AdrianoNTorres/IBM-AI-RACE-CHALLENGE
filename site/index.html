@@ -152,7 +152,6 @@ p { margin: 0 0 1rem; }
 .pull p { margin: 0 0 .6rem; font: 600 clamp(1.5rem, 3.2vw, 2.15rem)/1.2 var(--display); }
 .pull p::before { content: open-quote; } .pull p::after { content: close-quote; }
 .pull footer { padding: 0; color: var(--muted); font: 500 1rem var(--display); background: none; }
-.totop { margin: 1.4rem 0 0; font: 500 1rem var(--display); }
 /* reading progress: the logo's kerb arc fills round the ring; the ring is also the way back to the top */
 .progress { position: fixed; right: 1rem; bottom: 1rem; z-index: 9; width: 3.2rem; height: 3.2rem; padding: 0; border: 0; border-radius: 50%; cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
 .progress.on { opacity: 1; visibility: visible; }
@@ -309,7 +308,7 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
 </head>
 <body>
 
-<!-- the target of every "Back to top" link: it has to be an element that scrolls with the page, which the pinned top bar never does -->
+<!-- the target of the logo link in the top bar: it has to be an element that scrolls with the page, which the pinned top bar never does -->
 <div id="top"></div>
 <header class="top dark">
   <div class="wrap">
@@ -612,7 +611,6 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     </table>
   </div>
   </details>
-  <p class="totop"><a href="#top">Back to top</a></p>
 </div>
 </section>
 
@@ -629,7 +627,6 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     </table>
   </div>
   <p class="text small muted" style="margin-top:1rem">On track limits the officials' answer was: <q>Use trackPos between −1 and +1 as the practical sensor-based check. This measures the car's position, rather than whether individual wheels cross the edge.</q> On the judged lap the car's centre reaches <span data-s="max_trackpos">0.862</span> at its widest, <span data-s="max_trackpos_at_m">1037</span> m from the start line.</p>
-  <p class="totop"><a href="#top">Back to top</a></p>
 </div>
 </section>
 </main>
