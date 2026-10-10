@@ -11,6 +11,7 @@ import csv
 import glob
 import json
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -111,10 +112,11 @@ def bob():
     return {'tasks': len(dates), 'first': min(dates), 'last': max(dates)}
 
 
-def trace(run_csv, dt=0.5):
-    """The judged lap as distance driven every dt seconds, from its run CSV. The car starts
+def trace(run_csv, dt=0.2):
+    """The judged lap every dt seconds, from its run CSV: distance driven (m), trackPos, the car's angle to the
+    track (rad) and the 19 beam readings (m), with the beams' angles as the driver sets them. The car starts
     about 10 m before the line, so the distance runs on past one lap: take it modulo lap_m."""
-    ts, ds, lap_m, laps = [], [], 0.0, 0
+    ts, rows, lap_m, laps = [], [], 0.0, 0
     with open(os.path.join(ROOT, run_csv), newline='') as f:
         for row in csv.DictReader(f):
             t, d = float(row['curLapTime']), float(row['distFromStart'])
@@ -122,19 +124,24 @@ def trace(run_csv, dt=0.5):
                 continue
             if ts and t < ts[-1]:
                 break
-            if ts and d < ds[-1] - laps * lap_m - 1000:
+            if ts and d < rows[-1][0] - laps * lap_m - 1000:
                 laps += 1
             if not laps:
                 lap_m = max(lap_m, d)
             ts.append(t)
-            ds.append(d + laps * lap_m)
+            rows.append([d + laps * lap_m, float(row['trackPos']), float(row['angle'])]
+                        + [float(row['track%d' % k]) for k in range(19)])
     out, i = [], 0
     for k in range(int(ts[-1] / dt) + 1):
         while ts[i + 1] < k * dt:
             i += 1
         f = (k * dt - ts[i]) / ((ts[i + 1] - ts[i]) or 1)
-        out.append(round(ds[i] + f * (ds[i + 1] - ds[i])))
-    return {'dt': dt, 'lap_m': round(lap_m, 1), 'm': out}
+        out.append([a + f * (b - a) for a, b in zip(rows[i], rows[i + 1])])
+    with open(os.path.join(ROOT, 'driver', 'snakeoil3_v1.py'), encoding='utf-8') as f:
+        angles = json.loads(re.search(r'^TRACK_ANGLES\s*=\s*(\[[^\]]*\])', f.read(), re.M).group(1).replace(' .', ' 0.').replace('-.', '-0.'))
+    return {'dt': dt, 'lap_m': round(lap_m, 1), 'angles': angles,
+            'm': [round(r[0], 1) for r in out], 'pos': [round(r[1], 2) for r in out], 'ang': [round(r[2], 3) for r in out],
+            'beams': [[round(v) for v in r[3:]] for r in out]}
 
 
 def track(ds=8.0):

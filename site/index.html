@@ -84,15 +84,20 @@ h1 .time { display: block; font-weight: 700; font-size: clamp(4.6rem, 15vw, 11re
 .entry { max-width: 38rem; margin: 0 0 1.8rem; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
 /* the Corkscrew behind the opening screen, drawn in three dimensions from its plan and heights, and a car driving it at the judged lap's pace */
-.backdrop { position: absolute; right: -2rem; top: 50%; width: min(66%, 60rem); transform: translateY(-50%); pointer-events: none; }
+.backdrop { position: absolute; right: 1.5rem; top: 50%; width: min(64%, 58rem); transform: translateY(-50%); pointer-events: none; }
 .backdrop svg { display: block; width: 100%; height: auto; overflow: visible; }
 .backdrop .ground { fill: #000; fill-opacity: .3; }
 .backdrop .side { fill: #5d6673; }
 .backdrop .road { fill: #2b333f; stroke: #4a5361; stroke-width: 1; }
 .backdrop .pillar { fill: none; stroke: #fff; stroke-opacity: .09; stroke-width: 1.5; }
-.backdrop .car { fill: #eceff2; }
-.backdrop .car .wing { fill: var(--brand); }
-.backdrop .tail { fill: none; stroke: var(--brand); stroke-linecap: round; }
+.backdrop .trace { stroke: var(--brand); stroke-width: 2.4; stroke-linecap: round; }
+.backdrop .beam { stroke: #cdb8ff; stroke-width: .7; }
+.backdrop .c-shadow { fill: #000; fill-opacity: .45; }
+.backdrop .c-tyre { fill: #07090c; }
+.backdrop .c-tyre-top { fill: #2a313b; }
+.backdrop .c-hull { fill: #7d8693; }
+.backdrop .c-deck { fill: #f1f3f5; }
+.backdrop .c-wing { fill: var(--brand); }
 @media (max-width: 760px) { .backdrop { width: 135%; right: -40%; top: auto; bottom: 1rem; transform: none; opacity: .6; } }
 .jump { display: flex; flex-wrap: wrap; gap: .35rem 1.3rem; margin: 1.8rem 0 0; padding-top: 1rem; border-top: 1px solid var(--rule); max-width: 38rem; font: 500 1rem var(--display); }
 .jump span { color: var(--muted); }
@@ -673,64 +678,104 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }, { threshold: .9 }).observe(nodes[0].closest('.facts'));
   }
 
-  /* The landing screen's track: the centre line (x, y, height in metres) seen from the south and above, the road
-     as a ribbon with its true plan, heights stretched, a shadow on the ground under it. The car drives it at the
-     judged lap's own pace; behind it, the road of the last seconds, so the trail is long where the car is fast. */
+  /* The landing screen's track: the centre line (x, y, height in metres) seen from the south and above, the road as
+     a ribbon, heights stretched, a shadow on the ground under it. The car replays the judged lap from its telemetry:
+     its place across the road, its angle, its 19 range beams, and the line it drove, brighter where it was faster.
+     The road is drawn WIDE times its real width so the car can be seen; the car and everything measured across the
+     road are scaled by the same number, so they stay in proportion to the road. */
   function scene(tk, tr, lapS) {
-    var YAW = -.35, FLAT = .5, RISE = .87 * 2.6, HALF = 12, CAR = 30 / 35;   /* view angle, how flat the ground looks, height scale, half road width (m), car scale */
-    var svg = document.getElementById('scene'), n = tk.x.length, i;
+    var YAW = -.35, FLAT = .5, RISE = .87, HEIGHTS = 2.6, WIDE = 2, HALF = 6 * WIDE;
+    var IN = .9, OUT = 1.4;        /* seconds: the car fades in on the grid, and after the line drives on while it fades out */
+    var svg = document.getElementById('scene'), n = tk.x.length, K = tr.m.length, i;
     var p11 = Math.cos(YAW), p12 = -Math.sin(YAW), p21 = -Math.sin(YAW) * FLAT, p22 = -Math.cos(YAW) * FLAT;
     var z0 = Math.min.apply(null, tk.z);
-    function pr(x, y, z) { return [p11 * x + p12 * y, p21 * x + p22 * y - (z - z0) * RISE]; }
-    var mid = [], foot = [], L = [], Rt = [], gL = [], gR = [], cum = [0], all = [];
+    function pr(x, y, up) { return [p11 * x + p12 * y, p21 * x + p22 * y - up]; }
+    function lift(z) { return (z - z0) * RISE * HEIGHTS; }
+    function world(m) {            /* the centre line m metres from the start line: place, height, direction */
+      var f = (m % tr.lap_m + tr.lap_m) % tr.lap_m / tr.lap_m * n, a = Math.floor(f) % n, b = (a + 1) % n, t = f - Math.floor(f);
+      var dx = tk.x[b] - tk.x[a], dy = tk.y[b] - tk.y[a], d = Math.sqrt(dx * dx + dy * dy) || 1;
+      return { x: tk.x[a] + dx * t, y: tk.y[a] + dy * t, z: tk.z[a] + (tk.z[b] - tk.z[a]) * t, tx: dx / d, ty: dy / d };
+    }
+    var fix = function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); };
+
+    /* the road */
+    var mid = [], foot = [], L = [], Rt = [], gL = [], gR = [];
     for (i = 0; i < n; i++) {
       var j = (i + 1) % n, h = (i + n - 1) % n, dx = tk.x[j] - tk.x[h], dy = tk.y[j] - tk.y[h], q = HALF / Math.sqrt(dx * dx + dy * dy);
-      var nx = -dy * q, ny = dx * q, x = tk.x[i], y = tk.y[i], z = tk.z[i];
-      mid.push(pr(x, y, z)); foot.push(pr(x, y, z0));
-      L.push(pr(x + nx, y + ny, z)); Rt.push(pr(x - nx, y - ny, z));
-      gL.push(pr(x + nx, y + ny, z0)); gR.push(pr(x - nx, y - ny, z0));
+      var nx = -dy * q, ny = dx * q, x = tk.x[i], y = tk.y[i], up = lift(tk.z[i]);
+      mid.push(pr(x, y, up)); foot.push(pr(x, y, 0));
+      L.push(pr(x + nx, y + ny, up)); Rt.push(pr(x - nx, y - ny, up));
+      gL.push(pr(x + nx, y + ny, 0)); gR.push(pr(x - nx, y - ny, 0));
     }
-    for (i = 0; i < n; i++) { var a = mid[i], b = mid[(i + 1) % n]; cum.push(cum[i] + Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]))); }
-    var line = function (ps, dy) { return 'M' + ps.map(function (q) { return q[0].toFixed(1) + ' ' + (q[1] + (dy || 0)).toFixed(1); }).join('L') + 'Z'; };
-    all = L.concat(Rt, gL, gR);
-    var xs = all.map(function (q) { return q[0]; }), ys = all.map(function (q) { return q[1]; });
+    var loop = function (ps, dy) { return 'M' + ps.map(function (q) { return fix([q[0], q[1] + (dy || 0)]); }).join('L') + 'Z'; };
+    var all = L.concat(Rt, gL, gR), xs = all.map(function (q) { return q[0]; }), ys = all.map(function (q) { return q[1]; });
     var x0 = Math.min.apply(null, xs) - 20, y0 = Math.min.apply(null, ys) - 20;
     svg.setAttribute('viewBox', [x0, y0, Math.max.apply(null, xs) + 20 - x0, Math.max.apply(null, ys) + 30 - y0].map(Math.round).join(' '));
-    svg.appendChild(el('path', { class: 'ground', 'fill-rule': 'evenodd', d: line(gL) + line(gR) }));
+    svg.appendChild(el('path', { class: 'ground', 'fill-rule': 'evenodd', d: loop(gL) + loop(gR) }));
     var posts = '';
-    for (i = 0; i < n; i += 5) if (foot[i][1] - mid[i][1] > 8) posts += 'M' + mid[i][0].toFixed(1) + ' ' + mid[i][1].toFixed(1) + 'L' + foot[i][0].toFixed(1) + ' ' + foot[i][1].toFixed(1);
+    for (i = 0; i < n; i += 5) if (foot[i][1] - mid[i][1] > 8) posts += 'M' + fix(mid[i]) + 'L' + fix(foot[i]);
     svg.appendChild(el('path', { class: 'pillar', d: posts }));
-    svg.appendChild(el('path', { class: 'side', 'fill-rule': 'evenodd', d: line(L, 5) + line(Rt, 5) }));
-    svg.appendChild(el('path', { class: 'road', 'fill-rule': 'evenodd', d: line(L) + line(Rt) }));
-    var tails = [[2.4, 4, .25], [1.3, 6, .45], [.5, 8, .85]].map(function (o) {
-      return { p: svg.appendChild(el('path', { class: 'tail', d: line(mid), 'stroke-width': o[1], 'stroke-opacity': o[2], 'stroke-dasharray': '0 99999' })), back: o[0] };
-    });
-    var car = svg.appendChild(el('g', { class: 'car' }));
-    [['rect', { x: -13, y: -8.6, width: 6.5, height: 3.6, rx: 1 }], ['rect', { x: -13, y: 5, width: 6.5, height: 3.6, rx: 1 }],
-     ['rect', { x: 7, y: -8, width: 5.5, height: 3.2, rx: 1 }], ['rect', { x: 7, y: 4.8, width: 5.5, height: 3.2, rx: 1 }],
-     ['path', { d: 'M-15 0 L-9 -3.4 L5 -2.6 L17 -1 L17 1 L5 2.6 L-9 3.4 Z' }],
-     ['rect', { class: 'wing', x: -17.5, y: -6.2, width: 3.4, height: 12.4 }], ['rect', { class: 'wing', x: 14.6, y: -6.8, width: 2.8, height: 13.6 }]]
-      .forEach(function (o) { car.appendChild(el(o[0], o[1])); });
+    svg.appendChild(el('path', { class: 'side', 'fill-rule': 'evenodd', d: loop(L, 5) + loop(Rt, 5) }));
+    svg.appendChild(el('path', { class: 'road', 'fill-rule': 'evenodd', d: loop(L) + loop(Rt) }));
 
-    function metres(sec) {          /* distance driven sec seconds into the lap */
-      var k = Math.max(0, sec) / tr.dt, i = Math.min(tr.m.length - 2, Math.floor(k));
-      return tr.m[i] + (tr.m[i + 1] - tr.m[i]) * Math.min(1, k - i);
+    /* the lap, sample by sample */
+    var mEnd = tr.m[K - 1], vEnd = (mEnd - tr.m[K - 2]) / tr.dt;
+    function state(sec) {
+      if (sec >= lapS) return { m: mEnd + vEnd * (sec - lapS), pos: tr.pos[K - 1], ang: tr.ang[K - 1], a: K - 1, b: K - 1, t: 0 };
+      var k = Math.max(0, sec) / tr.dt, a = Math.min(K - 2, Math.floor(k)), t = Math.min(1, k - a);
+      return { m: tr.m[a] + (tr.m[a + 1] - tr.m[a]) * t, pos: tr.pos[a] + (tr.pos[a + 1] - tr.pos[a]) * t, ang: tr.ang[a] + (tr.ang[a + 1] - tr.ang[a]) * t, a: a, b: a + 1, t: t };
     }
-    function place(m) {             /* where on the drawing that is: point, heading and length along the centre line */
-      var f = m % tr.lap_m / tr.lap_m * n, i = Math.floor(f) % n, j = (i + 1) % n, t = f - Math.floor(f);
-      return { x: mid[i][0] + (mid[j][0] - mid[i][0]) * t, y: mid[i][1] + (mid[j][1] - mid[i][1]) * t,
-               dir: Math.atan2(tk.y[j] - tk.y[i], tk.x[j] - tk.x[i]), len: cum[i] + (cum[i + 1] - cum[i]) * t };
+    function carAt(st) {           /* the car in the world: on the road at its trackPos (+ = left), turned by its angle */
+      var w = world(st.m);
+      return { x: w.x - w.ty * st.pos * HALF, y: w.y + w.tx * st.pos * HALF, z: w.z, yaw: Math.atan2(w.ty, w.tx) - st.ang };
     }
-    function paint(sec) {
-      var m = metres(sec), c = place(m), co = Math.cos(c.dir) * CAR, si = Math.sin(c.dir) * CAR;
-      car.setAttribute('transform', 'matrix(' + [p11 * co + p12 * si, p21 * co + p22 * si, p12 * co - p11 * si, p22 * co - p21 * si, c.x, c.y].map(function (v) { return v.toFixed(2); }).join(' ') + ')');
-      tails.forEach(function (o) {
-        var len = Math.max(0, m - metres(sec - o.back)) / tr.lap_m * cum[n];
-        o.p.setAttribute('stroke-dasharray', len.toFixed(1) + ' 99999');
-        o.p.setAttribute('stroke-dashoffset', (len - c.len).toFixed(1));
+    var run = svg.appendChild(el('g', {})), pts = [], vmax = 0, v = [];
+    for (i = 0; i < K; i++) {
+      var c = carAt({ m: tr.m[i], pos: tr.pos[i], ang: tr.ang[i] });
+      pts.push(pr(c.x, c.y, lift(c.z)));
+      v.push(i ? (tr.m[i] - tr.m[i - 1]) / tr.dt : 0);
+      vmax = Math.max(vmax, v[i]);
+    }
+    var trace = [];
+    for (i = 1; i < K; i++) trace.push(run.appendChild(el('line', { class: 'trace', x1: pts[i - 1][0].toFixed(1), y1: pts[i - 1][1].toFixed(1), x2: pts[i][0].toFixed(1), y2: pts[i][1].toFixed(1),
+      'stroke-opacity': (.1 + .75 * Math.pow(v[i] / vmax, 1.6)).toFixed(2), visibility: 'hidden' })));
+    var head = run.appendChild(el('line', { class: 'trace' }));
+    var beams = tr.angles.map(function () { return run.appendChild(el('line', { class: 'beam' })); });
+
+    /* the car: flat shapes in metres (nose towards +x), stacked at their heights */
+    var box = function (u0, u1, v0, v1) { return 'M' + u0 + ' ' + v0 + 'H' + u1 + 'V' + v1 + 'H' + u0 + 'Z'; };
+    var hull = 'M-2.3 -.45L-1.2 -.75L.3 -.7L1.2 -.3L2.4 -.15V.15L1.2 .3L.3 .7L-1.2 .75L-2.3 .45Z';
+    var tyres = box(-1.9, -1.2, -1.05, -.62) + box(-1.9, -1.2, .62, 1.05) + box(1.1, 1.7, -1, -.66) + box(1.1, 1.7, .66, 1);
+    var car = run.appendChild(el('g', {}));
+    var layers = [['c-shadow', hull + tyres, 0], ['c-tyre', tyres, .1], ['c-tyre-top', tyres, .66], ['c-hull', hull, .25], ['c-wing', box(2.05, 2.45, -.95, .95), .3],
+                  ['c-deck', hull, .6], ['c-deck', box(-.9, -.1, -.22, .22), .95], ['c-wing', box(-2.45, -2, -.85, .85), 1]].map(function (o) {
+      var g = car.appendChild(el('g', { transform: 'translate(0 ' + (-o[2] * WIDE * RISE).toFixed(2) + ')' }));
+      return g.appendChild(el('g', {})).appendChild(el('path', { class: o[0], d: o[1] })).parentNode;
+    });
+
+    var shown = 0;
+    function paint(sec, alpha) {
+      var st = state(sec), c = carAt(st), at = pr(c.x, c.y, lift(c.z)), co = Math.cos(c.yaw), si = Math.sin(c.yaw);
+      var m = 'matrix(' + [(p11 * co + p12 * si) * WIDE, (p21 * co + p22 * si) * WIDE, (p12 * co - p11 * si) * WIDE, (p22 * co - p21 * si) * WIDE, 0, 0].map(function (q) { return q.toFixed(3); }).join(' ') + ')';
+      car.setAttribute('transform', 'translate(' + fix(at) + ')');
+      layers.forEach(function (g) { g.setAttribute('transform', m); });
+      var upto = sec >= lapS ? K - 1 : st.a;
+      if (upto < shown) { for (i = 0; i < K - 1; i++) trace[i].setAttribute('visibility', 'hidden'); shown = 0; }
+      for (; shown < upto; shown++) trace[shown].setAttribute('visibility', 'visible');
+      head.setAttribute('x1', pts[st.a][0].toFixed(1)); head.setAttribute('y1', pts[st.a][1].toFixed(1));
+      head.setAttribute('x2', at[0].toFixed(1)); head.setAttribute('y2', at[1].toFixed(1));
+      head.setAttribute('stroke-opacity', trace[Math.min(K - 2, st.a)].getAttribute('stroke-opacity'));
+      beams.forEach(function (ln, b) {      /* each beam from the car to where it met the edge; what lies across the road is widened like the road */
+        var r = tr.beams[st.a][b] + (tr.beams[st.b][b] - tr.beams[st.a][b]) * st.t, al = tr.angles[b] * Math.PI / 180;
+        var f = r * Math.cos(al), l = -r * Math.sin(al) * WIDE;
+        var e = pr(c.x + f * co - l * si, c.y + f * si + l * co, lift(world(st.m + f).z));
+        ln.setAttribute('x1', at[0].toFixed(1)); ln.setAttribute('y1', (at[1] - 1).toFixed(1));
+        ln.setAttribute('x2', e[0].toFixed(1)); ln.setAttribute('y2', e[1].toFixed(1));
+        ln.setAttribute('stroke-opacity', r >= 199 ? .1 : .42);
       });
+      run.setAttribute('opacity', alpha.toFixed(2));
     }
-    paint(0);
+    paint(0, 1);
     if (!MOTION) return;
     var t0 = null, onScreen = true;
     if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
@@ -739,20 +784,14 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     }).observe(svg);
     function frame(t) {
       if (!onScreen) return;
-      if (t0 == null) t0 = t;
-      paint((t - t0) / 1000 % lapS);
+      if (t0 == null) t0 = t - IN * 1000;       /* the first lap starts at once: the car is already on the grid */
+      var s = (t - t0) / 1000 % (IN + lapS + OUT);
+      if (s < IN) paint(0, s / IN);
+      else if (s < IN + lapS) paint(s - IN, 1);
+      else paint(s - IN, 1 - (s - IN - lapS) / OUT);
       requestAnimationFrame(frame);
     }
   }
-
-  /* the run viewer's silent clip plays while it is on screen; with reduced motion it stays on its still picture */
-  (function () {
-    var v = document.getElementById('clip');
-    if (!MOTION || !('IntersectionObserver' in window)) return;
-    new IntersectionObserver(function (es) {
-      if (es[0].isIntersecting) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();
-    }, { threshold: .25 }).observe(v);
-  })();
 
   window.addEventListener('beforeprint', function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
 
