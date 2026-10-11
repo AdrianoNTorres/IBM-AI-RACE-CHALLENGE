@@ -185,6 +185,16 @@ p { margin: 0 0 1rem; }
 .facts div { border-top: 2px solid var(--ink); padding-top: .5rem; }
 .facts dt { color: var(--muted); font-size: .94rem; }
 .facts dd { margin: 0; font: 700 1.9rem/1.15 var(--display); }
+/* every race on record as one dot */
+.laps { margin: 3rem 0 0; }
+.laps figcaption { display: grid; grid-template-columns: auto minmax(0, 36rem); gap: .4rem 2.2rem; align-items: baseline; margin-bottom: 1.1rem; }
+.laps strong { font: 700 clamp(2.4rem, 6vw, 3.6rem)/1 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.laps figcaption > span { color: var(--muted); }
+.laps canvas { display: block; width: 100%; height: 220px; }
+@media (max-width: 44rem) {
+  .laps figcaption { grid-template-columns: 1fr; }
+  .laps canvas { height: 300px; }
+}
 
 /* how it works */
 .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 1.5rem 0; border: 2px solid var(--ink); }
@@ -490,6 +500,13 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <h3>How a change earns its place</h3>
     <p>One mechanism per version, so its effect can be measured. In the final versions each candidate drove 730 laps with its settings and its plan deliberately nudged: 70 for the lap time, compared run by run against the version before, and 660 around the new values to look for a way off the road. Any damage, or any lap with the car's centre past the edge, rejected the version. Of 133 versions, 100 were kept, 11 were kept as groundwork for a later gain and 22 were rejected. The record of every one, with what was learned, is in the <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/blob/main/docs/CHANGELOG.md">changelog</a>.</p>
   </div>
+  <figure class="laps" id="laps">
+    <figcaption>
+      <strong><span id="laps-n">23,590</span> races</strong>
+      <span>One dot for each race written down in the notes of 18 of the 133 versions. The purple strip is the 730 laps one final candidate had to survive. The other 115 versions were not counted, so the true total is higher.</span>
+    </figcaption>
+    <canvas aria-hidden="true"></canvas>
+  </figure>
 </div>
 </section>
 
@@ -1400,9 +1417,49 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     });
   }
 
+  /* one dot per recorded race, filled in as the number counts up; the first 730 (one final candidate's bar) in the brand colour */
+  function laps(fig) {
+    var cv = fig && fig.querySelector('canvas'), out = document.getElementById('laps-n');
+    if (!cv || !cv.getContext) return;
+    var N = 23590, HOT = 730, ctx = cv.getContext('2d'), rows, pitch, shown = 0;
+    function dots(from, to) {
+      var cs = getComputedStyle(fig), ink = cs.getPropertyValue('--ink').trim(), brand = cs.getPropertyValue('--brand').trim(), s = Math.max(1, pitch * .62);
+      for (var i = from; i < to; i++) {
+        ctx.fillStyle = i < HOT ? brand : ink; ctx.globalAlpha = i < HOT ? 1 : .5;
+        ctx.fillRect(Math.floor(i / rows) * pitch, (i % rows) * pitch, s, s);   /* column by column: the fill sweeps left to right */
+      }
+    }
+    function size() {
+      var w = cv.clientWidth, h = cv.clientHeight, r = window.devicePixelRatio || 1;
+      if (!w || !h) return;
+      rows = Math.floor(h / Math.sqrt(w * h / N)); pitch = Math.min(h / rows, w / Math.ceil(N / rows));
+      cv.width = Math.round(w * r); cv.height = Math.round(h * r); ctx.setTransform(r, 0, 0, r, 0, 0);
+      dots(0, shown);
+    }
+    function all() { shown = N; size(); }
+    size();
+    window.addEventListener('resize', size);
+    if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', size);
+    if (!MOTION || !('IntersectionObserver' in window)) return all();
+    out.textContent = '0';
+    new IntersectionObserver(function (es, ob) {
+      if (!es[0].isIntersecting) return;
+      ob.disconnect();
+      var t0 = null;
+      requestAnimationFrame(function frame(t) {
+        if (t0 == null) t0 = t;
+        var k = Math.min(1, (t - t0) / 2200), to = Math.round(N * (1 - Math.pow(1 - k, 3)));
+        dots(shown, to); shown = to;
+        out.textContent = to.toLocaleString('en-US');
+        if (k < 1) requestAnimationFrame(frame);
+      });
+    }, { threshold: .5 }).observe(fig);
+  }
+
   /* decoration last and on its own: if it fails, or an older data.json is still cached, the page's content is already in */
   function extras(d) {
     try {
+      laps(document.getElementById('laps'));
       countUp([].slice.call(document.querySelectorAll('.facts [data-s]')));
       if (d.lap && d.track && d.trace) strip(document.getElementById('chart-speed'), d.lap, d.track, d.trace, document.getElementById('lap-video'));
       if (d.trace && d.track) scene(d.track, d.trace, d.summary.best_lap_torcs_s, d.ghost, d.summary.best_version);
