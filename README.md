@@ -76,8 +76,8 @@ The simulation is deterministic: the same driver file gives the same telemetry C
 ## Demonstration
 
 - Race lap video (Corkscrew, 1:05.56): https://youtu.be/yuep0Uarx2Y
-- Team video (3 minutes): not uploaded yet
-- Technical video (5 minutes): not uploaded yet
+- Team video (3 minutes): https://youtu.be/MrOq9yl0XXQ
+- Technical video (5 minutes): https://youtu.be/RUjWm48zO-U
 - The same lap, and every other version's, replayed from its telemetry: https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/viewer/
 
 ## Limitations
