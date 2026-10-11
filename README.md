@@ -19,6 +19,14 @@ The car drives one lap of the Corkscrew from a standing start. The first complet
 
 TORCS (the simulator, with the `scr_server` robot), Python 3, VS Code, IBM Bob (analysis, planning, review, repository documentation) and Claude Code (the driver's code and the test harness). Git: one tag per version.
 
+## Environment and setup
+
+- OS: Windows 11. The race harness (`harness/`, `tools/`) starts `wtorcs.exe` and is Windows-only; the driver itself is plain Python.
+- Python: 3.14. The driver and the harness use the standard library only; `tools/opt.py` also needs `optuna` (`pip install -r tools/requirements.txt`).
+- TORCS with the Simulated Car Racing server (`scr_server`), as supplied with the challenge kit, installed at `C:\torcs\torcs`. TORCS is not part of this repository.
+- Track and car: Corkscrew, `car1-ow1`, one lap from a standing start.
+- Required local files: `driver/snakeoil3_v1.py` alone. It imports nothing else from this repository.
+
 ## Baseline and final driver
 
 | | File | Result |
@@ -33,6 +41,8 @@ There is one driver file. Earlier versions are not kept as copies: each is a Git
 Every version changes one mechanism, is measured, and is recorded in [`docs/CHANGELOG.md`](docs/CHANGELOG.md): what changed, why, the prediction, the measured lap, damage, and what was learned. Of 133 versions, 100 were kept, 11 were kept as groundwork for a later gain and 22 were rejected. Every setting is listed in [`docs/tuning-card.md`](docs/tuning-card.md).
 
 ## How IBM Bob was used
+
+IBM Bob is the coding assistant built on IBM Granite. It was this project's analyst, planner and reviewer. The driver itself contains no model: Granite helped build it; it does not drive it. Certificate: [IBM SkillsBuild, IBM Granite Models for Software Development](https://skills.yourlearning.ibm.com/certificate/share/0970ff6c5bewogICJvYmplY3RUeXBlIiA6ICJBQ1RJVklUWSIsCiAgImxlYXJuZXJDTlVNIiA6ICI4ODkwMzgxUkVHIiwKICAib2JqZWN0SWQiIDogIkFMTS1DT1VSU0VfNDA1ODkxNCIKfQ1ad7799a7c-10) (Adriano Torres).
 
 - **Ask.** Bob's first task was to open the supplied driver, find the function that makes the driving decisions, and list every sensor it reads and every action it sets.
 - **Plan.** From that, Bob wrote the first tuning card and the changelog format used for all 133 versions. After 72 versions it produced an independent analysis with three specialists (race engineer, racing driver, data analyst) and a ranked plan, and later the hand-off plan and the brief for running agents in parallel.
@@ -62,6 +72,27 @@ The simulation is deterministic: the same driver file gives the same telemetry C
 - Ask about the rules early. Track memory was held back for 105 versions until the officials confirmed it was allowed.
 - Record rejections as carefully as gains; they stop the same idea from being tried twice.
 - State openly what a result relies on, and name the version to submit instead if it is ruled out.
+
+## Demonstration
+
+- Race lap video (Corkscrew, 1:05.56): https://youtu.be/yuep0Uarx2Y
+- Team video (3 minutes): not uploaded yet
+- Technical video (5 minutes): not uploaded yet
+- The same lap, and every other version's, replayed from its telemetry: https://adrianontorres.github.io/IBM-AI-RACE-CHALLENGE/viewer/
+
+## Limitations
+
+- One track and one car. The racing line, its speed and the elevation are computed for the Corkscrew and stored in the driver; they do not apply to another track. The last version that drives on its sensors alone is v1.05 (1:13.56).
+- The lap is a single car on an empty track from a standing start. There is no logic for traffic.
+- The harness is Windows-only and expects TORCS at `C:\torcs\torcs`.
+- Two of the six rule points on the presentation page are our own reading of the officials' answers and were not asked separately (the gear and steering zones, and elevation read from the track file). Each names the version to submit instead.
+- The driver's main loop ends the run at the first damage; there is no recovery logic.
+
+## Credits and licensing
+
+- `driver/snakeoil3_gym.py` is the driver supplied with the challenge kit, unmodified. It and the client library at the top of `driver/snakeoil3_v1.py` (`Client`, `ServerState`, `DriverAction`) are snakeoil by Chris X Edwards, for the Simulated Car Racing server. They are not my work; `drive_example()` and everything in `tools/`, `harness/`, `viewer/` and `site/` is.
+- TORCS is a separate open-source project and is not included. `viewer/tracks/corkscrew.xml` is the Corkscrew's definition file from TORCS (© 2005 Charalampos Alexopoulos, GNU GPL v2 or later, as its header states).
+- The car models in the run viewer are from Kenney's Car Kit, CC0 (`viewer/models/kenney/License.txt`).
 
 ---
 
@@ -110,7 +141,7 @@ tools/          parallel race harness, perturbation suites, Optuna optimiser
 site/           the presentation website (published at the address above)
 viewer/         the run viewer, a static website (open index.html in a browser)
 .github/        the workflow that publishes site/ and viewer/ on GitHub Pages
-docs/           CHANGELOG.md, improvement plan, tuning card, history
+docs/           CHANGELOG.md, CHANGELOG-simple.md, ledger, improvement plan, tuning card
 runs/           telemetry CSVs — one per version, committed to git
 ```
 
@@ -130,9 +161,9 @@ See `tools/README.md` for the full reference.
 
 ---
 
-## Experiment log
+## Results
 
-Every version is documented in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) with the change, why, what was observed, and the decision. Plain-language summaries are in [`docs/CHANGELOG-simple.md`](docs/CHANGELOG-simple.md).
+Corkscrew, `car1-ow1`, one lap from a standing start; every completed lap below has zero damage. Every version is documented in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) with the change, why, what was observed, and the decision. Plain-language summaries are in [`docs/CHANGELOG-simple.md`](docs/CHANGELOG-simple.md).
 
 Version highlights:
 

@@ -6,13 +6,13 @@ plans, and track memory.
 
 **Current version:** v1.33 · **1:05.56** · zero damage · 0 of 30 safety runs off-track
 
-**This page describes the sensor-driven driver as it stood at v1.06.** That logic is
-still in the file and still drives the start and the finish straight, and it still
-plans the speed outside `plan_mem`. Since v1.11–v1.19 most of the lap is steered by a
-planned line stored in the file (`plan_pos`, `plan_curv`, `plan_v`, one row per 10 m,
-computed offline by `tools/raceline.py`) and followed with live feedback; inside
-`plan_mem` the line's stored speed is the braking plan. The comments in the knob block
-of `drive_example()` and `docs/tuning-card.md` are the current reference.
+**The driver has two layers.** The sections below cover the sensor logic: it drives the
+start and the finish straight, and it plans the speed outside `plan_mem`. Most of the
+lap is steered by a planned line stored in the file (`plan_pos`, `plan_curv`, `plan_v`,
+one row per 10 m, computed offline by `tools/raceline.py`) and followed with live
+feedback; inside `plan_mem` the line's stored speed is the braking plan. The planned
+line is described in the comments of the knob block of `drive_example()` and in
+`docs/tuning-card.md`.
 
 ---
 
@@ -186,7 +186,7 @@ car runs straight out of slow corners.
 
 ## Knob organisation
 
-All 50+ tuning knobs are local variables declared at the **top of `drive_example()`**,
+All of the roughly 140 tuning knobs are local variables declared at the **top of `drive_example()`**,
 before the logic that uses them. This is deliberate: `tools/race.py` overrides knobs
 by text-substitution into this block (regex: `    name=value`), so knob lines must
 be one per line, four-space indented, and must not appear anywhere else in the function
