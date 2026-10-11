@@ -191,8 +191,8 @@ p { margin: 0 0 1rem; }
 .laps figcaption { color: var(--muted); }
 .laps figcaption p { margin: 0 0 .8rem; }
 .laps .card { fill: #ecdfb6; }
-.laps .hole { fill: #18202b; opacity: 0; }
-.laps .hole.on { opacity: 1; }
+.laps .hole { fill: #18202b; opacity: 0; transform-box: fill-box; transform-origin: center; transform: scaleY(.2); transition: opacity .1s, transform .14s cubic-bezier(.3, 1.4, .6, 1); }
+.laps .hole.on { opacity: 1; transform: none; }
 .laps .rule { stroke: #2b2a26; stroke-width: 1; opacity: .45; }
 .laps text { fill: #2b2a26; font: 600 13px/1 var(--display); letter-spacing: .06em; }
 .laps text.digit { text-anchor: middle; opacity: .5; }
@@ -1442,24 +1442,34 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
       digits.push(svg.appendChild(el('text', { class: 'digit', x: x.toFixed(1), y: y + 5 }, String(Math.floor(i / COLS)))));
       holes.push(svg.appendChild(el('rect', { class: 'hole', x: (x - 6.5).toFixed(1), y: y - 11, width: 13, height: 22, rx: 1.5 })));
     }
-    var done = 0, sum = 0;
-    function punch(to) {   /* punch every counted version up to position `to` */
-      for (; done <= to && done < V; done++) if (RACES[done]) { holes[done].setAttribute('class', 'hole on'); digits[done].style.display = 'none'; sum += RACES[done]; }
-      num.textContent = sum.toLocaleString('en-US');
+    var order = [], shown = 0, sum = 0, target = 0, ticking = false;
+    for (i = 0; i < V; i++) if (RACES[i]) order.push(i);
+    function punch(n) {   /* punch the first n counted versions; holes stay punched */
+      for (; shown < n; shown++) { holes[order[shown]].setAttribute('class', 'hole on'); digits[order[shown]].style.display = 'none'; target += RACES[order[shown]]; }
     }
-    if (!MOTION || !('IntersectionObserver' in window)) return punch(V - 1);
-    punch(-1);
-    new IntersectionObserver(function (es, ob) {
-      if (!es[0].isIntersecting) return;
-      ob.disconnect();
-      var t0 = null;
-      requestAnimationFrame(function frame(t) {
-        if (t0 == null) t0 = t;
-        var k = Math.min(1, (t - t0) / 2600);
-        punch(k * (V - 1));
-        if (k < 1) requestAnimationFrame(frame);
-      });
-    }, { threshold: .6 }).observe(svg);
+    if (!MOTION) { punch(order.length); num.textContent = target.toLocaleString('en-US'); return; }
+    num.textContent = '0';
+    /* the scroll drives it: nothing is punched until the whole card is on screen, and the last hole lands while the card is
+       still in the lower half of the screen, one hole at a time and evenly spaced over that stretch of scrolling */
+    function progress() {
+      var r = svg.getBoundingClientRect(), vh = window.innerHeight;
+      var from = Math.min(vh - r.height - 12, vh * .7), to = Math.min(from - 140, vh * .5);   /* full by the time the card's top is half way up the screen */
+      return Math.max(0, Math.min(1, (from - r.top) / (from - to)));
+    }
+    function count() {   /* the printed total runs up to what has been punched */
+      sum += (target - sum) * .22;
+      if (target - sum < 1) sum = target;
+      num.textContent = Math.round(sum).toLocaleString('en-US');
+      if (sum < target) requestAnimationFrame(count); else ticking = false;
+    }
+    function onScroll() {
+      punch(Math.round(progress() * order.length));
+      if (!ticking && sum < target) { ticking = true; requestAnimationFrame(count); }
+      if (shown === order.length) { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
   }
 
   /* decoration last and on its own: if it fails, or an older data.json is still cached, the page's content is already in */
