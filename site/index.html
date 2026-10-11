@@ -185,15 +185,20 @@ p { margin: 0 0 1rem; }
 .facts div { border-top: 2px solid var(--ink); padding-top: .5rem; }
 .facts dt { color: var(--muted); font-size: .94rem; }
 .facts dd { margin: 0; font: 700 1.9rem/1.15 var(--display); }
-/* every race on record as one dot */
-.laps { margin: 3rem 0 0; }
-.laps figcaption { display: grid; grid-template-columns: auto minmax(0, 36rem); gap: .4rem 2.2rem; align-items: baseline; margin-bottom: 1.1rem; }
-.laps strong { font: 700 clamp(2.4rem, 6vw, 3.6rem)/1 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.laps figcaption > span { color: var(--muted); }
-.laps canvas { display: block; width: 100%; height: 220px; }
+/* the races on record as a rev counter: one tick per version, lit where a count was written down */
+.laps { display: grid; grid-template-columns: minmax(15rem, 24rem) minmax(0, 30rem); gap: 1rem 3.5rem; align-items: center; margin: 3rem 0 0; }
+.laps svg { display: block; width: 100%; height: auto; }
+.laps figcaption { color: var(--muted); }
+.laps figcaption p { margin: 0 0 .8rem; }
+.laps .tick { stroke: var(--rule); stroke-width: 2.6; }
+.laps .tick.on { stroke: var(--brand); }
+.laps .needle { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.laps text { text-anchor: middle; fill: var(--muted); font-size: 17px; }
+.laps text.num { fill: var(--ink); font: 700 62px/1 var(--display); font-variant-numeric: tabular-nums; }
+.laps text.of { fill: var(--ink); font: 600 19px/1 var(--display); }
 @media (max-width: 44rem) {
-  .laps figcaption { grid-template-columns: 1fr; }
-  .laps canvas { height: 300px; }
+  .laps { grid-template-columns: 1fr; }
+  .laps svg { max-width: 22rem; }
 }
 
 /* how it works */
@@ -501,11 +506,11 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     <p>One mechanism per version, so its effect can be measured. In the final versions each candidate drove 730 laps with its settings and its plan deliberately nudged: 70 for the lap time, compared run by run against the version before, and 660 around the new values to look for a way off the road. Any damage, or any lap with the car's centre past the edge, rejected the version. Of 133 versions, 100 were kept, 11 were kept as groundwork for a later gain and 22 were rejected. The record of every one, with what was learned, is in the <a href="https://github.com/AdrianoNTorres/IBM-AI-RACE-CHALLENGE/blob/main/docs/CHANGELOG.md">changelog</a>.</p>
   </div>
   <figure class="laps" id="laps">
+    <svg viewBox="0 0 400 372" role="img" aria-label="A dial with one tick for each of the 133 versions. 36 of them are lit: the versions whose notes record how many races they ran, about 42,900 in all."></svg>
     <figcaption>
-      <strong><span id="laps-n">23,590</span> races</strong>
-      <span>One dot for each race written down in the notes of 18 of the 133 versions. The purple strip is the 730 laps one final candidate had to survive. The other 115 versions were not counted, so the true total is higher.</span>
+      <p>Each tick on the dial is one of the 133 versions, in order. The lit bars are the 36 whose notes say how many races they ran, and a bar's length is that count: about 42,900 races between them.</p>
+      <p>The other 97 versions kept no count, so the true total is higher. For scale, the final check on one late candidate was 730 laps.</p>
     </figcaption>
-    <canvas aria-hidden="true"></canvas>
   </figure>
 </div>
 </section>
@@ -1417,43 +1422,40 @@ footer p { max-width: 38rem; margin: 0 0 .5rem; }
     });
   }
 
-  /* one dot per recorded race, filled in as the number counts up; the first 730 (one final candidate's bar) in the brand colour */
+  /* the races on record as a rev counter: a tick per version round a 270 degree dial; a needle sweeps the project once,
+     lighting the versions that wrote down their race count (index in version order: races) and adding them up in the middle */
   function laps(fig) {
-    var cv = fig && fig.querySelector('canvas'), out = document.getElementById('laps-n');
-    if (!cv || !cv.getContext) return;
-    var N = 23590, HOT = 730, ctx = cv.getContext('2d'), rows, pitch, shown = 0;
-    function dots(from, to) {
-      var cs = getComputedStyle(fig), ink = cs.getPropertyValue('--ink').trim(), brand = cs.getPropertyValue('--brand').trim(), s = Math.max(1, pitch * .62);
-      for (var i = from; i < to; i++) {
-        ctx.fillStyle = i < HOT ? brand : ink; ctx.globalAlpha = i < HOT ? 1 : .5;
-        ctx.fillRect(Math.floor(i / rows) * pitch, (i % rows) * pitch, s, s);   /* column by column: the fill sweeps left to right */
-      }
+    var svg = fig && fig.querySelector('svg');
+    if (!svg) return;
+    var RACES = {79:550,80:970,81:860,82:1090,83:600,84:870,85:1330,86:700,87:860,88:1070,90:1160,91:1450,94:1330,95:1220,96:1280,97:1340,100:1495,101:1471,102:1481,103:1491,104:1472,105:1820,106:1540,107:1640,108:1850,109:2130,110:1080,111:1590,112:1500,113:930,114:550,115:1490,116:1230,130:385,131:516,132:588}, V = 133, MAX = 2130, CX = 200, CY = 200, R0 = 132, ticks = [], total = 0, i;
+    var at = function (i, r) { var a = (135 + 270 * i / (V - 1)) * Math.PI / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+    var put = function (ln, i, len) { var a = at(i, R0), b = at(i, R0 + len); ln.setAttribute('x1', a[0].toFixed(1)); ln.setAttribute('y1', a[1].toFixed(1)); ln.setAttribute('x2', b[0].toFixed(1)); ln.setAttribute('y2', b[1].toFixed(1)); };
+    for (i = 0; i < V; i++) { ticks.push(svg.appendChild(el('line', { class: 'tick' }))); put(ticks[i], i, 7); total += RACES[i] || 0; }
+    var needle = svg.appendChild(el('line', { class: 'needle' }));
+    var num = svg.appendChild(el('text', { class: 'num', x: CX, y: CY + 12 }, total.toLocaleString('en-US')));
+    svg.appendChild(el('text', { x: CX, y: CY + 42 }, 'races on record'));
+    svg.appendChild(el('text', { class: 'of', x: CX, y: 338 }, '36 of 133 versions'));
+    svg.appendChild(el('text', { x: CX, y: 360 }, 'kept a count'));
+    var lit = 0, sum = 0;
+    function sweep(to) {   /* light every counted version up to tick `to` and point the needle there */
+      for (; lit <= to && lit < V; lit++) if (RACES[lit]) { ticks[lit].setAttribute('class', 'tick on'); put(ticks[lit], lit, 12 + 44 * RACES[lit] / MAX); sum += RACES[lit]; }
+      var a = at(to, R0 - 26), b = at(to, R0 - 6);
+      needle.setAttribute('x1', a[0].toFixed(1)); needle.setAttribute('y1', a[1].toFixed(1)); needle.setAttribute('x2', b[0].toFixed(1)); needle.setAttribute('y2', b[1].toFixed(1));
+      num.textContent = sum.toLocaleString('en-US');
     }
-    function size() {
-      var w = cv.clientWidth, h = cv.clientHeight, r = window.devicePixelRatio || 1;
-      if (!w || !h) return;
-      rows = Math.floor(h / Math.sqrt(w * h / N)); pitch = Math.min(h / rows, w / Math.ceil(N / rows));
-      cv.width = Math.round(w * r); cv.height = Math.round(h * r); ctx.setTransform(r, 0, 0, r, 0, 0);
-      dots(0, shown);
-    }
-    function all() { shown = N; size(); }
-    size();
-    window.addEventListener('resize', size);
-    if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', size);
-    if (!MOTION || !('IntersectionObserver' in window)) return all();
-    out.textContent = '0';
+    if (!MOTION || !('IntersectionObserver' in window)) return sweep(V - 1);
+    sweep(-1); needle.style.opacity = 0;
     new IntersectionObserver(function (es, ob) {
       if (!es[0].isIntersecting) return;
-      ob.disconnect();
+      ob.disconnect(); needle.style.opacity = 1;
       var t0 = null;
       requestAnimationFrame(function frame(t) {
         if (t0 == null) t0 = t;
-        var k = Math.min(1, (t - t0) / 2200), to = Math.round(N * (1 - Math.pow(1 - k, 3)));
-        dots(shown, to); shown = to;
-        out.textContent = to.toLocaleString('en-US');
+        var k = Math.min(1, (t - t0) / 2600), e = k < .5 ? 2 * k * k : 1 - 2 * (1 - k) * (1 - k);
+        sweep(e * (V - 1));
         if (k < 1) requestAnimationFrame(frame);
       });
-    }, { threshold: .5 }).observe(fig);
+    }, { threshold: .6 }).observe(svg);
   }
 
   /* decoration last and on its own: if it fails, or an older data.json is still cached, the page's content is already in */
